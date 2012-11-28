@@ -436,7 +436,146 @@ agg.pval <- function(gamma,pval){
     min(quantile(pval/gamma,probs=gamma),1)
 }
 
-twosample_diffnet2 <- function(x1,x2,b.splits=50,frac.split=1/2,screen.lambda='lambda.cv',gamma.min=0.05,compute.evals='est2.my.ev2',diag.invcov=TRUE,acc=1e-04,...){
+diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.evals,include.mean,acc){
+  ##compute test-statistic
+  teststat <- logratio(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu)$twiceLR
+  ##weights of sum-w-chi2
+  weights.nulldistr <- eval(as.name(compute.evals))(sig1,sig2,sig,act1,act2,act,include.mean)$eval
+  if (any(is.na(weights.nulldistr))){
+    cat('warning: weight with value NA; pval=NA','\n')
+  }else{
+    pval.onesided <- davies(teststat,lambda=weights.nulldistr,acc=acc)$Qq;cat('ifault(davies):',davies(teststat,lambda=weights.nulldistr,acc=acc)$ifault,'\n')
+    pval.twosided <- 2*min(pval.onesided,1-pval.onesided)
+  }
+  return(list(pval.onesided=pval.onesided,pval.twosided=pval.twosided,weights.nulldistr=weights.nulldistr,teststat=teststat))
+}
+
+diffnet_singlesplit<- function(x1,x2,pop1.screen,pop2.screen,screen.meth='cv.glasso',
+                               compute.evals='est2.my.ev2',include.mean=TRUE,
+                               diag.invcov=TRUE,acc=1e-04,...){
+
+  ##Single-Split Pvalues
+  ##
+  ##Input:
+  ##
+  ## -Data:x1,x2 [scaled data (var=1,mean=0), in particular mu1=mu2=mu=0]
+  ## -n.screen.pop1, n.screen.pop2: no samples for screening
+  ## -screen.lambda={lambda.cv,lambda.cv.1se,lambda.uni.parcor,lambda.uni.invcov}
+  ## -compute.evals: 'est2.my.ev2'/'est2.ww.mat2 '
+  ## -diag.invcov: TRUE (parameter of interest is invcov; diag(invcov) also considered) / FALSE (param of interest is par.cor; no diagonal)
+  ## -...: additional arguments for cv.glasso(x,...) or glasso.parcor.launi(x,...)
+  
+  n1 <- nrow(x1)
+  n2 <- nrow(x2)
+  p <- ncol(x1)
+
+  if(diag.invcov){df.param <- p*(p+1)/2}
+  if(!diag.invcov){df.param <- p*(p-1)/2}
+
+  est.mu <- est.sig <- est.wi <- active <- list()#save est.mu;est.sig & active variables
+  
+  split1 <- pop1.screen
+  split2 <- pop2.screen
+  ###############
+  ##Joint Model##
+  ###############
+  xx.train <- rbind(x1[split1,],x2[split2,])
+  xx.valid <- rbind(x1[-split1,],x2[-split2,])
+  fit.screen <- eval(as.name(screen.meth))(xx.train,include.mean=include.mean,...)
+  act <- which(fit.screen$wi[upper.tri(diag(1,p),diag=TRUE)]!=0)
+  if(!diag.invcov){
+    ind.diag <- which(diag(1,p)[upper.tri(diag(1,p),diag=TRUE)]!=0)
+    act <- setdiff(act,ind.diag)
+  }
+  active[['modJ']] <- act
+  if(include.mean==TRUE){
+    est.mu[['modJ']] <- colMeans(xx.valid)
+  }else{
+    est.mu[['modJ']] <- rep(0,p)
+  }
+  if (length(active[['modJ']])==df.param){
+    w <- var(xx.valid)
+    if(!diag.invcov){
+      w <-w*sqrt(tcrossprod(diag(solve(w))))
+    }
+    est.sig[['modJ']] <- w
+    est.wi[['modJ']] <- solve(w)
+  }
+  if (length(active[['modJ']])!=df.param){
+    fit.mle <- glasso(var(xx.valid),rho=10^{-10},zero=which(fit.screen$wi==0,arr.in=TRUE))
+    w <- fit.mle$w
+    if(!diag.invcov){
+      w <-w*sqrt(tcrossprod(diag(solve(fit.mle$w))))
+    }
+    est.sig[['modJ']] <- w
+    est.wi[['modJ']] <- fit.mle$wi
+  }
+  #####################  
+  ##Individual Models##
+  #####################
+  for (j in c('1','2')){
+    split.train <- eval(as.name(paste('split',j,sep='')))
+    xx.train <- eval(as.name(paste('x',j,sep='')))[split.train,]
+    xx.valid <- eval(as.name(paste('x',j,sep='')))[-split.train,]
+    fit.screen <- eval(as.name(screen.meth))(xx.train,include.mean=include.mean,...)
+    act <- which(fit.screen$wi[upper.tri(diag(1,p),diag=TRUE)]!=0)
+    if(!diag.invcov){
+      ind.diag <- which(diag(1,p)[upper.tri(diag(1,p),diag=TRUE)]!=0)
+      act <- setdiff(act,ind.diag)
+    }
+    active[[paste('modIpop',j,sep='')]] <- act
+    if(include.mean==TRUE){
+      est.mu[[paste('modIpop',j,sep='')]] <- colMeans(xx.valid)
+    }else{
+      est.mu[[paste('modIpop',j,sep='')]] <- rep(0,p)
+    }
+    est.mu[[paste('modIpop',j,sep='')]] <- rep(0,p)
+    if (length(active[[paste('modIpop',j,sep='')]])==df.param){
+      w <- var(xx.valid)
+      if(!diag.invcov){
+        w <-w*sqrt(tcrossprod(diag(solve(w))))
+      }
+      est.sig[[paste('modIpop',j,sep='')]] <- w
+      est.wi[[paste('modIpop',j,sep='')]] <- solve(w)
+    }
+    if (length(active[[paste('modIpop',j,sep='')]])!=df.param){
+      fit.mle <- glasso(var(xx.valid),rho=10^{-10},zero=which(fit.screen$wi==0,arr.in=TRUE))
+      w <- fit.mle$w
+      if(!diag.invcov){
+        w <-w*sqrt(tcrossprod(diag(solve(fit.mle$w))))
+      }
+      est.sig[[paste('modIpop',j,sep='')]] <- w
+      est.wi[[paste('modIpop',j,sep='')]] <- fit.mle$wi
+    }
+  }
+
+  ###############
+  ##Some Checks##
+  ###############
+  l.act <- lapply(active,length)
+  n1.valid <- nrow(x1[-split1,])
+  n2.valid <- nrow(x2[-split2,])
+  if (any(l.act==0)){ cat('warning:at least one active-set is empty','\n')}
+  if (all(l.act>= c(n1.valid+n2.valid,n1.valid,n2.valid))){cat('warning:dim(model) > n-1','\n')}
+
+  ###########
+  ##Pvalues##
+  ###########
+  res.pval <- diffnet_pval(x1=x1[-split1,,drop=FALSE],x2=x2[-split2,,drop=FALSE],x=rbind(x1[-split1,,drop=FALSE],x2[-split2,,drop=FALSE]),
+                           sig1=est.sig[['modIpop1']],sig2=est.sig[['modIpop2']],sig=est.sig[['modJ']],
+                           mu1=est.mu[['modIpop1']],mu2=est.mu[['modIpop2']],mu=est.mu[['modJ']],
+                           active[['modIpop1']],active[['modIpop2']],active[['modJ']],
+                           compute.evals,include.mean,acc)
+  
+
+  return(list(pval.onesided=res.pval$pval.onesided,pval.twosided=res.pval$pval.twosided,
+              teststat=res.pval$teststat,weights.nulldistr=res.pval$weights.nulldistr,
+              active=active,sig=est.sig,wi=est.wi))
+}
+
+
+diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='cv.glasso',include.mean=FALSE,
+                              gamma.min=0.05,compute.evals='est2.my.ev2',diag.invcov=TRUE,acc=1e-04,...){
 
   ##Multisplit Pvalues
   ##
@@ -459,236 +598,34 @@ twosample_diffnet2 <- function(x1,x2,b.splits=50,frac.split=1/2,screen.lambda='l
   n1 <- nrow(x1)
   n2 <- nrow(x2)
   p <- ncol(x1)
-  pval.onesided <- pval.twosided <- rep(NA,length=b.splits)
-
-  if(screen.lambda=='lambda.cv'){screen.meth <- 'cv.glasso'}
-  if(screen.lambda=='lambda.cv.1se'){screen.meth <- 'cv.glasso.1se'}
-  if(screen.lambda=='lambda.uni.parcor'){screen.meth <- 'glasso.parcor.launi'}
-  if(screen.lambda=='lambda.uni.invcov'){screen.meth <- 'glasso.launi'}
 
   if(diag.invcov){df.param <- p*(p+1)/2}
   if(!diag.invcov){df.param <- p*(p-1)/2}
-  
-  for (i in 1:b.splits){
 
-    cat('split:',i,'\n')
-    
-    split1 <- sample(1:n1,round(n1*frac.split),replace=FALSE)
-    split2 <- sample(1:n2,round(n2*frac.split),replace=FALSE)
 
-    est.mu <- est.sig <- est.wi <- active <- list()#save est.beta & active variables
-
-    ##model joint:
-    xx.train <- rbind(x1[split1,],x2[split2,])
-    xx.valid <- rbind(x1[-split1,],x2[-split2,])
-    fit.screen <- eval(as.name(screen.meth))(xx.train,...)
-    act <- which(fit.screen$wi[upper.tri(diag(1,p),diag=TRUE)]!=0)
-    if(!diag.invcov){
-      ind.diag <- which(diag(1,p)[upper.tri(diag(1,p),diag=TRUE)]!=0)
-      act <- setdiff(act,ind.diag)
-    }
-    active[['modJ']] <- act
-    est.mu[['modJ']] <- rep(0,p)
-    if (length(active[['modJ']])==df.param){
-      w <- var(xx.valid)
-      if(!diag.invcov){
-        w <-w*sqrt(tcrossprod(diag(solve(w))))
-      }
-      est.sig[['modJ']] <- w
-      est.wi[['modJ']] <- solve(w)
-    }
-    if (length(active[['modJ']])!=df.param){
-      fit.mle <- glasso(var(xx.valid),rho=10^{-10},zero=which(fit.screen$wi==0,arr.in=TRUE))
-      w <- fit.mle$w
-      if(!diag.invcov){
-        w <-w*sqrt(tcrossprod(diag(solve(fit.mle$w))))
-      }
-      est.sig[['modJ']] <- w
-      est.wi[['modJ']] <- fit.mle$wi
-    }
-    
-    ##model individual:
-    for (j in c('1','2')){
-      split.train <- eval(as.name(paste('split',j,sep='')))
-      xx.train <- eval(as.name(paste('x',j,sep='')))[split.train,]
-      xx.valid <- eval(as.name(paste('x',j,sep='')))[-split.train,]
-      fit.screen <- eval(as.name(screen.meth))(xx.train,...)
-      act <- which(fit.screen$wi[upper.tri(diag(1,p),diag=TRUE)]!=0)
-      if(!diag.invcov){
-        ind.diag <- which(diag(1,p)[upper.tri(diag(1,p),diag=TRUE)]!=0)
-        act <- setdiff(act,ind.diag)
-      }
-      active[[paste('modIpop',j,sep='')]] <- act
-      est.mu[[paste('modIpop',j,sep='')]] <- rep(0,p)
-      if (length(active[[paste('modIpop',j,sep='')]])==df.param){
-        w <- var(xx.valid)
-        if(!diag.invcov){
-          w <-w*sqrt(tcrossprod(diag(solve(w))))
-        }
-        est.sig[[paste('modIpop',j,sep='')]] <- w
-        est.wi[[paste('modIpop',j,sep='')]] <- solve(w)
-      }
-      if (length(active[[paste('modIpop',j,sep='')]])!=df.param){
-        fit.mle <- glasso(var(xx.valid),rho=10^{-10},zero=which(fit.screen$wi==0,arr.in=TRUE))
-        w <- fit.mle$w
-        if(!diag.invcov){
-          w <-w*sqrt(tcrossprod(diag(solve(fit.mle$w))))
-        }
-        est.sig[[paste('modIpop',j,sep='')]] <- w
-        est.wi[[paste('modIpop',j,sep='')]] <- fit.mle$wi
-      }
-    }
-    l.act <- lapply(active,length)
-    n1.valid <- nrow(x1[-split1,])
-    n2.valid <- nrow(x2[-split2,])
-    if (any(l.act==0)){ warning('at least one active-set is empty')}
-    if (all(l.act>= c(n1.valid+n2.valid,n1.valid,n2.valid))){warning('dim(model) > n-1')}
-
-    teststat <- logratio(x1=x1[-split1,,drop=FALSE],
-                         x2=x2[-split2,,drop=FALSE],
-                         x=rbind(x1[-split1,,drop=FALSE],x2[-split2,,drop=FALSE]),
-                         sig1=est.sig[['modIpop1']],sig2=est.sig[['modIpop2']],sig=est.sig[['modJ']],
-                         mu1=est.mu[['modIpop1']],mu2=est.mu[['modIpop2']],mu=est.mu[['modJ']])
-    
-    ev.nulldistr <- eval(as.name(compute.evals))(est.sig[['modIpop1']],est.sig[['modIpop2']],est.sig[['modJ']],
-                                                 active[['modIpop1']],active[['modIpop2']],active[['modJ']])$eval
-    
-    if (any(is.na(ev.nulldistr))){
-      warning('Eigenval is NA: pval=NA')
-    }else{
-      pval_onesided <- davies(teststat$twiceLR,lambda=ev.nulldistr,acc=acc)$Qq;cat('ifault(davies):',davies(teststat$twiceLR,lambda=ev.nulldistr,acc=acc)$ifault,'\n')
-      pval.onesided[i] <- pval_onesided
-      pval.twosided[i] <- 2*min(pval_onesided,1-pval_onesided)
-    }
-  }
-  sspval.onesided<-pval.onesided[1]
-  sspval.twosided<-pval.twosided[1]
+  res.multisplit <- lapply(seq(b.splits),
+                          function(i){
+                            split1 <- sample(1:n1,round(n1*frac.split),replace=FALSE)
+                            split2 <- sample(1:n2,round(n2*frac.split),replace=FALSE)
+                            res.singlesplit <- diffnet_singlesplit(x1,x2,split1,split2,screen.meth,
+                                                                   compute.evals,include.mean,diag.invcov,acc,...)
+                            
+                          })
+  pval.onesided <- sapply(res.multisplit,function(x){x[['pval.onesided']]},simplify='array')
+  pval.twosided <- sapply(res.multisplit,function(x){x[['pval.twosided']]},simplify='array')
+  teststat <- sapply(res.multisplit,function(x){x[['teststat']]},simplify='array')
+  weights.nulldistr <- sapply(res.multisplit,function(x){x[['weights.nulldistr']]},simplify='array')
   aggpval.onesided <- min(1,(1-log(gamma.min))*optimize(f=agg.pval,interval=c(gamma.min,1),maximum=FALSE,pval=pval.onesided[!is.na(pval.onesided)])$objective)
   aggpval.twosided <- min(1,(1-log(gamma.min))*optimize(f=agg.pval,interval=c(gamma.min,1),maximum=FALSE,pval=pval.twosided[!is.na(pval.twosided)])$objective)
     
-  return(list(pval.onesided=pval.onesided,pval.twosided=pval.twosided,sspval.onesided=sspval.onesided,
-              sspval.twosided=sspval.twosided,
+  return(list(pval.onesided=pval.onesided,pval.twosided=pval.twosided,
+              sspval.onesided=pval.onesided[1],sspval.twosided=pval.twosided[1],
               aggpval.onesided=aggpval.onesided,aggpval.twosided=aggpval.twosided,
-              LR.last=teststat$twiceLR,active.last=active,sig.last=est.sig,wi.last=est.wi,ev.last=ev.nulldistr))
+              teststat=teststat,weights.nulldistr=weights.nulldistr,
+              active.last=res.multisplit[[b.splits]]$active,sig.last=res.multisplit[[b.splits]]$sig,wi.last=res.multisplit[[b.splits]]$wi))
 }
 
 
-twosample_single_diffnet <- function(x1,x2,n.screen.pop1=150,n.screen.pop2=150,screen.lambda='lambda.cv',
-                                     compute.evals='est2.my.ev2',diag.invcov=TRUE,acc=1e-04,...){
-
-  ##Single-Split Pvalues
-  ##
-  ##Input:
-  ##
-  ## -Data:x1,x2 [scaled data (var=1,mean=0), in particular mu1=mu2=mu=0]
-  ## -n.screen.pop1, n.screen.pop2: no samples for screening
-  ## -screen.lambda={lambda.cv,lambda.cv.1se,lambda.uni.parcor,lambda.uni.invcov}
-  ## -compute.evals: 'est2.my.ev2'/'est2.ww.mat2 '
-  ## -diag.invcov: TRUE (parameter of interest is invcov; diag(invcov) also considered) / FALSE (param of interest is par.cor; no diagonal)
-  ## -...: additional arguments for cv.glasso(x,...) or glasso.parcor.launi(x,...)
-
-  n1 <- nrow(x1)
-  n2 <- nrow(x2)
-  p <- ncol(x1)
-
-  if(screen.lambda=='lambda.cv'){screen.meth <- 'cv.glasso'}
-  if(screen.lambda=='lambda.cv.1se'){screen.meth <- 'cv.glasso.1se'}
-  if(screen.lambda=='lambda.uni.parcor'){screen.meth <- 'glasso.parcor.launi'}
-  if(screen.lambda=='lambda.uni.invcov'){screen.meth <- 'glasso.launi'}
-
-  if(diag.invcov){df.param <- p*(p+1)/2}
-  if(!diag.invcov){df.param <- p*(p-1)/2}
-
-  ##split data
-  split1 <- sample(1:n1,n.screen.pop1,replace=FALSE)
-  split2 <- sample(1:n2,n.screen.pop2,replace=FALSE)
-  est.mu <- est.sig <- est.wi <- active <- list()#save est.beta & active variables
-
-  ##model joint:
-  xx.train <- rbind(x1[split1,],x2[split2,])
-  xx.valid <- rbind(x1[-split1,],x2[-split2,])
-  fit.screen <- eval(as.name(screen.meth))(xx.train,...)
-  act <- which(fit.screen$wi[upper.tri(diag(1,p),diag=TRUE)]!=0)
-  if(!diag.invcov){
-    ind.diag <- which(diag(1,p)[upper.tri(diag(1,p),diag=TRUE)]!=0)
-    act <- setdiff(act,ind.diag)
-  }
-  active[['modJ']] <- act
-  est.mu[['modJ']] <- rep(0,p)
-  if (length(active[['modJ']])==df.param){
-    w <- var(xx.valid)
-    if(!diag.invcov){
-      w <-w*sqrt(tcrossprod(diag(solve(w))))
-    }
-    est.sig[['modJ']] <- w
-    est.wi[['modJ']] <- solve(w)
-  }
-  if (length(active[['modJ']])!=df.param){
-    fit.mle <- glasso(var(xx.valid),rho=10^{-10},zero=which(fit.screen$wi==0,arr.in=TRUE))
-    w <- fit.mle$w
-    if(!diag.invcov){
-      w <-w*sqrt(tcrossprod(diag(solve(fit.mle$w))))
-    }
-    est.sig[['modJ']] <- w
-    est.wi[['modJ']] <- fit.mle$wi
-  }
-    
-  ##model individual:
-  for (j in c('1','2')){
-    split.train <- eval(as.name(paste('split',j,sep='')))
-    xx.train <- eval(as.name(paste('x',j,sep='')))[split.train,]
-    xx.valid <- eval(as.name(paste('x',j,sep='')))[-split.train,]
-    fit.screen <- eval(as.name(screen.meth))(xx.train,...)
-    act <- which(fit.screen$wi[upper.tri(diag(1,p),diag=TRUE)]!=0)
-    if(!diag.invcov){
-      ind.diag <- which(diag(1,p)[upper.tri(diag(1,p),diag=TRUE)]!=0)
-      act <- setdiff(act,ind.diag)
-    }
-    active[[paste('modIpop',j,sep='')]] <- act
-    est.mu[[paste('modIpop',j,sep='')]] <- rep(0,p)
-    if (length(active[[paste('modIpop',j,sep='')]])==df.param){
-      w <- var(xx.valid)
-      if(!diag.invcov){
-        w <-w*sqrt(tcrossprod(diag(solve(w))))
-      }
-      est.sig[[paste('modIpop',j,sep='')]] <- w
-      est.wi[[paste('modIpop',j,sep='')]] <- solve(w)
-    }
-    if (length(active[[paste('modIpop',j,sep='')]])!=df.param){
-      fit.mle <- glasso(var(xx.valid),rho=10^{-10},zero=which(fit.screen$wi==0,arr.in=TRUE))
-      w <- fit.mle$w
-      if(!diag.invcov){
-        w <-w*sqrt(tcrossprod(diag(solve(fit.mle$w))))
-      }
-      est.sig[[paste('modIpop',j,sep='')]] <- w
-      est.wi[[paste('modIpop',j,sep='')]] <- fit.mle$wi
-    }
-  }
-  l.act <- lapply(active,length)
-  n1.valid <- nrow(x1[-split1,])
-  n2.valid <- nrow(x2[-split2,])
-  if (any(l.act==0)){ warning('at least one active-set is empty')}
-  if (all(l.act>= c(n1.valid+n2.valid,n1.valid,n2.valid))){warning('dim(model) > n-1')}
-
-  teststat <- logratio(x1=x1[-split1,,drop=FALSE],
-                       x2=x2[-split2,,drop=FALSE],
-                       x=rbind(x1[-split1,,drop=FALSE],x2[-split2,,drop=FALSE]),
-                       sig1=est.sig[['modIpop1']],sig2=est.sig[['modIpop2']],sig=est.sig[['modJ']],
-                       mu1=est.mu[['modIpop1']],mu2=est.mu[['modIpop2']],mu=est.mu[['modJ']])
-  
-  ev.nulldistr <- eval(as.name(compute.evals))(est.sig[['modIpop1']],est.sig[['modIpop2']],est.sig[['modJ']],
-                                               active[['modIpop1']],active[['modIpop2']],active[['modJ']])$eval
-  if (any(is.na(ev.nulldistr))){
-    warning('Eigenval is NA: pval=NA')
-  }else{
-    sspval.onesided <- davies(teststat$twiceLR,lambda=ev.nulldistr,acc=acc)$Qq;cat('ifault(davies):',davies(teststat$twiceLR,lambda=ev.nulldistr,acc=acc)$ifault,'\n')
-    sspval.twosided <- 2*min(sspval.onesided,1-sspval.onesided)
-  }
-
-  return(list(sspval.onesided=sspval.onesided,
-              sspval.twosided=sspval.twosided,
-              LR=teststat$twiceLR,active=active,sig=est.sig,wi=est.wi,ev=ev.nulldistr))
-}
 
 
 ## glasso.parcor.launi <- function(x,maxiter=1000,term=10^{-3}){
