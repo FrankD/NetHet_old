@@ -1,4 +1,4 @@
-###TwoSampleTest for Gaussian Graphical Model
+###High-Dimensional Two-Sample Testing for Gaussian Graphical Model
 ###Date: 27/11/2012
 ###
 ###Changes: - align with twosample_highdimregr-07062012.r
@@ -170,7 +170,7 @@ logratio <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu){
 ##' Compute Information Matrix of Gaussian Graphical Model
 ##'
 ##' computes E_0[s(Y;Omega)s(Y;Omega)'] where s(Y;Omega)=(d/dOmega) LogLik
-##' @title 
+##' @title Information Matrix of Gaussian Graphical Model
 ##' @param Sig Sig=solve(SigInv) true covariance matrix under H0
 ##' @param include.mean 
 ##' @return 
@@ -212,7 +212,7 @@ inf.mat<-function(Sig,include.mean=FALSE){
 ##' Calculates weight-matrix and eigenvalues
 ##'
 ##' calculation based on true information matrix
-##' @title 
+##' @title Weight-matrix and eigenvalues
 ##' @param imat 
 ##' @param act I_uv
 ##' @param act1 I_u
@@ -326,10 +326,78 @@ q.matrix3 <- function(sig,sig.a,sig.b,act.a,act.b,ss){
   }
 }
 
-##' Compute weights of w-chi2 (2nd order simplification)
+##' Compute weights of sum-w-chi2 (1st order simplification)
 ##'
 ##' .. content for \details{} ..
-##' @title Compute weights of w-chi2
+##' @title Weights of sum-w-chi2
+##' @param sig1 
+##' @param sig2 
+##' @param sig 
+##' @param act1 
+##' @param act2 
+##' @param act 
+##' @param include.mean 
+##' @return 
+##' @author n.stadler
+est2.ww.mat2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
+
+  k <- nrow(sig1)
+  
+  #######################
+  ##dimension of models##
+  #######################
+  dimf1 <- length(act1)
+  dimf2 <- length(act2)
+  dimf <- dimf1+dimf2
+  dimg <- length(act)
+  if(include.mean==TRUE){
+    dimf <- dimf+2*k
+    dimg <- dimg+k
+  }
+
+  ###############
+  ##Beta-matrix##
+  ###############
+  b1.act<- beta.mat(act,act,sig,sig,sig1)
+  b2.act<- beta.mat(act,act,sig,sig,sig2)
+  b1.act1<- beta.mat(act1,act1,sig1,sig1,sig1)
+  b2.act2<- beta.mat(act2,act2,sig2,sig2,sig2)
+  b1.act1.act<- beta.mat(act1,act,sig1,sig,sig1)
+  b2.act2.act<- beta.mat(act2,act,sig2,sig,sig2)
+  
+  #if (any(c(dimf1,dimf2,dimg)>min(nrow(xx1),nrow(xx2)))){
+  #  warning('|active-set| > n')
+  #  return(list(eval=NA))
+  #}else{
+  bfg <- rbind(b1.act1.act,b2.act2.act)
+  bgf <- t(bfg)
+  bf <- matrix(0,dimf1+dimf2,dimf1+dimf2)
+  bf[1:dimf1,1:dimf1] <- b1.act1
+  bf[dimf1+(1:dimf2),dimf1+(1:dimf2)] <- b2.act2
+  bg <- b1.act+b2.act
+  if (dimf>=dimg){
+    mat <- bgf%*%solve(bf)%*%bfg%*%solve(bg)
+    eval<-rep(1,dimf-dimg)
+  }
+  if (dimf<dimg){
+    mat <- bfg%*%solve(bg)%*%bgf%*%solve(bf)
+    eval<-rep(-1,dimg-dimf)
+  }
+  eval.mu.complex<-eigen(mat)$values
+  onemineval.mu <- 1-as.real(eval.mu.complex)
+  onemineval.mu[abs(onemineval.mu)<10^{-6}]<-0
+  eval <- c(eval,sqrt(onemineval.mu),-sqrt(onemineval.mu))
+  if(include.mean==TRUE){
+    eval <- c(rep(0,2*k),eval)
+  }
+  return(list(ww.mat=mat,eval=eval,eval.mu.complex=eval.mu.complex))
+}
+
+
+##' Compute weights of sum-w-chi2 (2nd order simplification)
+##'
+##' .. content for \details{} ..
+##' @title Weights of sum-w-chi2
 ##' @param sig1 
 ##' @param sig2 
 ##' @param sig 
@@ -341,7 +409,7 @@ q.matrix3 <- function(sig,sig.a,sig.b,act.a,act.b,ss){
 ##' @author n.stadler
 est2.my.ev2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
 
-  p <- nrow(sig1)
+  k <- nrow(sig1)
 
   #######################
   ##dimension of models##
@@ -351,8 +419,8 @@ est2.my.ev2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
   dimf <- dimf1+dimf2
   dimg <- length(act)
   if(include.mean==TRUE){
-    dimf <- dimf+2*p
-    dimg <- dimg+p
+    dimf <- dimf+2*k
+    dimg <- dimg+k
   }
   ##########################
   ##intersection of models##
@@ -419,7 +487,7 @@ est2.my.ev2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
   }## end if (dimf<dimg){
   
   if(include.mean==TRUE){
-    eval <- c(rep(0,2*p),eval)
+    eval <- c(rep(0,2*k),eval)
   }
   return(list(eval=eval,ev.aux.complex=ev.aux.complex))
 }
@@ -436,11 +504,37 @@ agg.pval <- function(gamma,pval){
     min(quantile(pval/gamma,probs=gamma),1)
 }
 
+##' P-value calculation
+##'
+##' .. content for \details{} ..
+##' @title P-value calculation
+##' @param x1 
+##' @param x2 
+##' @param x 
+##' @param sig1 
+##' @param sig2 
+##' @param sig 
+##' @param mu1 
+##' @param mu2 
+##' @param mu 
+##' @param act1 
+##' @param act2 
+##' @param act 
+##' @param compute.evals 
+##' @param include.mean 
+##' @param acc 
+##' @return 
+##' @author n.stadler
 diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.evals,include.mean,acc){
-  ##compute test-statistic
+  ##########################
+  ##compute test-statistic##
+  ##########################
   teststat <- logratio(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu)$twiceLR
-  ##weights of sum-w-chi2
+  #################################
+  ##compute weights of sum-w-chi2##
+  #################################
   weights.nulldistr <- eval(as.name(compute.evals))(sig1,sig2,sig,act1,act2,act,include.mean)$eval
+  weights.nulldistr <- weights.nulldistr[weights.nulldistr!=0]
   if (any(is.na(weights.nulldistr))){
     cat('warning: weight with value NA; pval=NA','\n')
   }else{
@@ -450,48 +544,51 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
   return(list(pval.onesided=pval.onesided,pval.twosided=pval.twosided,weights.nulldistr=weights.nulldistr,teststat=teststat))
 }
 
-diffnet_singlesplit<- function(x1,x2,pop1.screen,pop2.screen,screen.meth='cv.glasso',
+##' Differential network for given split
+##'
+##' if include.mean=FALSE then x1 and x2 have to be scaled to var=1 & mean=0
+##' @title DiffNet for given split
+##' @param x1 
+##' @param x2 
+##' @param split1 
+##' @param split2 
+##' @param screen.meth 
+##' @param compute.evals 
+##' @param include.mean 
+##' @param diag.invcov 
+##' @param acc 
+##' @param ... 
+##' @return 
+##' @author n.stadler
+diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='cv.glasso',
                                compute.evals='est2.my.ev2',include.mean=TRUE,
                                diag.invcov=TRUE,acc=1e-04,...){
-
-  ##Single-Split Pvalues
-  ##
-  ##Input:
-  ##
-  ## -Data:x1,x2 [scaled data (var=1,mean=0), in particular mu1=mu2=mu=0]
-  ## -n.screen.pop1, n.screen.pop2: no samples for screening
-  ## -screen.lambda={lambda.cv,lambda.cv.1se,lambda.uni.parcor,lambda.uni.invcov}
-  ## -compute.evals: 'est2.my.ev2'/'est2.ww.mat2 '
-  ## -diag.invcov: TRUE (parameter of interest is invcov; diag(invcov) also considered) / FALSE (param of interest is par.cor; no diagonal)
-  ## -...: additional arguments for cv.glasso(x,...) or glasso.parcor.launi(x,...)
   
   n1 <- nrow(x1)
   n2 <- nrow(x2)
-  p <- ncol(x1)
+  k <- ncol(x1)
 
-  if(diag.invcov){df.param <- p*(p+1)/2}
-  if(!diag.invcov){df.param <- p*(p-1)/2}
+  if(diag.invcov){df.param <- k*(k+1)/2}
+  if(!diag.invcov){df.param <- k*(k-1)/2}
 
-  est.mu <- est.sig <- est.wi <- active <- list()#save est.mu;est.sig & active variables
+  est.mu <- est.sig <- est.wi <- active <- list()#save est.mu;est.sig;est.wi;active
   
-  split1 <- pop1.screen
-  split2 <- pop2.screen
   ###############
   ##Joint Model##
   ###############
   xx.train <- rbind(x1[split1,],x2[split2,])
   xx.valid <- rbind(x1[-split1,],x2[-split2,])
   fit.screen <- eval(as.name(screen.meth))(xx.train,include.mean=include.mean,...)
-  act <- which(fit.screen$wi[upper.tri(diag(1,p),diag=TRUE)]!=0)
+  act <- which(fit.screen$wi[upper.tri(diag(1,k),diag=TRUE)]!=0)
   if(!diag.invcov){
-    ind.diag <- which(diag(1,p)[upper.tri(diag(1,p),diag=TRUE)]!=0)
+    ind.diag <- which(diag(1,k)[upper.tri(diag(1,k),diag=TRUE)]!=0)
     act <- setdiff(act,ind.diag)
   }
   active[['modJ']] <- act
   if(include.mean==TRUE){
     est.mu[['modJ']] <- colMeans(xx.valid)
   }else{
-    est.mu[['modJ']] <- rep(0,p)
+    est.mu[['modJ']] <- rep(0,k)
   }
   if (length(active[['modJ']])==df.param){
     w <- var(xx.valid)
@@ -518,18 +615,18 @@ diffnet_singlesplit<- function(x1,x2,pop1.screen,pop2.screen,screen.meth='cv.gla
     xx.train <- eval(as.name(paste('x',j,sep='')))[split.train,]
     xx.valid <- eval(as.name(paste('x',j,sep='')))[-split.train,]
     fit.screen <- eval(as.name(screen.meth))(xx.train,include.mean=include.mean,...)
-    act <- which(fit.screen$wi[upper.tri(diag(1,p),diag=TRUE)]!=0)
+    act <- which(fit.screen$wi[upper.tri(diag(1,k),diag=TRUE)]!=0)
     if(!diag.invcov){
-      ind.diag <- which(diag(1,p)[upper.tri(diag(1,p),diag=TRUE)]!=0)
+      ind.diag <- which(diag(1,k)[upper.tri(diag(1,k),diag=TRUE)]!=0)
       act <- setdiff(act,ind.diag)
     }
     active[[paste('modIpop',j,sep='')]] <- act
     if(include.mean==TRUE){
       est.mu[[paste('modIpop',j,sep='')]] <- colMeans(xx.valid)
     }else{
-      est.mu[[paste('modIpop',j,sep='')]] <- rep(0,p)
+      est.mu[[paste('modIpop',j,sep='')]] <- rep(0,k)
     }
-    est.mu[[paste('modIpop',j,sep='')]] <- rep(0,p)
+    est.mu[[paste('modIpop',j,sep='')]] <- rep(0,k)
     if (length(active[[paste('modIpop',j,sep='')]])==df.param){
       w <- var(xx.valid)
       if(!diag.invcov){
@@ -559,7 +656,7 @@ diffnet_singlesplit<- function(x1,x2,pop1.screen,pop2.screen,screen.meth='cv.gla
   if (all(l.act>= c(n1.valid+n2.valid,n1.valid,n2.valid))){cat('warning:dim(model) > n-1','\n')}
 
   ###########
-  ##Pvalues##
+  ##Pvalue ##
   ###########
   res.pval <- diffnet_pval(x1=x1[-split1,,drop=FALSE],x2=x2[-split2,,drop=FALSE],x=rbind(x1[-split1,,drop=FALSE],x2[-split2,,drop=FALSE]),
                            sig1=est.sig[['modIpop1']],sig2=est.sig[['modIpop2']],sig=est.sig[['modJ']],
@@ -573,36 +670,33 @@ diffnet_singlesplit<- function(x1,x2,pop1.screen,pop2.screen,screen.meth='cv.gla
               active=active,sig=est.sig,wi=est.wi))
 }
 
-
+##' Differential Network (mulitsplit)
+##'
+##' if include.mean=FALSE then x1 and x2 have to be scaled to var=1 & mean=0
+##' @title DiffNet
+##' @param x1 if include.mean=FALSE: scale data (var=1,mean=0) !
+##' @param x2 if include.mean=FALSE: scale data (var=1,mean=0) !
+##' @param b.splits number of splits
+##' @param frac.split  fraction train-data (screening) / test-data (cleaning)
+##' @param screen.meth 
+##' @param include.mean 
+##' @param gamma.min see p-value aggregation (Meinshausen&Meier&Buehlmann)
+##' @param compute.evals 'est2.my.ev2'/'est2.ww.mat2 '
+##' @param diag.invcov  TRUE (parameter of interest is invcov; diag(invcov) also considered) / FALSE (param of interest is par.cor; no diagonal)
+##' @param acc 
+##' @param ... additional arguments for screen.meth
+##' @return 
+##' @author n.stadler
 diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='cv.glasso',include.mean=FALSE,
                               gamma.min=0.05,compute.evals='est2.my.ev2',diag.invcov=TRUE,acc=1e-04,...){
-
-  ##Multisplit Pvalues
-  ##
-  ##Input:
-  ##
-  ## -Data:x1,x2 [scaled data (var=1,mean=0), in particular mu1=mu2=mu=0]
-  ## -b.splits: number of splits
-  ## -frac.split: fraction train-data (for model selection) / test-data (for pval calculations)
-  ## -screen.lambda={lambda.cv,lambda.cv.1se,lambda.uni.parcor,lambda.uni.invcov}
-  ## -gamma.min: see Meinshausen&Meier&Buehlmann
-  ## -compute.evals: 'est2.my.ev2'/'est2.ww.mat2 '
-  ## -diag.invcov: TRUE (parameter of interest is invcov; diag(invcov) also considered) / FALSE (param of interest is par.cor; no diagonal)
-  ## -...: additional arguments for cv.glasso(x,...) or glasso.parcor.launi(x,...)
 
   ##????Important Notes: Pval can be NA, because...
   ##????
   ##????                 1) Eval=sqrt(neg. value)=NA
   ##????                 2) W cannot be estimated (|active-set| > n, problems matrix inversion) 
-
   n1 <- nrow(x1)
   n2 <- nrow(x2)
-  p <- ncol(x1)
-
-  if(diag.invcov){df.param <- p*(p+1)/2}
-  if(!diag.invcov){df.param <- p*(p-1)/2}
-
-
+  
   res.multisplit <- lapply(seq(b.splits),
                           function(i){
                             split1 <- sample(1:n1,round(n1*frac.split),replace=FALSE)

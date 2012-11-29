@@ -107,6 +107,7 @@ e3 <- est2.my.ev2(Sig,Sig,Sig,act1,act2,act,include.mean=TRUE);round(sort(e3$eva
 ## [120]  1.000000  1.000000  1.000000  1.000000  1.000000  1.000000  1.000000
 ## [127]  1.000000
 
+e4 <- est2.ww.mat2(Sig,Sig,Sig,act1,act2,act,include.mean=TRUE);round(sort(e4$eval),6)
 
 ##Test Pval-Aggregation (old function)
 set.seed(1)
