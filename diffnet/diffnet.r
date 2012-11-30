@@ -626,7 +626,6 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='cv.glasso',
     }else{
       est.mu[[paste('modIpop',j,sep='')]] <- rep(0,k)
     }
-    est.mu[[paste('modIpop',j,sep='')]] <- rep(0,k)
     if (length(active[[paste('modIpop',j,sep='')]])==df.param){
       w <- var(xx.valid)
       if(!diag.invcov){
@@ -667,7 +666,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='cv.glasso',
 
   return(list(pval.onesided=res.pval$pval.onesided,pval.twosided=res.pval$pval.twosided,
               teststat=res.pval$teststat,weights.nulldistr=res.pval$weights.nulldistr,
-              active=active,sig=est.sig,wi=est.wi))
+              active=active,sig=est.sig,wi=est.wi,mu=est.mu))
 }
 
 ##' Differential Network (mulitsplit)
