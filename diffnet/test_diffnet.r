@@ -128,8 +128,8 @@ fit.pval2$teststat#26.07755 26.07807 21.08478 50.16631 38.96125
 set.seed(1)
 source('diffnet.r')
 fit.pval3 <- diffnet_multisplit(xx1,xx2,b.splits=5,include.mean=TRUE,lambda=la)
-fit.pval3$pval.onesided# 0.9999916 0.9996231 0.9999693 0.9960757 0.9845568
-fit.pval3$teststat#2.030517 15.938588  7.216169 28.174944 22.661378
+fit.pval3$pval.onesided# 0.9466259 0.9137041 0.9624722 0.3386900 0.2152311
+fit.pval3$teststat# 26.10484 32.43598 27.25644 58.04601 52.16929
 
 
 ## fit.pval$LR.last#377.3058
