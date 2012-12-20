@@ -17,6 +17,9 @@ library(mvtnorm)
 library(glasso)
 library(CompQuadForm)
 
+##load C-code
+dyn.load("/Users/n.stadler/nki/projects/TwoSample/code/betamat_diffnet.so")
+
 #############################
 ##-------Screening---------##
 #############################
@@ -111,7 +114,7 @@ cv.glasso <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se
 ##' @param include.mean 
 ##' @return 
 ##' @author n.stadler
-cv.glasso.1se <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se=TRUE)
+cv.glasso.1se <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se=TRUE,include.mean=TRUE)
 {
   colnames(x)<-paste('x',1:ncol(x),sep='')  
   all.folds <- cv.fold(nrow(x),folds)
@@ -119,7 +122,12 @@ cv.glasso.1se <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALS
 
   for (cvfold in 1:folds){
     omit <- all.folds[[cvfold]]
-    s <- var(x[-omit,])###!!!!!!!!!!!!!
+    s <- var(x[-omit,])
+    if (include.mean==TRUE){
+      mu <- colMeans(x[-omit,,drop=FALSE])
+    }else{
+      mu <- rep(0,ncol(x))
+    }
     fit.path <- glassopath(s,rholist=2*lambda/nrow(x),penalize.diagonal=penalize.diagonal,trace=0)
     if(length(omit)==1){
       residmat[cvfold,] <- -2*apply(fit.path$w,3,dmvnorm,log=TRUE,mean=rep(0,ncol(x)),x=x[omit,,drop=FALSE])
@@ -141,6 +149,26 @@ cv.glasso.1se <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALS
     plotCV(lambda,cv,cv.error,se=se)
   }
   invisible(object)
+}
+
+glasso.parcor.launi <- function(x,maxiter=1000,term=10^{-3},include.mean=NULL,lambda=NULL){
+  p <- ncol(x)
+  s <- var(x)
+  rho.uni <- sqrt(2*log(ncol(x))/nrow(x))
+
+  ww <- rep(1,p)#sqrt(diag(s))
+  iter <- 0
+  err <- Inf #convergence of parameters
+  param <- as.vector(diag(ww))
+  while((err>term)&(iter<maxiter)){
+    gl <- glasso(s,rho=rho.uni*ww,penalize.diagonal=FALSE)
+    ww <- 1/(diag(gl$wi))
+    param.old <- param
+    param <- as.vector(gl$w)
+    err <- max(abs(param-param.old)/(1+abs(param)))
+    iter <- iter+1
+  }
+  list(w=gl$w,wi=gl$wi,mu=colMeans(x),iter=iter)
 }
 
 
@@ -282,23 +310,34 @@ ww.mat2 <- function(imat,act,act1,act2){
 ##' @return 
 ##' @author n.stadler
 beta.mat<-function(ind1,ind2,sig1,sig2,sig){
-  k <- ncol(sig)
-  p <- k*(k+1)/2
   uptri.rownr <- row(sig)[upper.tri(sig,diag=TRUE)]
   uptri.colnr <- col(sig)[upper.tri(sig,diag=TRUE)]
-
-  bmat <- matrix(NA,p,p)
-  for (i in ind1){
-    colnr.i <- uptri.colnr[i]
-    rownr.i <- uptri.rownr[i]
-    for (j in ind2){
-      colnr.j <- uptri.colnr[j]
-      rownr.j <- uptri.rownr[j]
-      bmat[i,j] <- sig[colnr.i,rownr.i]*sig[colnr.j,rownr.j]-sig1[colnr.i,rownr.i]*sig[colnr.j,rownr.j]-sig[colnr.i,rownr.i]*sig2[colnr.j,rownr.j]+sig1[colnr.i,rownr.i]*sig2[colnr.j,rownr.j]+sig[colnr.i,rownr.j]*sig[rownr.i,colnr.j]+sig[colnr.i,colnr.j]*sig[rownr.i,rownr.j]
-    }
-  }
-  return(bmat[ind1,ind2,drop=FALSE])
+  betamat <- .C('betamat_diffnet',betamat=matrix(0,length(ind1),length(ind2)),
+                ind1=as.integer(ind1-1),ind2=as.integer(ind2-1),##8!indexing
+                uptrirownr=uptri.rownr,uptricolnr=uptri.colnr,
+                lind1=length(ind1),lind2=length(ind2),
+                sig1=sig1,sig2=sig2,sig=sig,k=ncol(sig))$betamat
+  
+  return(betamat)
 }
+## beta.mat<-function(ind1,ind2,sig1,sig2,sig){
+##   k <- ncol(sig)
+##   p <- k*(k+1)/2
+##   uptri.rownr <- row(sig)[upper.tri(sig,diag=TRUE)]
+##   uptri.colnr <- col(sig)[upper.tri(sig,diag=TRUE)]
+
+##   bmat <- matrix(NA,p,p)
+##   for (i in ind1){
+##     colnr.i <- uptri.colnr[i]
+##     rownr.i <- uptri.rownr[i]
+##     for (j in ind2){
+##       colnr.j <- uptri.colnr[j]
+##       rownr.j <- uptri.rownr[j]
+##       bmat[i,j] <- sig[colnr.i,rownr.i]*sig[colnr.j,rownr.j]-sig1[colnr.i,rownr.i]*sig[colnr.j,rownr.j]-sig[colnr.i,rownr.i]*sig2[colnr.j,rownr.j]+sig1[colnr.i,rownr.i]*sig2[colnr.j,rownr.j]+sig[colnr.i,rownr.j]*sig[rownr.i,colnr.j]+sig[colnr.i,colnr.j]*sig[rownr.i,rownr.j]
+##     }
+##   }
+##   return(bmat[ind1,ind2,drop=FALSE])
+## }
 
 ##' Compute Q-matrix 
 ##'
