@@ -258,7 +258,7 @@ est2.my.ev2 <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
   
   ##intersection of models
   ss <- intersect(act,intersect(act1,act2))
-  if(length(ss)==0){cat('no intersection between models','\n')}
+  if(length(ss)==0){cat('warning! no intersection between models','\n')}
   aa <- setdiff(act1,ss)
   bb <- setdiff(act2,ss)
   cc <- setdiff(act,ss)
@@ -341,6 +341,7 @@ twosample_regr <- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,lambda.cv='lam
   pval.onesided <- pval.twosided <- rep(NA,length=b.splits)
 
   for (i in 1:b.splits){
+    cat('\n','split:',i,'\n')
     split1 <- sample(1:n1,round(n1*frac.split),replace=FALSE)
     split2 <- sample(1:n2,round(n2*frac.split),replace=FALSE)
 
@@ -378,7 +379,7 @@ twosample_regr <- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,lambda.cv='lam
     l.act <- lapply(active,length)
     n1.valid <- nrow(x1[-split1,])
     n2.valid <- nrow(x2[-split2,])
-    if (any(l.act==0)){ cat('at least one active-set is empty','\n')}
+    if (any(l.act==0)){ cat('warning! at least one active-set is empty','\n')}
     
     if (all(l.act<c(n1.valid+n2.valid,n1.valid,n2.valid))){
       
@@ -391,13 +392,13 @@ twosample_regr <- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,lambda.cv='lam
                                                    est.beta[['modIpop1']],est.beta[['modIpop2']],est.beta[['modJ']],
                                                    active[['modIpop1']],active[['modIpop2']],active[['modJ']])$eval
       if (any(is.na(ev.nulldistr))){
-        cat('Eigenval is NA: pval=NA','\n')
+        cat('warning! eigenval is NA: pval=NA','\n')
       }else{
         pval_onesided <- davies(teststat,lambda=ev.nulldistr)$Qq
         pval.onesided[i] <- pval_onesided
         pval.twosided[i] <- 2*min(pval_onesided,1-pval_onesided)
       }
-    }else{cat('dim(model) > n-1: pval=NA','\n')}
+    }else{cat('warning! dim(model) > n-1: pval=NA','\n')}
   }
   sspval.onesided<-pval.onesided[1]
   sspval.twosided<-pval.twosided[1]

@@ -18,7 +18,7 @@ library(glasso)
 library(CompQuadForm)
 
 ##load C-code
-dyn.load("/Users/n.stadler/nki/projects/TwoSample/code/betamat_diffnet.so")
+dyn.load("../code/betamat_diffnet.so")
 
 #############################
 ##-------Screening---------##
@@ -564,7 +564,7 @@ agg.pval <- function(gamma,pval){
 ##' @param acc 
 ##' @return 
 ##' @author n.stadler
-diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.evals,include.mean,acc){
+diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.evals,include.mean,acc,show.trace){
   ##########################
   ##compute test-statistic##
   ##########################
@@ -577,7 +577,7 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
   if (any(is.na(weights.nulldistr))){
     cat('warning: weight with value NA; pval=NA','\n')
   }else{
-    pval.onesided <- davies(teststat,lambda=weights.nulldistr,acc=acc)$Qq;cat('ifault(davies):',davies(teststat,lambda=weights.nulldistr,acc=acc)$ifault,'\n')
+    pval.onesided <- davies(teststat,lambda=weights.nulldistr,acc=acc)$Qq;if(show.trace){cat('ifault(davies):',davies(teststat,lambda=weights.nulldistr,acc=acc)$ifault,'\n')}
     pval.twosided <- 2*min(pval.onesided,1-pval.onesided)
   }
   return(list(pval.onesided=pval.onesided,pval.twosided=pval.twosided,weights.nulldistr=weights.nulldistr,teststat=teststat))
@@ -601,7 +601,7 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
 ##' @author n.stadler
 diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='cv.glasso',
                                compute.evals='est2.my.ev2',include.mean=TRUE,
-                               diag.invcov=TRUE,acc=1e-04,...){
+                               diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,...){
   
   n1 <- nrow(x1)
   n2 <- nrow(x2)
@@ -690,8 +690,8 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='cv.glasso',
   l.act <- lapply(active,length)
   n1.valid <- nrow(x1[-split1,])
   n2.valid <- nrow(x2[-split2,])
-  if (any(l.act==0)){ cat('warning:at least one active-set is empty','\n')}
-  if (all(l.act>= c(n1.valid+n2.valid,n1.valid,n2.valid))){cat('warning:dim(model) > n-1','\n')}
+  if (any(l.act==0)){ if(show.trace){cat('warning:at least one active-set is empty','\n')}}
+  if (all(l.act>= c(n1.valid+n2.valid,n1.valid,n2.valid))){if(show.trace){cat('warning:dim(model) > n-1','\n')}}
 
   ###########
   ##Pvalue ##
@@ -700,7 +700,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='cv.glasso',
                            sig1=est.sig[['modIpop1']],sig2=est.sig[['modIpop2']],sig=est.sig[['modJ']],
                            mu1=est.mu[['modIpop1']],mu2=est.mu[['modIpop2']],mu=est.mu[['modJ']],
                            active[['modIpop1']],active[['modIpop2']],active[['modJ']],
-                           compute.evals,include.mean,acc)
+                           compute.evals,include.mean,acc,show.trace)
   
 
   return(list(pval.onesided=res.pval$pval.onesided,pval.twosided=res.pval$pval.twosided,
@@ -726,7 +726,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='cv.glasso',
 ##' @return 
 ##' @author n.stadler
 diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='cv.glasso',include.mean=FALSE,
-                              gamma.min=0.05,compute.evals='est2.my.ev2',diag.invcov=TRUE,acc=1e-04,...){
+                              gamma.min=0.05,compute.evals='est2.my.ev2',diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,...){
 
   ##????Important Notes: Pval can be NA, because...
   ##????
@@ -740,7 +740,7 @@ diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='cv.g
                             split1 <- sample(1:n1,round(n1*frac.split),replace=FALSE)
                             split2 <- sample(1:n2,round(n2*frac.split),replace=FALSE)
                             res.singlesplit <- diffnet_singlesplit(x1,x2,split1,split2,screen.meth,
-                                                                   compute.evals,include.mean,diag.invcov,acc,...)
+                                                                   compute.evals,include.mean,diag.invcov,acc,show.trace,...)
                             
                           })
   pval.onesided <- sapply(res.multisplit,function(x){x[['pval.onesided']]},simplify='array')
