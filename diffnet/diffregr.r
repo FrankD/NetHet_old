@@ -19,6 +19,30 @@ library(mvtnorm)
 library(glmnet)
 library(CompQuadForm)
 
+#############
+##Screening##
+#############
+
+lasso.cvmin <- function(x,y){
+  fit.cv <- cv.glmnet(x,y)
+  beta <- as.numeric(coef(fit.cv,s='lambda.min')[-1])
+  return(which(beta!=0))
+}
+
+lasso.cvtrunc <- function(x,y,k=5){
+  n <- nrow(x)
+  fit.cv <- cv.glmnet(x,y)
+  beta <- as.numeric(coef(fit.cv,s='lambda.min')[-1])
+  beta[-order(abs(beta),decreasing=TRUE)[1:ceiling(n/k)]] <- 0
+  return(which(beta!=0))
+}
+
+lasso.cv1se <- function(x,y){
+  fit.cv <- cv.glmnet(x,y)
+  beta <- as.numeric(coef(fit.cv,s='lambda.1se')[-1])
+  return(which(beta!=0))
+}
+
 ############
 ##P-VALUES##
 ############
@@ -323,7 +347,7 @@ agg.pval <- function(gamma,pval){
     min(quantile(pval/gamma,probs=gamma),1)
 }
 
-twosample_regr <- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,lambda.cv='lambda.min',gamma.min=0.05,compute.evals='est2.my.ev2'){
+twosample_regr <- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,screen.meth='lasso.cvmin',gamma.min=0.05,compute.evals='est2.my.ev2'){
 
   ##Multisplit Pvalues
   ##
@@ -332,7 +356,7 @@ twosample_regr <- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,lambda.cv='lam
   ## -Data:y1,y2,x1,x2 (centered)
   ## -b.splits: number of splits
   ## -frac.split: fraction train-data (for model selection) / test-data (for pval calculations)
-  ## -lambda.cv={lambda.min,lambda.1se}
+  ## -screen.meth={lasso.cvmin,lasso.cv1se}
   ## -gamma.min: see Meinshausen&Meier&Buehlmann
   ## -compute.evals: 'est2.my.ev2'
 
@@ -352,8 +376,7 @@ twosample_regr <- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,lambda.cv='lam
     yy.train <- c(y1[split1],y2[split2])
     xx.valid <- rbind(x1[-split1,],x2[-split2,])
     yy.valid <- c(y1[-split1],y2[-split2])
-    fit.cv <- cv.glmnet(xx.train,yy.train)
-    active[['modJ']] <- which(as.numeric(coef(fit.cv,s=lambda.cv)[-1])!=0)
+    active[['modJ']] <- eval(as.name(screen.meth))(xx.train,yy.train)
     if(length(active[['modJ']])!=0){
       est.beta[['modJ']] <- as.numeric(coef(lm(yy.valid~xx.valid[,active[['modJ']]]-1)))
     }else{
@@ -367,8 +390,7 @@ twosample_regr <- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,lambda.cv='lam
       yy.train <- eval(as.name(paste('y',j,sep='')))[split.train]
       xx.valid <- eval(as.name(paste('x',j,sep='')))[-split.train,]
       yy.valid <- eval(as.name(paste('y',j,sep='')))[-split.train]
-      fit.cv <- cv.glmnet(xx.train,yy.train)
-      active[[paste('modIpop',j,sep='')]] <- which(as.numeric(coef(fit.cv,s=lambda.cv)[-1])!=0)
+      active[[paste('modIpop',j,sep='')]] <- eval(as.name(screen.meth))(xx.train,yy.train)
 
       if(length(active[[paste('modIpop',j,sep='')]])!=0){
         est.beta[[paste('modIpop',j,sep='')]] <- as.numeric(coef(lm(yy.valid~xx.valid[,active[[paste('modIpop',j,sep='')]]]-1)))
@@ -413,7 +435,7 @@ twosample_regr <- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,lambda.cv='lam
 
 
 
-twosample_single_regr <- function(y1,y2,x1,x2,n.screen.pop1=100,n.screen.pop2=100,lambda.cv='lambda.min',compute.evals='est2.my.ev2'){
+twosample_single_regr <- function(y1,y2,x1,x2,n.screen.pop1=100,n.screen.pop2=100,screen.meth=lasso.cvmin,compute.evals='est2.my.ev2'){
 
   ##Single-Split Pvalues
   ##
@@ -421,7 +443,7 @@ twosample_single_regr <- function(y1,y2,x1,x2,n.screen.pop1=100,n.screen.pop2=10
   ##
   ## -Data:y1,y2,x1,x2
   ## -n.screen.pop1, n.screen.pop2: no samples for screening
-  ## -lambda.cv={lambda.min,lambda.1se}
+  ## -screen.meth={lasso.cvmin,lasso.cv1se}
   ## -compute.evals: 'est2.my.ev2'
 
   n1 <- nrow(x1)
@@ -438,8 +460,7 @@ twosample_single_regr <- function(y1,y2,x1,x2,n.screen.pop1=100,n.screen.pop2=10
   yy.train <- c(y1[split1],y2[split2])
   xx.valid <- rbind(x1[-split1,],x2[-split2,])
   yy.valid <- c(y1[-split1],y2[-split2])
-  fit.cv <- cv.glmnet(xx.train,yy.train)
-  active[['modJ']] <- which(as.numeric(coef(fit.cv,s=lambda.cv)[-1])!=0)
+  active[['modJ']] <- eval(as.name(screen.meth))(xx.train,yy.train)
   if(length(active[['modJ']])!=0){
     est.beta[['modJ']] <- as.numeric(coef(lm(yy.valid~xx.valid[,active[['modJ']]]-1)))
   }else{
@@ -453,8 +474,7 @@ twosample_single_regr <- function(y1,y2,x1,x2,n.screen.pop1=100,n.screen.pop2=10
     yy.train <- eval(as.name(paste('y',j,sep='')))[split.train]
     xx.valid <- eval(as.name(paste('x',j,sep='')))[-split.train,]
     yy.valid <- eval(as.name(paste('y',j,sep='')))[-split.train]
-    fit.cv <- cv.glmnet(xx.train,yy.train)
-    active[[paste('modIpop',j,sep='')]] <- which(as.numeric(coef(fit.cv,s=lambda.cv)[-1])!=0)
+    active[[paste('modIpop',j,sep='')]] <- eval(as.name(screen.meth))(xx.train,yy.train)
 
     if(length(active[[paste('modIpop',j,sep='')]])!=0){
       est.beta[[paste('modIpop',j,sep='')]] <- as.numeric(coef(lm(yy.valid~xx.valid[,active[[paste('modIpop',j,sep='')]]]-1)))
