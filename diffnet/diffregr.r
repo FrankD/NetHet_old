@@ -29,11 +29,20 @@ lasso.cvmin <- function(x,y){
   return(which(beta!=0))
 }
 
-lasso.cvtrunc <- function(x,y,k=5){
+##' Screening using crossvalidation & truncation
+##'
+##' Computes crossvalidated coefficients; if more nonzeros than n/k then truncate smallest coefficients
+##' @title Screening using crossvalidation & truncation
+##' @param x 
+##' @param y 
+##' @param k 
+##' @return 
+##' @author n.stadler
+lasso.cvtrunc <- function(x,y,k.trunc=5){
   n <- nrow(x)
   fit.cv <- cv.glmnet(x,y)
   beta <- as.numeric(coef(fit.cv,s='lambda.min')[-1])
-  beta[-order(abs(beta),decreasing=TRUE)[1:ceiling(n/k)]] <- 0
+  beta[-order(abs(beta),decreasing=TRUE)[1:ceiling(n/k.trunc)]] <- 0
   return(which(beta!=0))
 }
 

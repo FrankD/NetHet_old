@@ -101,6 +101,40 @@ cv.glasso <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se
   invisible(object)
 }
 
+cvtrunc.glasso <- function(x,folds=10,lambda,trunc.k=5,penalize.diagonal=FALSE,include.mean=TRUE)
+{
+  colnames(x)<-paste('x',1:ncol(x),sep='')  
+  all.folds <- cv.fold(nrow(x),folds)
+  residmat <- matrix(NA,folds,length(lambda))
+  for (cvfold in 1:folds){
+    omit <- all.folds[[cvfold]]
+    s <- var(x[-omit,])
+    if (include.mean==TRUE){
+      mu <- colMeans(x[-omit,,drop=FALSE])
+    }else{
+      mu <- rep(0,ncol(x))
+    }
+    fit.path <- glassopath(s,rholist=2*lambda/nrow(x),penalize.diagonal=penalize.diagonal,trace=0)
+    if(length(omit)==1){
+      residmat[cvfold,] <- -2*apply(fit.path$w,3,dmvnorm,log=TRUE,mean=mu,x=x[omit,,drop=FALSE])
+    }else{
+      residmat[cvfold,] <- apply(-2*apply(fit.path$w,3,dmvnorm,log=TRUE,mean=mu,x=x[omit,,drop=FALSE]),2,sum)
+    }
+  }
+  cv <- apply(residmat,2,mean)
+  cv.error <- sqrt(apply(residmat,2,var)/folds)
+  gl.opt<-glasso(var(x),rho=2*lambda[which.min(cv)]/nrow(x),penalize.diagonal=penalize.diagonal)
+  cat('la.opt:',lambda[which.min(cv)],'\n')
+  w<-gl.opt$w
+  wi<-gl.opt$wi
+  wi[abs(wi)<10^{-3}]<-0
+  colnames(w)<-rownames(w)<-colnames(wi)<-rownames(wi)<-colnames(x)
+  wi[-order(abs(wi),decreasing=TRUE)[1:(p*ceiling(n/trunc.k))]] <- 0
+
+  object <- list(wi=wi)
+  return(object)
+}
+
 ##' Crossvalidation for GLasso (1-se rule)
 ##'
 ##' 8! lambda-grid has to be increasing (see glassopath)
