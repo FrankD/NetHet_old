@@ -129,10 +129,10 @@ cvtrunc.glasso <- function(x,folds=10,lambda,trunc.k=5,penalize.diagonal=FALSE,i
   wi<-gl.opt$wi
   wi[abs(wi)<10^{-3}]<-0
   colnames(w)<-rownames(w)<-colnames(wi)<-rownames(wi)<-colnames(x)
-  wi[-order(abs(wi),decreasing=TRUE)[1:(p*ceiling(n/trunc.k))]] <- 0
+  wi[-order(abs(wi),decreasing=TRUE)[1:(ncol(x)*ceiling(nrow(x)/trunc.k))]] <- 0
 
-  object <- list(wi=wi)
-  return(object)
+  list(wi=wi)
+  
 }
 
 ##' Crossvalidation for GLasso (1-se rule)
@@ -204,6 +204,29 @@ glasso.parcor.launi <- function(x,maxiter=1000,term=10^{-3},include.mean=NULL,la
   }
   list(w=gl$w,wi=gl$wi,mu=colMeans(x),iter=iter)
 }
+
+glasso.parcor.launi.trunc <- function(x,trunc.k=5,maxiter=1000,term=10^{-3},include.mean=NULL,lambda=NULL){
+  p <- ncol(x)
+  s <- var(x)
+  rho.uni <- sqrt(2*log(ncol(x))/nrow(x))
+
+  ww <- rep(1,p)#sqrt(diag(s))
+  iter <- 0
+  err <- Inf #convergence of parameters
+  param <- as.vector(diag(ww))
+  while((err>term)&(iter<maxiter)){
+    gl <- glasso(s,rho=rho.uni*ww,penalize.diagonal=FALSE)
+    ww <- 1/(diag(gl$wi))
+    param.old <- param
+    param <- as.vector(gl$w)
+    err <- max(abs(param-param.old)/(1+abs(param)))
+    iter <- iter+1
+  }
+  wi <- gl$wi
+  wi[-order(abs(wi),decreasing=TRUE)[1:(ncol(x)*ceiling(nrow(x)/trunc.k))]] <- 0
+  list(wi=wi)
+}
+
 
 
 ##############################
