@@ -232,9 +232,14 @@ screen.mean <- function(x1,x2,method='none',sign.level=0.05){
   k <- ncol(x1)
   if(method=='none'){
     act.mu <- seq(k)
-  }else{
+  }
+  if(method=='pval'){
     pval <- sapply(1:k,function(i){t.test(x1[,i],x2[,i],var.equal=TRUE)$p.value})
-    pval.adj <- p.adjust(pval, method = method)
+    act.mu <- which(pval<sign.level)
+  }
+  if(method=='pval.adj'){
+    pval <- sapply(1:k,function(i){t.test(x1[,i],x2[,i],var.equal=TRUE)$p.value})
+    pval.adj <- p.adjust(pval, method = 'fdr')
     act.mu <- which(pval.adj<sign.level)
   }
   return(list(act.mu=act.mu))
