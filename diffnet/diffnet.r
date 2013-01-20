@@ -227,18 +227,6 @@ glasso.parcor.launi.trunc <- function(x,trunc.k=5,maxiter=1000,term=10^{-3},incl
   list(wi=wi)
 }
 
-screen.mean <- function(x1,x2,method='none',sign.level=0.05){
-
-  k <- ncol(x1)
-  if(method=='none'){
-    act.mu <- seq(k)
-  }else{
-    pval <- sapply(1:k,function(i){t.test(x1[,i],x2[,i],var.equal=TRUE)$p.value})
-    pval.adj <- p.adjust(pval, method = method)
-    act.mu <- which(pval.adj<sign.level)
-  }
-  return(list(act.mu=act.mu))
-}
 
 
 ##############################
@@ -447,7 +435,7 @@ q.matrix3 <- function(sig,sig.a,sig.b,act.a,act.b,ss){
 ##' @param include.mean 
 ##' @return 
 ##' @author n.stadler
-est2.ww.mat2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE,act.mu=seq(nrow(sig1))){
+est2.ww.mat2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
 
   k <- nrow(sig1)
   
@@ -459,8 +447,8 @@ est2.ww.mat2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE,act.mu=s
   dimf <- dimf1+dimf2
   dimg <- length(act)
   if(include.mean==TRUE){
-    dimf <- dimf+2*length(act.mu)
-    dimg <- dimg+length(act.mu)
+    dimf <- dimf+2*k
+    dimg <- dimg+k
   }
 
   ###############
@@ -496,7 +484,7 @@ est2.ww.mat2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE,act.mu=s
   onemineval.mu[abs(onemineval.mu)<10^{-6}]<-0
   eval <- c(eval,sqrt(onemineval.mu),-sqrt(onemineval.mu))
   if(include.mean==TRUE){
-    eval <- c(rep(0,2*length(act.mu)),eval)
+    eval <- c(rep(0,2*k),eval)
   }
   return(list(ww.mat=mat,eval=eval,eval.mu.complex=eval.mu.complex))
 }
@@ -515,7 +503,7 @@ est2.ww.mat2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE,act.mu=s
 ##' @param include.mean 
 ##' @return 
 ##' @author n.stadler
-est2.my.ev2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE,act.mu=seq(nrow(sig1))){
+est2.my.ev2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
 
   k <- nrow(sig1)
 
@@ -527,8 +515,8 @@ est2.my.ev2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE,act.mu=se
   dimf <- dimf1+dimf2
   dimg <- length(act)
   if(include.mean==TRUE){
-    dimf <- dimf+2*length(act.mu)
-    dimg <- dimg+length(act.mu)
+    dimf <- dimf+2*k
+    dimg <- dimg+k
   }
   ##########################
   ##intersection of models##
@@ -595,7 +583,7 @@ est2.my.ev2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE,act.mu=se
   }## end if (dimf<dimg){
   
   if(include.mean==TRUE){
-    eval <- c(rep(0,2*length(act.mu)),eval)
+    eval <- c(rep(0,2*k),eval)
   }
   return(list(eval=eval,ev.aux.complex=ev.aux.complex))
 }
@@ -668,7 +656,7 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
 ##' @param ... 
 ##' @return 
 ##' @author n.stadler
-diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth.invcov='cv.glasso',screen.meth.mean='none',
+diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='cv.glasso',
                                compute.evals='est2.my.ev2',include.mean=TRUE,
                                diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,...){
   
@@ -680,19 +668,14 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth.invcov='cv.glasso
   if(!diag.invcov){df.param <- k*(k-1)/2}
 
   est.mu <- est.sig <- est.wi <- active <- list()#save est.mu;est.sig;est.wi;active
-
-  if(include.mean==TRUE){
-    act.mu <- screen.mean(x1[split1,],x2[split2,],method=screen.meth.mean,sign.level=0.05)$act.mu
-  }
   
   ###############
   ##Joint Model##
   ###############
   xx.train <- rbind(x1[split1,],x2[split2,])
   xx.valid <- rbind(x1[-split1,],x2[-split2,])
-  fit.screen <- eval(as.name(screen.meth.invcov))(xx.train,include.mean=include.mean,...)
+  fit.screen <- eval(as.name(screen.meth))(xx.train,include.mean=include.mean,...)
   act <- which(fit.screen$wi[upper.tri(diag(1,k),diag=TRUE)]!=0)
-  
   if(!diag.invcov){
     ind.diag <- which(diag(1,k)[upper.tri(diag(1,k),diag=TRUE)]!=0)
     act <- setdiff(act,ind.diag)
@@ -736,7 +719,6 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth.invcov='cv.glasso
     active[[paste('modIpop',j,sep='')]] <- act
     if(include.mean==TRUE){
       est.mu[[paste('modIpop',j,sep='')]] <- colMeans(xx.valid)
-      est.mu[[paste('modIpop',j,sep='')]][!act.mu] <- est.mu[['modJ']][!act.mu]
     }else{
       est.mu[[paste('modIpop',j,sep='')]] <- rep(0,k)
     }
