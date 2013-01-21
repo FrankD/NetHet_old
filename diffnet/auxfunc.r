@@ -1,4 +1,4 @@
-sparse_conc <- function(p,K,s,s.common,scale.parcor=TRUE){
+sparse_conc <- function(p,K,s,s.common,magn.nz=0.5,scale.parcor=TRUE){
     ##Generate K different Sparse Inverse Covariance-Matrices of dimension p:
     ##
     ##-for each SigInv there are s non-zero entries
@@ -20,14 +20,14 @@ sparse_conc <- function(p,K,s,s.common,scale.parcor=TRUE){
     comp.nonzero <- tot.nonzero <- sample(ind.upper.tri,size=s,replace=FALSE)
     same.nonzero <- sample(comp.nonzero,size=s.common,replace=FALSE)
     remain.zero <- setdiff(ind.upper.tri,comp.nonzero)
-    B[comp.nonzero] <- 0.9
+    B[comp.nonzero] <- magn.nz
     B.list[[1]] <- B+t(B)
     if (K>1){
       for (k in 2:K){
         B <- matrix(0,p,p)
         comp.nonzero <- c(same.nonzero,sample(remain.zero,size=s-s.common,replace=FALSE))
         tot.nonzero <- union(tot.nonzero,comp.nonzero)
-        B[comp.nonzero] <- 0.5
+        B[comp.nonzero] <- magn.nz
         B.list[[k]] <- B+t(B)
         remain.zero <- setdiff(ind.upper.tri,tot.nonzero)
       }
