@@ -1,4 +1,4 @@
-sparse_conc <- function(p,K,s,s.common){
+sparse_conc <- function(p,K,s,s.common,scale.parcor=TRUE){
     ##Generate K different Sparse Inverse Covariance-Matrices of dimension p:
     ##
     ##-for each SigInv there are s non-zero entries
@@ -39,7 +39,9 @@ sparse_conc <- function(p,K,s,s.common){
       ev <- eigen(SigInv[[k]])$values
       del <- (max(ev)-min(ev)*p)/(p-1)
       diag(SigInv[[k]]) <- del
-      SigInv[[k]] <- SigInv[[k]]/del
+      if(scale.parcor==TRUE){
+        SigInv[[k]] <- SigInv[[k]]/del
+      }
     }
   }
     
