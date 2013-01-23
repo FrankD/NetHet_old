@@ -18,7 +18,7 @@ library(glasso)
 library(CompQuadForm)
 
 ##load C-code
-dyn.load("../code/betamat_diffnet.so")
+#dyn.load("../code/betamat_diffnet.so")
 
 #############################
 ##-------Screening---------##
@@ -128,10 +128,16 @@ cvtrunc.glasso <- function(x,folds=10,lambda,trunc.k=5,penalize.diagonal=FALSE,i
   w<-gl.opt$w
   wi<-gl.opt$wi
   wi[abs(wi)<10^{-3}]<-0
+  wi <- (wi+t(wi))/2
   colnames(w)<-rownames(w)<-colnames(wi)<-rownames(wi)<-colnames(x)
-  wi[-order(abs(wi),decreasing=TRUE)[1:(ncol(x)*ceiling(nrow(x)/trunc.k))]] <- 0
 
-  list(wi=wi)
+  wi.trunc <- wi
+  diag(wi.trunc) <- 0
+  nonzero <- min(2*ceiling(ncol(x)*ceiling(nrow(x)/trunc.k)/2),sum(wi.trunc!=0))
+  wi.trunc[-order(abs(wi.trunc),decreasing=TRUE)[1:nonzero]] <- 0
+  diag(wi.trunc) <- diag(wi)
+
+  list(wi=wi.trunc)
   
 }
 
@@ -223,8 +229,16 @@ glasso.parcor.launi.trunc <- function(x,trunc.k=5,maxiter=1000,term=10^{-3},incl
     iter <- iter+1
   }
   wi <- gl$wi
-  wi[-order(abs(wi),decreasing=TRUE)[1:(ncol(x)*ceiling(nrow(x)/trunc.k))]] <- 0
-  list(wi=wi)
+  wi <- (wi+t(wi))/2
+
+  wi.trunc <- wi
+  diag(wi.trunc) <- 0
+  nonzero <- min(2*ceiling(ncol(x)*ceiling(nrow(x)/trunc.k)/2),sum(wi.trunc!=0))
+  wi.trunc[-order(abs(wi.trunc),decreasing=TRUE)[1:nonzero]] <- 0
+  diag(wi.trunc) <- diag(wi)
+
+  list(wi=wi.trunc)
+ 
 }
 
 
