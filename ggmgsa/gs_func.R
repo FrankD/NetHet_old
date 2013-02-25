@@ -1,4 +1,69 @@
 library(GSA)
+library('limma')
+library('multtest')
+#library('genefilter')
+library(ICSNP)
+#library(qvalue)
+
+GSEA.Gct2Frame <- function(filename = "NULL") { 
+#
+# Reads a gene expression dataset in GCT format and converts it into an R data frame
+#
+# The Broad Institute
+# SOFTWARE COPYRIGHT NOTICE AGREEMENT
+# This software and its documentation are copyright 2003 by the
+# Broad Institute/Massachusetts Institute of Technology.
+# All rights are reserved.
+#
+# This software is supplied without any warranty or guaranteed support
+# whatsoever. Neither the Broad Institute nor MIT can be responsible for
+# its use, misuse, or functionality.
+   ds <- read.delim(filename, header=T, sep="\t", skip=2, row.names=1, blank.lines.skip=T, comment.char="", as.is=T)
+   ds <- ds[-1]
+   return(ds)
+}
+
+GSEA.Gct2Frame2 <- function(filename = "NULL") { 
+#
+# Reads a gene expression dataset in GCT format and converts it into an R data frame
+#
+# The Broad Institute
+# SOFTWARE COPYRIGHT NOTICE AGREEMENT
+# This software and its documentation are copyright 2003 by the
+# Broad Institute/Massachusetts Institute of Technology.
+# All rights are reserved.
+#
+# This software is supplied without any warranty or guaranteed support
+# whatsoever. Neither the Broad Institute nor MIT can be responsible for
+# its use, misuse, or functionality.
+      content <- readLines(filename)
+      content <- content[-1]
+      content <- content[-1]
+      col.names <- noquote(unlist(strsplit(content[1], "\t")))
+      col.names <- col.names[c(-1, -2)]
+      num.cols <- length(col.names)
+      content <- content[-1]
+      num.lines <- length(content)
+
+
+      row.nam <- vector(length=num.lines, mode="character")
+      row.des <- vector(length=num.lines, mode="character")
+      m <- matrix(0, nrow=num.lines, ncol=num.cols)
+
+      for (i in 1:num.lines) {
+         line.list <- noquote(unlist(strsplit(content[i], "\t")))
+         row.nam[i] <- noquote(line.list[1])
+         row.des[i] <- noquote(line.list[2])
+         line.list <- line.list[c(-1, -2)]
+         for (j in 1:length(line.list)) {
+            m[i, j] <- as.numeric(line.list[j])
+         }
+      }
+      ds <- data.frame(m)
+      names(ds) <- col.names
+      row.names(ds) <- row.nam
+      return(ds)
+}
 
 GSEA.Res2Frame <- function(filename = "NULL") { 
 #
@@ -66,37 +131,100 @@ GSEA.ReadClsFile <- function(file = "NULL") {
       return(list(phen = phen, class.v = class.v))
 }
 
+my.p.adjust <- function(p,method='fdr'){
+  if(method=='fdr'){
+    return(p.adjust(p,method='fdr'))
+  }
+  if(method=='qvalue'){
+    return(qvalue(p)$qvalues)
+  }
+}
+
 my.ttest <- function(x1,x2){
+  ##equal variances
   s <- sqrt((var(x1)*(length(x1)-1)+var(x2)*(length(x2)-1))/(length(x1)+length(x2)-2))
   tstat <- (mean(x1)-mean(x2))/(s*sqrt(1/length(x1)+1/length(x2)))
   return(tstat)
 }
 
+my.ttest2 <- function(x1,x2){
+  ##unequal variances
+  s <- sqrt((var(x1)/length(x1))+(var(x2)/length(x2)))
+  tstat <- (mean(x1)-mean(x2))/s
+  return(tstat)
+}
+
 agg.score.iriz <- function(ttstat,geneset,gene.name){
-  ttstat <- ttstat[gene.name%in%geneset]
-  aggscore <- sqrt(length(geneset))*mean(ttstat)
+  genes.gs <- which(gene.name%in%geneset)
+  ttstat <- ttstat[genes.gs]
+  aggscore <- sqrt(length(genes.gs))*mean(ttstat)
   return(aggscore)
 }
 
-gsea.iriz <- function(x1,x2,gene.sets,gene.name,genesets.name=NULL){
+gsea.iriz <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',alternative='two-sided'){
   
   no.genes <- ncol(x1)
 
-  my.tstat <- sapply(1:no.genes,function(i){my.ttest(x1[,i],x2[,i])})
-  agg.scores <- sapply(gene.sets,function(x){agg.score.iriz(my.tstat,x,gene.name)})
-  pvals <- p.adjust(2*pnorm(-abs(agg.scores)),method='fdr')
-  if(is.null(genesets.name)){
-    return(list(agg.scores.sort=agg.scores[order(pvals)],pvals.sort=pval[order(pvals)],
+  my.tstat <- sapply(1:no.genes,function(i){my.ttest2(x1[,i],x2[,i])})
+  agg.scores <- sapply(gene.sets,function(x){agg.score.iriz(my.tstat,x,gene.names)})
+  if(alternative=='two-sided'){
+    pvals <- my.p.adjust(2*(1-pnorm(abs(agg.scores))),method=method.p.adjust)
+  }
+  if(alternative=='one-sided'){
+    pvals <- my.p.adjust(1-pnorm(agg.scores),method=method.p.adjust)
+  }
+
+  if(is.null(gs.names)){
+    return(list(tstat=my.tstat,
+                agg.scores.sort=agg.scores[order(pvals)],pvals.sort=pvals[order(pvals)],
                 agg.scores=agg.scores,pvals=pvals))
   }else{
-    return(list(agg.scores.sort=agg.scores[order(pvals)],pvals.sort=pvals[order(pvals)],
-                genesets.name.sort=genesets.name[order(pvals)],
+    return(list(tstat=my.tstat,
+                agg.scores.sort=agg.scores[order(pvals)],pvals.sort=pvals[order(pvals)],
+                gs.names.sort=gs.names[order(pvals)],
                 agg.scores=agg.scores,pvals=pvals))
   }
 }
 
+## gsea.iriz.new <- function(x,pheno,gene.sets,gs.names=NULL,gene.names,method.p.adjust='fdr',alternative='two-sided'){
+  
+##   no.genes <- ncol(x)
+##   my.tstat <- rowttests(as.matrix(x),pheno)$stat
+  
+##   agg.scores <- sapply(gs.names,function(gs){
+##     geneset <- gene.sets[which(gs.names==gs),]
+##     geneset <- geneset[geneset!="null"]
+##     Index2 <- match(geneset,gene.names)
+##     x=my.tstat[Index2]
+##     N <- length(x)
+##     return(mean(x)*sqrt(N))
+##   })
+##   if(alternative=='two-sided'){
+##     pvals <- my.p.adjust(2*(1-pnorm(abs(agg.scores))),method=method.p.adjust)
+##   }
+##   if(alternative=='one-sided'){
+##     pvals <- my.p.adjust(1-pnorm(agg.scores),method=method.p.adjust)
+##   }
+##   if(is.null(gs.names)){
+##     return(list(tstat=my.tstat,
+##                 agg.scores.sort=agg.scores[order(pvals)],pvals.sort=pval[order(pvals)],
+##                 agg.scores=agg.scores,pvals=pvals))
+##   }else{
+##     return(list(tstat=my.tstat,
+##                 agg.scores.sort=agg.scores[order(pvals)],pvals.sort=pvals[order(pvals)],
+##                 gs.names.sort=gs.names[order(pvals)],
+##                 agg.scores=agg.scores,pvals=pvals))
+##   }
+## }
+
 trace.mat <- function(m){
   sum(diag(m))
+}
+
+
+test.t2 <- function(x1,x2){
+  fit.t2 <- HotellingsT2(x1,x2, mu = NULL, test = "f")
+  list(pval=fit.t2$p.value)
 }
 
 ##' High-Dim Two-Sample Test (Srivastava, 2006)
@@ -124,26 +252,26 @@ test.sd <- function(x1,x2){
   list(teststat=teststat,pval=1-pnorm(teststat))
 }
 
-gsea.highdimT2 <- function(x1,x2,gene.sets,gene.name,genesets.name=NULL,method='test.sd'){
+gsea.highdimT2 <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method='test.sd',method.p.adjust='fdr'){
   
   
   pvals<- sapply(gene.sets,
                  function(y){
-                   ind.genes <- gene.name%in%y
+                   ind.genes <- which(gene.names%in%y)
                    eval(as.name(method))(x1[,ind.genes],x2[,ind.genes])$pval
                  })
-  pvals.corrected <- p.adjust(pvals,method='fdr')
-  if(is.null(genesets.name)){
+  pvals.corrected <- my.p.adjust(pvals,method=method.p.adjust)
+  if(is.null(gs.names)){
     return(list(pvals.sort=pvals.corrected[order(pvals.corrected)],pvals=pvals.corrected))
   }else{
     return(list(pvals.sort=pvals.corrected[order(pvals.corrected)],
-                genesets.name.sort=genesets.name[order(pvals.corrected)],
+                gs.names.sort=gs.names[order(pvals.corrected)],
                 pvals=pvals.corrected))
   }
   
 }
 
-gsea.diffnet.singlesplit <- function(x1,x2,gene.sets,gene.name,genesets.name=NULL,scale.mean=FALSE,scale.var=FALSE,...){
+gsea.diffnet.singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust='fdr',...){
 
   pvals<- sapply(seq(length(gene.sets)),
                  function(i){
@@ -154,12 +282,29 @@ gsea.diffnet.singlesplit <- function(x1,x2,gene.sets,gene.name,genesets.name=NUL
                    ## la <- seq(0.3,2,length=10)*la;print(la)
                    y <- gene.sets[[i]]
                    cat('gene set:',i,'\n')
-                   ind.genes <- gene.name%in%y
-                   diffnet_multisplit(scale(x1[,ind.genes],center=scale.mean,scale=scale.var),scale(x2[,ind.genes],center=scale.mean,scale=scale.var),b.splits=1,...)$pval.onesided
+                   ind.genes <- gene.names%in%y
+                   diffnet_multisplit(x1[,ind.genes],x2[,ind.genes],b.splits=1,...)$pval.onesided
                  })
-  pvals.corrected <- p.adjust(pvals,method='fdr')
+  pvals.corrected <- my.p.adjust(pvals,method=method.p.adjust)
   return(list(pvals=pvals.corrected))
 }
+
+gsea.diffnet.singlesplit2 <- function(x1,x2,gene.sets,gene.names,method.p.adjust='fdr',...){
+  n1 <- nrow(x1)
+  n2 <- nrow(x2)
+  split1 <- sample(1:n1,round(n1*0.5),replace=FALSE)
+  split2 <- sample(1:n2,round(n2*0.5),replace=FALSE)
+  pvals<- sapply(seq(length(gene.sets)),
+                 function(i){
+                   y <- gene.sets[[i]]
+                   cat('gene set:',i,'\n')
+                   ind.genes <- which(gene.names%in%y)
+                   diffnet_singlesplit(x1[,ind.genes],x2[,ind.genes],split1,split2,...)$pval.onesided
+                 })
+  pvals.corrected <- my.p.adjust(pvals,method=method.p.adjust)
+  return(list(pvals=pvals.corrected))
+}
+
 
 aggpval <- function(pval,gamma.min=0.05){
   
@@ -170,46 +315,50 @@ aggpval <- function(pval,gamma.min=0.05){
                                     ,interval=c(gamma.min,1),maximum=FALSE)$objective)
 }
 
-gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.name,genesets.name=NULL,scale.mean=FALSE,scale.var=FALSE,...){
+gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',...){
 
   res <- lapply(seq(no.splits),
                 function(i){
                   cat('split:',i,'\n')
-                  pvals <- gsea.diffnet.singlesplit(x1,x2,gene.sets,gene.name,genesets.name=NULL,scale.mean=FALSE,scale.var=FALSE,...)$pvals
+                  pvals <- gsea.diffnet.singlesplit2(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
+                                                     method.p.adjust=method.p.adjust,...)$pvals
                   return(pvals)
                 }
                 )
   res <- matrix(simplify2array(res,higher=TRUE),nrow=length(gene.sets),ncol=no.splits)
   pval.agg <- apply(res,1,aggpval)
 
-  if(is.null(genesets.name)){
-    return(list(pvalagg.sort=pval.agg[order(pval.agg)],pvalagg=pval.agg,pval=res))
+  if(is.null(gs.names)){
+    return(list(pvalmed=apply(res,1,median,na.rm=TRUE),pvalagg=pval.agg,pval=res))
   }else{
-    return(list(pvalagg.sort=pval.agg[order(pval.agg)],
-                genesets.name.sort=genesets.name[order(pval.agg)],
+    return(list(pvalmed=apply(res,1,median,na.rm=TRUE),
+                gs.names=gs.names,
                 pvalagg=pval.agg,pval=res))
   }
 }
 
-par.gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.name,genesets.name=NULL,scale.mean=FALSE,scale.var=FALSE,...){
+par.gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',...){
 
   res <- mclapply(seq(no.splits),
                 function(i){
                   cat('split:',i,'\n')
-                  pvals <- gsea.diffnet.singlesplit(x1,x2,gene.sets,gene.name,genesets.name=NULL,scale.mean=FALSE,scale.var=FALSE,...)$pvals
+                  pvals <- gsea.diffnet.singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
+                                                    method.p.adjust=method.p.adjust,...)$pvals
+                  
                   return(pvals)
                 },
                   mc.set.seed=TRUE, mc.preschedule = TRUE)
   res <- matrix(simplify2array(res,higher=TRUE),nrow=length(gene.sets),ncol=no.splits)
   pval.agg <- apply(res,1,aggpval)
 
-  if(is.null(genesets.name)){
-    return(list(pvalagg.sort=pval.agg[order(pval.agg)],pvalagg=pval.agg,pval=res))
+   if(is.null(gs.names)){
+    return(list(pvalmed=apply(res,1,median,na.rm=TRUE),pvalagg=pval.agg,pval=res))
   }else{
-    return(list(pvalagg.sort=pval.agg[order(pval.agg)],
-                genesets.name.sort=genesets.name[order(pval.agg)],
+    return(list(pvalmed=apply(res,1,median,na.rm=TRUE),
+                gs.names=gs.names,
                 pvalagg=pval.agg,pval=res))
   }
+  
 }
 
 ## rho.max <- function(s){

@@ -116,9 +116,9 @@ mytrunc.method <- function(n,wi,method='linear.growth',trunc.k=5){
   }
 }
     
-cv.glasso.trunc <- function(x,include.mean=FALSE,
-                            folds=10,length.lambda=15,penalize.diagonal=FALSE,
-                            trunc.method='linear.growth',trunc.k=5,plot.it=FALSE,se=FALSE)
+screen_cv.glasso <- function(x,include.mean=FALSE,
+                             folds=10,length.lambda=15,penalize.diagonal=FALSE,
+                             trunc.method='linear.growth',trunc.k=5,plot.it=FALSE,se=FALSE)
 {
   
   gridmax <- lambda.max(x)
@@ -152,12 +152,12 @@ cv.glasso.trunc <- function(x,include.mean=FALSE,
   wi[abs(wi)<10^{-3}]<-0
   wi <- (wi+t(wi))/2
   colnames(w)<-rownames(w)<-colnames(wi)<-rownames(wi)<-colnames(x)
-  wi <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
+  wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
   
   if (plot.it){
     plotCV(lambda,cv,cv.error,se=se)
   }
-  list(wi=wi)
+  list(wi=wi.trunc,wi.orig=wi)
 }
 
 bic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE)
@@ -300,8 +300,8 @@ screen_bic.glasso <- function(x,include.mean=TRUE,
   
   fit.bicgl <- bic.glasso(x,lambda=my.grid,penalize.diagonal=FALSE,plot.it=plot.it)
   wi <- fit.bicgl$wi
-  wi <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
-  list(wi=wi) 
+  wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
+  list(wi=wi.trunc,wi.orig=wi) 
 }
 
 screen_aic.glasso <- function(x,include.mean=TRUE,
@@ -314,16 +314,16 @@ screen_aic.glasso <- function(x,include.mean=TRUE,
   
   fit.aicgl <- aic.glasso(x,lambda=my.grid,penalize.diagonal=FALSE,plot.it=plot.it)
   wi <- fit.aicgl$wi
-  wi <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
-  list(wi=wi) 
+  wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
+  list(wi=wi.trunc,wi.orig=wi) 
 }
 
 screen_lasso <- function(x,include.mean=NULL,
                          trunc.method='linear.growth',trunc.k=5){
   
   wi <- adalasso.net(x, k = 10,use.Gram=FALSE,both=FALSE,verbose=FALSE)$pcor.lasso
-  wi <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
-  list(wi=wi)
+  wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
+  list(wi=wi.trunc,wi.orig=wi)
 }
 
 screen_shrink <- function(x,include.mean=NULL,
@@ -331,8 +331,8 @@ screen_shrink <- function(x,include.mean=NULL,
   wi <- ggm.estimate.pcor(x)
   adj <- performance.pcor(wi, fdr=TRUE,verbose=FALSE,plot=FALSE)$adj
   wi[adj==0] <- 0
-  wi <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
-  list(wi=wi)
+  wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
+  list(wi=wi.trunc,wi.orig=wi)
 }
 
 ## cv.glasso.approx.trunc <- function(x,include.mean=FALSE,
