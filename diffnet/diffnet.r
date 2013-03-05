@@ -241,7 +241,186 @@ glasso.parcor.launi.trunc <- function(x,trunc.k=5,maxiter=1000,term=10^{-3},incl
  
 }
 
+lambda.max <- function(x){
+  n <- nrow(x)
+  s.var <- var(x)
+  diag(s.var) <- 0
+  return(n*max(abs(s.var))/2)
+}
 
+bic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE)
+{
+  ##glasso; lambda.opt with bic
+  aic.score <-rep(NA,length(lambda))
+  Mu <- colMeans(x)
+  samplecov <- var(x)
+
+  if(is.null(lambda)){
+    la <- lambda
+  }else{
+    la <- 2*lambda/nrow(x)
+  }
+
+  fit.path <- glassopath(samplecov,rholist=la,penalize.diagonal=penalize.diagonal,trace=0)
+
+  loglik <- lapply(seq(length(fit.path$rholist)),
+                   function(i){
+                     return(sum(dmvnorm(x,mean=Mu,sigma=fit.path$w[,,i],log=TRUE)))
+                   }
+                   )
+  degfree <- lapply(seq(length(fit.path$rholist)),
+                    function(i){
+                      wi <- fit.path$wi[,,i]
+                      wi[abs(wi)<10^{-3}]<-0
+                      p <- ncol(wi)
+                      n.zero<-sum(wi==0)
+                      return(p+(p*(p+1)/2)-n.zero/2)
+                    }
+                    )
+  loglik <- simplify2array(loglik,higher=TRUE)
+  degfree <- simplify2array(degfree,higher=TRUE)
+  myscore <- -loglik+log(nrow(x))*degfree/2
+
+  if(is.null(lambda)){
+    lambda <- 0.5*nrow(x)*fit.path$rholist
+  }
+  
+  if(ncol(x)<nrow(x)){
+    loglik.la0 <- sum(dmvnorm(x,mean=Mu,sigma=var(x),log=TRUE))
+    degfree.la0 <- ncol(x)+(ncol(x)*(ncol(x)+1)/2)
+    myscore.la0 <- -loglik.la0+log(nrow(x))*degfree.la0/2
+    myscore <- c(myscore.la0,myscore)
+    index.opt <- which.min(myscore)
+    if(index.opt==1){
+      w <- var(x)
+      wi <- solve(var(x))
+    }else{
+      wi <- fit.path$wi[,,index.opt-1]
+      wi[abs(wi)<10^{-3}]<-0
+      w <- fit.path$w[,,index.opt-1]
+    }
+    lambda <- c(0,lambda)
+  }else{
+    index.opt <- which.min(myscore)
+    wi <- fit.path$wi[,,index.opt]
+    wi[abs(wi)<10^{-3}]<-0
+    w <- fit.path$w[,,index.opt]
+  }
+  if (plot.it){
+    plot(lambda,myscore,type='b',xlab='lambda')
+  }
+  
+  list(lambda=lambda,bic.score=myscore,Mu=Mu,wi=wi,w=w)
+}
+
+screen_bic.glasso <- function(x,length.lambda=20,trunc.k=5,plot.it=TRUE,include.mean=TRUE){
+
+  gridmax <- lambda.max(x)
+  gridmin <- gridmax/length.lambda
+  my.grid <- lambdagrid_mult(gridmin,gridmax,length.lambda)[length.lambda:1]
+  
+  fit.bicgl <- bic.glasso(x,lambda=my.grid,penalize.diagonal=FALSE,plot.it=plot.it)
+  wi.trunc <- fit.bicgl$wi
+  diag(wi.trunc) <- 0
+  nonzero <- min(2*ceiling(ncol(x)*ceiling(nrow(x)/trunc.k)/2),sum(wi.trunc!=0))
+  wi.trunc[-order(abs(wi.trunc),decreasing=TRUE)[1:nonzero]] <- 0
+  diag(wi.trunc) <- diag(fit.bicgl$wi)
+
+  list(wi=wi.trunc)
+}
+
+rho.max <- function(s){
+  diag(s) <- 0
+  return(max(abs(s)))
+}
+
+bic.glasso.invcor <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE)
+{
+  ##glasso; lambda.opt with bic
+  aic.score <-rep(NA,length(lambda))
+  Mu <- colMeans(x)
+  samplecov <- var(x)
+
+  if(is.null(lambda)){
+    la <- lambda
+  }else{
+    la <- 2*lambda/nrow(x)
+  }
+
+  v.mat <- 1/sqrt(diag(samplecov))
+  v.tcross <- tcrossprod(v.mat)
+  vinv.tcross <- tcrossprod(1/v.mat)
+  fit.path <- glassopath(samplecov*v.tcross,rholist=la,penalize.diagonal=penalize.diagonal,trace=0)
+
+  loglik <- lapply(seq(length(fit.path$rholist)),
+                   function(i){
+                     return(sum(dmvnorm(x,mean=Mu,sigma=fit.path$w[,,i]*vinv.tcross,log=TRUE)))
+                   }
+                   )
+  degfree <- lapply(seq(length(fit.path$rholist)),
+                    function(i){
+                      wi <- fit.path$wi[,,i]
+                      wi[abs(wi)<10^{-3}]<-0
+                      wi <- wi*v.tcross
+                      p <- ncol(wi)
+                      n.zero<-sum(wi==0)
+                      return(p+(p*(p+1)/2)-n.zero/2)
+                    }
+                    )
+  loglik <- simplify2array(loglik,higher=TRUE)
+  degfree <- simplify2array(degfree,higher=TRUE)
+  myscore <- -loglik+log(nrow(x))*degfree/2
+
+  if(is.null(lambda)){
+    lambda <- 0.5*nrow(x)*fit.path$rholist
+  }
+  
+  if(ncol(x)<nrow(x)){
+    loglik.la0 <- sum(dmvnorm(x,mean=Mu,sigma=var(x),log=TRUE))
+    degfree.la0 <- ncol(x)+(ncol(x)*(ncol(x)+1)/2)
+    myscore.la0 <- -loglik.la0+log(nrow(x))*degfree.la0/2
+    myscore <- c(myscore.la0,myscore)
+    index.opt <- which.min(myscore)
+    if(index.opt==1){
+      w <- var(x)
+      wi <- solve(var(x))
+    }else{
+      wi <- fit.path$wi[,,index.opt-1]
+      wi[abs(wi)<10^{-3}]<-0
+      wi <- wi*v.tcross
+      w <- fit.path$w[,,index.opt-1]*vinv.tcross
+    }
+    lambda <- c(0,lambda)
+  }else{
+    index.opt <- which.min(myscore)
+    wi <- fit.path$wi[,,index.opt]
+    wi[abs(wi)<10^{-3}]<-0
+    wi <- wi*v.tcross
+    w <- fit.path$w[,,index.opt]*vinv.tcross
+  }
+  if (plot.it){
+    plot(lambda,myscore,type='b',xlab='lambda')
+  }
+  
+  list(lambda=lambda,bic.score=myscore,Mu=Mu,wi=wi,w=w)
+}
+
+screen_bic.glasso.invcor <- function(x,length.lambda=20,trunc.k=5,plot.it=TRUE,include.mean=TRUE){
+
+  gridmax <- nrow(x)*rho.max(cor(x))/2
+  gridmin <- gridmax/length.lambda
+  my.grid <- lambdagrid_mult(gridmin,gridmax,length.lambda)[length.lambda:1]
+  
+  fit.bicgl <- bic.glasso.invcor(x,lambda=my.grid,penalize.diagonal=FALSE,plot.it=plot.it)
+  wi.trunc <- fit.bicgl$wi
+  diag(wi.trunc) <- 0
+  nonzero <- min(2*ceiling(ncol(x)*ceiling(nrow(x)/trunc.k)/2),sum(wi.trunc!=0))
+  wi.trunc[-order(abs(wi.trunc),decreasing=TRUE)[1:nonzero]] <- 0
+  diag(wi.trunc) <- diag(fit.bicgl$wi)
+
+  list(wi=wi.trunc)
+}
+  
 
 ##############################
 ##--------P-VALUES----------##
@@ -670,8 +849,8 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
 ##' @param ... 
 ##' @return 
 ##' @author n.stadler
-diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='cv.glasso',
-                               compute.evals='est2.my.ev2',include.mean=TRUE,
+diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glasso',
+                               compute.evals='est2.my.ev2',include.mean=FALSE,
                                diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,...){
   
   n1 <- nrow(x1)
@@ -796,7 +975,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='cv.glasso',
 ##' @param ... additional arguments for screen.meth
 ##' @return 
 ##' @author n.stadler
-diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='cv.glasso',include.mean=FALSE,
+diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='screen_bic.glasso',include.mean=FALSE,
                               gamma.min=0.05,compute.evals='est2.my.ev2',diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,...){
 
   ##????Important Notes: Pval can be NA, because...
@@ -823,6 +1002,7 @@ diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='cv.g
     
   return(list(pval.onesided=pval.onesided,pval.twosided=pval.twosided,
               sspval.onesided=pval.onesided[1],sspval.twosided=pval.twosided[1],
+              medpval.onesided=median(pval.onesided,na.rm=TRUE),medpval.twosided=median(pval.twosided,na.rm=TRUE),
               aggpval.onesided=aggpval.onesided,aggpval.twosided=aggpval.twosided,
               teststat=teststat,weights.nulldistr=weights.nulldistr,
               active.last=res.multisplit[[b.splits]]$active,sig.last=res.multisplit[[b.splits]]$sig,wi.last=res.multisplit[[b.splits]]$wi))

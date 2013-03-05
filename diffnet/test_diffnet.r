@@ -59,6 +59,7 @@ e1 <- ww.mat(imat,act,act1,act2);round(sort(e1$eval),6)
 
 ##Compute weights (new function)
 source('diffnet.r')
+dyn.load("../code/betamat_diffnet.so")
 p <- k+(k+1)*k/2
 act.mean <- (p-k+1):p
 imat <- inf.mat(Sig,include.mean=TRUE)
@@ -120,6 +121,7 @@ fit.pval1$LR.last#38.96125
 ##Test Pval-Aggregation (new function)
 set.seed(1)
 source('diffnet.r')
+dyn.load("../code/betamat_diffnet.so")
 fit.pval2 <- diffnet_multisplit(xx1,xx2,b.splits=5,include.mean=FALSE,lambda=la)
 fit.pval2$pval.onesided# 0.8262682 0.8603141 0.9607790 0.2258820 0.2905430
 fit.pval2$aggpval.onesided# 1
@@ -127,6 +129,7 @@ fit.pval2$teststat#26.07755 26.07807 21.08478 50.16631 38.96125
 
 set.seed(1)
 source('diffnet.r')
+dyn.load("../code/betamat_diffnet.so")
 fit.pval3 <- diffnet_multisplit(xx1,xx2,b.splits=5,include.mean=TRUE,lambda=la)
 fit.pval3$pval.onesided# 0.9466259 0.9137041 0.9624722 0.3386900 0.2152311
 fit.pval3$teststat# 26.10484 32.43598 27.25644 58.04601 52.16929
