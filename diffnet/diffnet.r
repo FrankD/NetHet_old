@@ -826,6 +826,7 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
   weights.nulldistr <- weights.nulldistr[weights.nulldistr!=0]
   if (any(is.na(weights.nulldistr))){
     cat('warning: weight with value NA; pval=NA','\n')
+    pval.onesided <- pval.twosided <- NA
   }else{
     pval.onesided <- davies(teststat,lambda=weights.nulldistr,acc=acc)$Qq;if(show.trace){cat('ifault(davies):',davies(teststat,lambda=weights.nulldistr,acc=acc)$ifault,'\n')}
     pval.twosided <- 2*min(pval.onesided,1-pval.onesided)
