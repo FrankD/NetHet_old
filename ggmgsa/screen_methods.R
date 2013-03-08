@@ -53,7 +53,7 @@ hugepath <- function(s,rholist,penalize.diagonal=NULL,trace=NULL){
   wi <- sapply(fit.huge$icov,as.matrix,simplify='array')
   w <- sapply(fit.huge$cov,as.matrix,simplify='array')
   #return(list(wi=wi[,,length(fit.huge$lambda):1],w=w[,,length(fit.huge$lambda):1]))
-  return(list(wi=wi[,,length(rholist):1],w=w[,,length(rholist):1]))
+  return(list(rholist=rholist,wi=wi[,,length(rholist):1],w=w[,,length(rholist):1]))
 }
 
 ##' Crossvalidation for GLasso 
@@ -136,49 +136,8 @@ mytrunc.method <- function(n,wi,method='linear.growth',trunc.k=5){
   }
 }
 
-## screen_cv.glasso.huge <- function(x,include.mean=FALSE,
-##                                   folds=10,length.lambda=15,penalize.diagonal=FALSE,
-##                                   trunc.method='linear.growth',trunc.k=5,plot.it=FALSE,se=FALSE)
-## {
-##  
-##   colnames(x)<-paste('x',1:ncol(x),sep='')  
-##   all.folds <- cv.fold(nrow(x),folds)
-##   residmat <- matrix(NA,folds,length.lambda)
-##   for (cvfold in 1:folds){
-##     omit <- all.folds[[cvfold]]
-##     s <- var(x[-omit,])
-##     if (include.mean==TRUE){
-##       mu <- colMeans(x[-omit,,drop=FALSE])
-##     }else{
-##       mu <- rep(0,ncol(x))
-##     }
-##     fit.path <- huge(s,nlambda=length.lambda,method='glasso',cov.output=TRUE)
-##     fit.path.cov <- sapply(fit.path$cov,as.matrix,simplify='array')
-##     if(length(omit)==1){
-##       residmat[cvfold,] <- -2*apply(fit.path.cov,3,dmvnorm,log=TRUE,mean=mu,x=x[omit,,drop=FALSE])
-##     }else{
-##       residmat[cvfold,] <- apply(-2*apply(fit.path.cov,3,dmvnorm,log=TRUE,mean=mu,x=x[omit,,drop=FALSE]),2,sum)
-##     }
-##   }
-##   cv <- apply(residmat,2,mean)
-##   cv.error <- sqrt(apply(residmat,2,var)/folds)
-##   gl.opt<-glasso(var(x),rho=fit.path$lambda[which.min(cv)],penalize.diagonal=penalize.diagonal)
-##   cat('la.opt:',fit.path$lambda[which.min(cv)],'\n')
-##   w<-gl.opt$w
-##   wi<-gl.opt$wi
-##   wi[abs(wi)<10^{-3}]<-0
-##   wi <- (wi+t(wi))/2
-##   colnames(w)<-rownames(w)<-colnames(wi)<-rownames(wi)<-colnames(x)
-##   wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
-##  
-##   if (plot.it){
-##     plotCV(fit.path$lambda,cv,cv.error,se=se)
-##   }
-##   list(wi=wi.trunc,wi.orig=wi)
-## }
-
 screen_cv.glasso <- function(x,include.mean=FALSE,
-                             folds=10,length.lambda=20,lambdamin.ratio=0.1,penalize.diagonal=FALSE,
+                             folds=10,length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,
                              trunc.method='linear.growth',trunc.k=5,plot.it=FALSE,se=FALSE,use.package='huge')
 {
   
@@ -207,6 +166,8 @@ screen_cv.glasso <- function(x,include.mean=FALSE,
   cv <- apply(residmat,2,mean)
   cv.error <- sqrt(apply(residmat,2,var)/folds)
   gl.opt<-glasso(var(x),rho=2*lambda[which.min(cv)]/nrow(x),penalize.diagonal=penalize.diagonal)
+  cat('la.min:',gridmin,'\n')
+  cat('la.max:',gridmax,'\n')
   cat('la.opt:',lambda[which.min(cv)],'\n')
   w<-gl.opt$w
   wi<-gl.opt$wi
@@ -221,7 +182,7 @@ screen_cv.glasso <- function(x,include.mean=FALSE,
   list(wi=wi.trunc,wi.orig=wi)
 }
 
-bic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE)
+bic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package='huge')
 {
   ##glasso; lambda.opt with bic
   Mu <- colMeans(x)
@@ -285,7 +246,7 @@ bic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE)
   list(lambda=lambda,bic.score=myscore,Mu=Mu,wi=wi,w=w)
 }
 
-aic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE)
+aic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package='huge')
 {
   ##glasso; lambda.opt with aicc
   aic.score <-rep(NA,length(lambda))
@@ -350,30 +311,29 @@ aic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE)
   list(lambda=lambda,bic.score=myscore,Mu=Mu,wi=wi,w=w)
 }
 
-
 screen_bic.glasso <- function(x,include.mean=TRUE,
-                              length.lambda=20,lambdamin.ratio=0.1,plot.it=FALSE,
-                              trunc.method='linear.growth',trunc.k=5){
+                              length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,plot.it=FALSE,
+                              trunc.method='linear.growth',trunc.k=5,use.package='huge'){
 
   gridmax <- lambda.max(x)
   gridmin <- gridmax*lambdamin.ratio
   my.grid <- make_grid(gridmin,gridmax,length.lambda)[length.lambda:1]
   
-  fit.bicgl <- bic.glasso(x,lambda=my.grid,penalize.diagonal=FALSE,plot.it=plot.it)
+  fit.bicgl <- bic.glasso(x,lambda=my.grid,penalize.diagonal=penalize.diagonal,plot.it=plot.it,use.package=use.package)
   wi <- fit.bicgl$wi
   wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
   list(wi=wi.trunc,wi.orig=wi) 
 }
 
 screen_aic.glasso <- function(x,include.mean=TRUE,
-                              length.lambda=20,lambdamin.ratio=0.1,plot.it=FALSE,
-                              trunc.method='linear.growth',trunc.k=5){
+                              length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,plot.it=FALSE,
+                              trunc.method='linear.growth',trunc.k=5,use.package='huge'){
 
   gridmax <- lambda.max(x)
   gridmin <- gridmax*lambdamin.ratio
   my.grid <- make_grid(gridmin,gridmax,length.lambda)[length.lambda:1]
   
-  fit.aicgl <- aic.glasso(x,lambda=my.grid,penalize.diagonal=FALSE,plot.it=plot.it)
+  fit.aicgl <- aic.glasso(x,lambda=my.grid,penalize.diagonal=penalize.diagonal,plot.it=plot.it,use.package=use.package)
   wi <- fit.aicgl$wi
   wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
   list(wi=wi.trunc,wi.orig=wi) 
@@ -397,7 +357,7 @@ screen_shrink <- function(x,include.mean=NULL,
 }
 
 screen_mb <- function(x,include.mean=NULL,
-                      folds=10,length.lambda=40,lambdamin.ratio=0.1,penalize.diagonal=FALSE,
+                      folds=10,length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,
                       trunc.method='linear.growth',trunc.k=5,plot.it=FALSE,se=FALSE)
 {
   p <- ncol(x)
@@ -418,17 +378,48 @@ screen_mb <- function(x,include.mean=NULL,
   }
   cv <- apply(residmat,2,mean)
   cv.error <- sqrt(apply(residmat,2,var)/folds)
-  gl.opt<-glasso(var(x),rho=2*lambda[which.min(cv)]/nrow(x),penalize.diagonal=penalize.diagonal)
+  gl.opt<-glasso(var(x),rho=2*lambda[which.min(cv)]/nrow(x),penalize.diagonal=penalize.diagonal,approx=TRUE)
+  cat('la.min:',gridmin,'\n')
+  cat('la.max:',gridmax,'\n')
   cat('la.opt:',lambda[which.min(cv)],'\n')
   
   wi<-Beta2parcor(gl.opt$wi)
-  wi[abs(wi)<10^{-3}]<-0
+  #wi[abs(wi)<10^{-3}]<-0
   colnames(wi)<-rownames(wi)<-colnames(x)
   wi <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
   
   if (plot.it){
     plotCV(lambda,cv,cv.error,se=se)
   }
+  
+  list(wi=wi)
+}
+
+screen_mb2 <- function(x,include.mean=NULL,
+                       length.lambda=20,
+                       trunc.method='linear.growth',trunc.k=5,plot.it=FALSE,verbose=FALSE)
+{
+  p <- ncol(x)
+  beta <- rep(0,p)
+  Beta <- sapply(1:p,function(j){
+    fit.cv <- cv.glmnet(x[,-j],x[,j],standardize=FALSE,nlambda=length.lambda)
+    if(verbose){
+      cat('vertex no ',j,' laopt ',0.5*nrow(x)*fit.cv$lambda.min,'\n')
+    }
+    if(plot.it){
+      if(j==1){
+        plot(fit.cv$lambda,fit.cv$cvm/max(fit.cv$cvm),type='b',cex=0.5,ylim=c(0,1))
+      }else{
+        lines(fit.cv$lambda,fit.cv$cvm/max(fit.cv$cvm),type='b',cex=0.5)
+      }
+    }
+    beta[-j] <- as.numeric(coef(fit.cv,s='lambda.min')[-1])
+    return(beta)})
+                 
+  wi<-Beta2parcor(Beta)
+  #wi[abs(wi)<10^{-3}]<-0
+  colnames(wi)<-rownames(wi)<-colnames(x)
+  wi <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
   
   list(wi=wi)
 }
@@ -551,5 +542,45 @@ screen_mb <- function(x,include.mean=NULL,
 #  list(lambda=lambda,bic.score=myscore,Mu=Mu,wi=wi,w=w)
 #}
 
+## screen_cv.glasso.huge <- function(x,include.mean=FALSE,
+##                                   folds=10,length.lambda=15,penalize.diagonal=FALSE,
+##                                   trunc.method='linear.growth',trunc.k=5,plot.it=FALSE,se=FALSE)
+## {
+##  
+##   colnames(x)<-paste('x',1:ncol(x),sep='')  
+##   all.folds <- cv.fold(nrow(x),folds)
+##   residmat <- matrix(NA,folds,length.lambda)
+##   for (cvfold in 1:folds){
+##     omit <- all.folds[[cvfold]]
+##     s <- var(x[-omit,])
+##     if (include.mean==TRUE){
+##       mu <- colMeans(x[-omit,,drop=FALSE])
+##     }else{
+##       mu <- rep(0,ncol(x))
+##     }
+##     fit.path <- huge(s,nlambda=length.lambda,method='glasso',cov.output=TRUE)
+##     fit.path.cov <- sapply(fit.path$cov,as.matrix,simplify='array')
+##     if(length(omit)==1){
+##       residmat[cvfold,] <- -2*apply(fit.path.cov,3,dmvnorm,log=TRUE,mean=mu,x=x[omit,,drop=FALSE])
+##     }else{
+##       residmat[cvfold,] <- apply(-2*apply(fit.path.cov,3,dmvnorm,log=TRUE,mean=mu,x=x[omit,,drop=FALSE]),2,sum)
+##     }
+##   }
+##   cv <- apply(residmat,2,mean)
+##   cv.error <- sqrt(apply(residmat,2,var)/folds)
+##   gl.opt<-glasso(var(x),rho=fit.path$lambda[which.min(cv)],penalize.diagonal=penalize.diagonal)
+##   cat('la.opt:',fit.path$lambda[which.min(cv)],'\n')
+##   w<-gl.opt$w
+##   wi<-gl.opt$wi
+##   wi[abs(wi)<10^{-3}]<-0
+##   wi <- (wi+t(wi))/2
+##   colnames(w)<-rownames(w)<-colnames(wi)<-rownames(wi)<-colnames(x)
+##   wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
+##  
+##   if (plot.it){
+##     plotCV(fit.path$lambda,cv,cv.error,se=se)
+##   }
+##   list(wi=wi.trunc,wi.orig=wi)
+## }
                         
                   

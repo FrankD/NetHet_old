@@ -271,25 +271,25 @@ gsea.highdimT2 <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method='test
   
 }
 
+## gsea.diffnet.singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust='fdr',...){
+
+##   pvals<- sapply(seq(length(gene.sets)),
+##                  function(i){
+##                    ## k <- length(y);print(k)
+##                    ## n1 <- nrow(x1)
+##                    ## n2 <- nrow(x2)
+##                    ## la <- sqrt(2*log(k)*sum(c(n1,n2))/2)/2
+##                    ## la <- seq(0.3,2,length=10)*la;print(la)
+##                    y <- gene.sets[[i]]
+##                    cat('gene set:',i,'\n')
+##                    ind.genes <- gene.names%in%y
+##                    diffnet_multisplit(x1[,ind.genes],x2[,ind.genes],b.splits=1,...)$pval.onesided
+##                  })
+##   pvals.corrected <- my.p.adjust(pvals,method=method.p.adjust)
+##   return(list(pvals=pvals.corrected))
+## }
+
 gsea.diffnet.singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust='fdr',...){
-
-  pvals<- sapply(seq(length(gene.sets)),
-                 function(i){
-                   ## k <- length(y);print(k)
-                   ## n1 <- nrow(x1)
-                   ## n2 <- nrow(x2)
-                   ## la <- sqrt(2*log(k)*sum(c(n1,n2))/2)/2
-                   ## la <- seq(0.3,2,length=10)*la;print(la)
-                   y <- gene.sets[[i]]
-                   cat('gene set:',i,'\n')
-                   ind.genes <- gene.names%in%y
-                   diffnet_multisplit(x1[,ind.genes],x2[,ind.genes],b.splits=1,...)$pval.onesided
-                 })
-  pvals.corrected <- my.p.adjust(pvals,method=method.p.adjust)
-  return(list(pvals=pvals.corrected))
-}
-
-gsea.diffnet.singlesplit2 <- function(x1,x2,gene.sets,gene.names,method.p.adjust='fdr',...){
   n1 <- nrow(x1)
   n2 <- nrow(x2)
   split1 <- sample(1:n1,round(n1*0.5),replace=FALSE)
@@ -320,8 +320,9 @@ gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.n
   res <- lapply(seq(no.splits),
                 function(i){
                   cat('split:',i,'\n')
-                  pvals <- gsea.diffnet.singlesplit2(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
-                                                     method.p.adjust=method.p.adjust,...)$pvals
+                  pvals <- gsea.diffnet.singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
+                                                    method.p.adjust=method.p.adjust,...)$pvals
+                  cat('pvals: ',pvals,'\n')
                   return(pvals)
                 }
                 )
@@ -341,9 +342,10 @@ par.gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,
 
   res <- mclapply(seq(no.splits),
                 function(i){
-                  cat('split:',i,'\n')
+                  cat('split: ',i,'\n')
                   pvals <- gsea.diffnet.singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
                                                     method.p.adjust=method.p.adjust,...)$pvals
+                  cat('pvals: ',pvals,'\n')
                   
                   return(pvals)
                 },
@@ -360,6 +362,24 @@ par.gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,
   }
   
 }
+
+gsea.diffregr.singlesplit <- function(y1,y2,x1,x2,gene.sets,gene.names,method.p.adjust='fdr',screen.meth='lasso.cvtrunc'){
+  n1 <- nrow(x1)
+  n2 <- nrow(x2)
+  split1 <- sample(1:n1,round(n1*0.5),replace=FALSE)
+  split2 <- sample(1:n2,round(n2*0.5),replace=FALSE)
+  pvals<- sapply(seq(length(gene.sets)),
+                 function(i){
+                   y <- gene.sets[[i]]
+                   cat('gene set:',i,'\n')
+                   ind.genes <- which(gene.names%in%y)
+                   diffregr_singlesplit(y1,y2,x1[,ind.genes],x2[,ind.genes],split1,split2,screen.meth=screen.meth)$pval.onesided
+                 })
+  pvals.corrected <- my.p.adjust(pvals,method=method.p.adjust)
+  return(list(pvals=pvals.corrected))
+}
+
+
 
 ## rho.max <- function(s){
 ##   diag(s) <- 0
