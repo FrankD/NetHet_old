@@ -16,9 +16,11 @@ source('twosample_highdimregr-09082012.r')
 set.seed(1)
 fit1 <- twosample_regr(y1,y2,x1,x2)
 str(fit1)
+fit1$beta.last
 
 source('diffregr.r')
 set.seed(1)
-fit2 <- twosample_regr(y1,y2,x1,x2)
+fit2 <- diffregr_multisplit(y1,y2,x1,x2)
 hist(fit1$pval.onesided)
 str(fit2)
+fit2$beta.last

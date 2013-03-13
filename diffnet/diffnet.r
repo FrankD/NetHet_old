@@ -16,6 +16,7 @@
 library(mvtnorm)
 library(glasso)
 library(CompQuadForm)
+library(ggm)
 
 ##load C-code
 #dyn.load("../code/betamat_diffnet.so")
@@ -425,6 +426,24 @@ screen_bic.glasso.invcor <- function(x,length.lambda=20,trunc.k=5,plot.it=TRUE,i
 ##############################
 ##--------P-VALUES----------##
 ##############################
+mle.ggm <- function(x,wi,algorithm='glasso'){
+  if (algorithm=='glasso'){
+    fit.mle <- glasso(var(x),rho=10^{-10},zero=which(wi==0,arr.in=TRUE))
+    return(list(w=fit.mle$w,wi=fit.mle$wi))
+  }
+  if (algorithm=='fitcongraph'){
+    s <- var(x)
+    adj <- wi!=0
+    colnames(s) <- rownames(s) <- colnames(adj) <- rownames(adj) <- 1:ncol(x)
+    fit.mle <- fitConGraph(adj,s,nrow(x))
+    w <- fit.mle$Shat
+    wi <- solve(w)
+    wi[!adj] <- 0
+    return(list(w=fit.mle$Shat,wi=wi))
+  }
+}
+  
+
 ##' LogLikelihood-Ratio 
 ##'
 ##' .. content for \details{} ..
@@ -851,7 +870,7 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
 ##' @return 
 ##' @author n.stadler
 diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glasso',
-                               compute.evals='est2.my.ev2',include.mean=FALSE,
+                               compute.evals='est2.my.ev2',algorithm.mleggm='glasso',include.mean=FALSE,
                                diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,...){
   
   n1 <- nrow(x1)
@@ -889,7 +908,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
     est.wi[['modJ']] <- solve(w)
   }
   if (length(active[['modJ']])!=df.param){
-    fit.mle <- glasso(var(xx.valid),rho=10^{-10},zero=which(fit.screen$wi==0,arr.in=TRUE))
+    fit.mle <- mle.ggm(xx.valid,fit.screen$wi,algorithm=algorithm.mleggm)
     w <- fit.mle$w
     if(!diag.invcov){
       w <-w*sqrt(tcrossprod(diag(solve(fit.mle$w))))
@@ -925,7 +944,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
       est.wi[[paste('modIpop',j,sep='')]] <- solve(w)
     }
     if (length(active[[paste('modIpop',j,sep='')]])!=df.param){
-      fit.mle <- glasso(var(xx.valid),rho=10^{-10},zero=which(fit.screen$wi==0,arr.in=TRUE))
+      fit.mle <- mle.ggm(xx.valid,fit.screen$wi,algorithm=algorithm.mleggm)
       w <- fit.mle$w
       if(!diag.invcov){
         w <-w*sqrt(tcrossprod(diag(solve(fit.mle$w))))
@@ -977,7 +996,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
 ##' @return 
 ##' @author n.stadler
 diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='screen_bic.glasso',include.mean=FALSE,
-                              gamma.min=0.05,compute.evals='est2.my.ev2',diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,...){
+                              gamma.min=0.05,compute.evals='est2.my.ev2',algorithm.mleggm='glasso',diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,...){
 
   ##????Important Notes: Pval can be NA, because...
   ##????
@@ -991,7 +1010,7 @@ diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='scre
                             split1 <- sample(1:n1,round(n1*frac.split),replace=FALSE)
                             split2 <- sample(1:n2,round(n2*frac.split),replace=FALSE)
                             res.singlesplit <- diffnet_singlesplit(x1,x2,split1,split2,screen.meth,
-                                                                   compute.evals,include.mean,diag.invcov,acc,show.trace,...)
+                                                                   compute.evals,algorithm.mleggm,include.mean,diag.invcov,acc,show.trace,...)
                             
                           })
   pval.onesided <- sapply(res.multisplit,function(x){x[['pval.onesided']]},simplify='array')

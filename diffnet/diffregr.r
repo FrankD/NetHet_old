@@ -19,10 +19,9 @@ library(mvtnorm)
 library(glmnet)
 library(CompQuadForm)
 
-#############
-##Screening##
-#############
-
+#######################
+##-----Screening-----##
+#######################
 lasso.cvmin <- function(x,y){
   fit.cv <- cv.glmnet(x,y)
   beta <- as.numeric(coef(fit.cv,s='lambda.min')[-1])
@@ -52,10 +51,9 @@ lasso.cv1se <- function(x,y){
   return(which(beta!=0))
 }
 
-############
-##P-VALUES##
-############
-
+##############################
+##--------P-VALUES----------##
+##############################
 logratio <- function(y1,y2,y,xx1,xx2,xx,beta1,beta2,beta){
   ##Compute 2*log-likelihood ratio
   ##Input:
@@ -356,8 +354,30 @@ agg.pval <- function(gamma,pval){
     min(quantile(pval/gamma,probs=gamma),1)
 }
 
-twosample_regr <- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,screen.meth='lasso.cvmin',gamma.min=0.05,compute.evals='est2.my.ev2'){
+diffregr_pval <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act,compute.evals,acc,verbose){
+  ##########################
+  ##compute test-statistic##
+  ##########################
+  teststat <- logratio(y1,y2,c(y1,y2),x1[,act1,drop=FALSE],x2[,act2,drop=FALSE],rbind(x1,x2)[,act,drop=FALSE],beta1,beta2,beta)
+  #################################
+  ##compute weights of sum-w-chi2##
+  #################################
+  weights.nulldistr <- eval(as.name(compute.evals))(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act)$eval
+  weights.nulldistr <- weights.nulldistr[weights.nulldistr!=0]
+  if (any(is.na(weights.nulldistr))){
+    cat('warning: weight with value NA; pval=NA','\n')
+    pval.onesided <- pval.twosided <- NA
+  }else{
+    pval.onesided <- davies(teststat,lambda=weights.nulldistr,acc=acc)$Qq;if(verbose){cat('ifault(davies):',davies(teststat,lambda=weights.nulldistr,acc=acc)$ifault,'\n')}
+    pval.twosided <- 2*min(pval.onesided,1-pval.onesided)
+  }
+  return(list(pval.onesided=pval.onesided,pval.twosided=pval.twosided,weights.nulldistr=weights.nulldistr,teststat=teststat))
+}
 
+diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='lasso.cvmin',
+                                compute.evals='est2.my.ev2',
+                                acc=1e-04,verbose=FALSE){
+  
   ##Multisplit Pvalues
   ##
   ##Input:
@@ -371,78 +391,89 @@ twosample_regr <- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,screen.meth='l
 
   n1 <- nrow(x1)
   n2 <- nrow(x2)
-  pval.onesided <- pval.twosided <- rep(NA,length=b.splits)
+ 
+  est.beta <- active <- list()#save est.beta & active variables
 
-  for (i in 1:b.splits){
-    cat('\n','split:',i,'\n')
-    split1 <- sample(1:n1,round(n1*frac.split),replace=FALSE)
-    split2 <- sample(1:n2,round(n2*frac.split),replace=FALSE)
-
-    est.beta <- active <- list()#save est.beta & active variables
-
-    ##model joint
-    xx.train <- rbind(x1[split1,],x2[split2,])
-    yy.train <- c(y1[split1],y2[split2])
-    xx.valid <- rbind(x1[-split1,],x2[-split2,])
-    yy.valid <- c(y1[-split1],y2[-split2])
-    active[['modJ']] <- eval(as.name(screen.meth))(xx.train,yy.train)
-    if(length(active[['modJ']])!=0){
-      est.beta[['modJ']] <- as.numeric(coef(lm(yy.valid~xx.valid[,active[['modJ']]]-1)))
-    }else{
-      est.beta[['modJ']]<-numeric(0)
-    }
-    
-    ##model individual
-    for (j in c('1','2')){
-      split.train <- eval(as.name(paste('split',j,sep='')))
-      xx.train <- eval(as.name(paste('x',j,sep='')))[split.train,]
-      yy.train <- eval(as.name(paste('y',j,sep='')))[split.train]
-      xx.valid <- eval(as.name(paste('x',j,sep='')))[-split.train,]
-      yy.valid <- eval(as.name(paste('y',j,sep='')))[-split.train]
-      active[[paste('modIpop',j,sep='')]] <- eval(as.name(screen.meth))(xx.train,yy.train)
-
-      if(length(active[[paste('modIpop',j,sep='')]])!=0){
-        est.beta[[paste('modIpop',j,sep='')]] <- as.numeric(coef(lm(yy.valid~xx.valid[,active[[paste('modIpop',j,sep='')]]]-1)))
-      }else{
-        est.beta[[paste('modIpop',j,sep='')]]<-numeric(0)
-      }
-    }
-    l.act <- lapply(active,length)
-    n1.valid <- nrow(x1[-split1,])
-    n2.valid <- nrow(x2[-split2,])
-    if (any(l.act==0)){ cat('warning! at least one active-set is empty','\n')}
-    
-    if (all(l.act<c(n1.valid+n2.valid,n1.valid,n2.valid))){
-      
-      teststat <- logratio(y1[-split1],y2[-split2],c(y1[-split1],y2[-split2]),
-                           x1[-split1,active[['modIpop1']],drop=FALSE],x2[-split2,active[['modIpop2']],drop=FALSE],
-                           rbind(x1[-split1,active[['modJ']],drop=FALSE],x2[-split2,active[['modJ']],drop=FALSE]),
-                           est.beta[['modIpop1']],est.beta[['modIpop2']],est.beta[['modJ']])
-      
-      ev.nulldistr <- eval(as.name(compute.evals))(y1[-split1],y2[-split2],x1[-split1,],x2[-split2,],
-                                                   est.beta[['modIpop1']],est.beta[['modIpop2']],est.beta[['modJ']],
-                                                   active[['modIpop1']],active[['modIpop2']],active[['modJ']])$eval
-      if (any(is.na(ev.nulldistr))){
-        cat('warning! eigenval is NA: pval=NA','\n')
-      }else{
-        pval_onesided <- davies(teststat,lambda=ev.nulldistr)$Qq
-        pval.onesided[i] <- pval_onesided
-        pval.twosided[i] <- 2*min(pval_onesided,1-pval_onesided)
-      }
-    }else{cat('warning! dim(model) > n-1: pval=NA','\n')}
+  ###############
+  ##Joint Model##
+  ###############
+  xx.train <- rbind(x1[split1,],x2[split2,])
+  yy.train <- c(y1[split1],y2[split2])
+  xx.valid <- rbind(x1[-split1,],x2[-split2,])
+  yy.valid <- c(y1[-split1],y2[-split2])
+  active[['modJ']] <- eval(as.name(screen.meth))(xx.train,yy.train)
+  if(length(active[['modJ']])!=0){
+    est.beta[['modJ']] <- as.numeric(coef(lm(yy.valid~xx.valid[,active[['modJ']]]-1)))
+  }else{
+    est.beta[['modJ']]<-numeric(0)
   }
-  sspval.onesided<-pval.onesided[1]
-  sspval.twosided<-pval.twosided[1]
+  ####################  
+  ##Individual Model##
+  ####################
+  for (j in c('1','2')){
+    split.train <- eval(as.name(paste('split',j,sep='')))
+    xx.train <- eval(as.name(paste('x',j,sep='')))[split.train,]
+    yy.train <- eval(as.name(paste('y',j,sep='')))[split.train]
+    xx.valid <- eval(as.name(paste('x',j,sep='')))[-split.train,]
+    yy.valid <- eval(as.name(paste('y',j,sep='')))[-split.train]
+    active[[paste('modIpop',j,sep='')]] <- eval(as.name(screen.meth))(xx.train,yy.train)
+
+    if(length(active[[paste('modIpop',j,sep='')]])!=0){
+      est.beta[[paste('modIpop',j,sep='')]] <- as.numeric(coef(lm(yy.valid~xx.valid[,active[[paste('modIpop',j,sep='')]]]-1)))
+    }else{
+      est.beta[[paste('modIpop',j,sep='')]]<-numeric(0)
+    }
+  }
+  ###############
+  ##Some Checks##
+  ###############
+  l.act <- lapply(active,length)
+  n1.valid <- nrow(x1[-split1,])
+  n2.valid <- nrow(x2[-split2,])
+  if (any(l.act==0)){ cat('warning: at least one active-set is empty','\n')}
+  if (all(l.act<c(n1.valid+n2.valid,n1.valid,n2.valid))){
+    res.pval <- diffregr_pval(y1=y1[-split1],y2=y2[-split2],
+                              x1=x1[-split1,,drop=FALSE],x2=x2[-split2,,drop=FALSE],
+                              beta1=est.beta[['modIpop1']],beta2=est.beta[['modIpop2']],beta=est.beta[['modJ']],
+                              active[['modIpop1']],active[['modIpop2']],active[['modJ']],
+                              compute.evals,acc,verbose)
+  }else{
+    cat('warning: dim(model) > n: pval=NA','\n')
+    res.pval <- list(pval.onesided=NA,pval.twosided=NA,weights.nulldistr=NA,teststat=NA)
+  }
+  
+  return(list(pval.onesided=res.pval$pval.onesided,pval.twosided=res.pval$pval.twosided,
+              teststat=res.pval$teststat,weights.nulldistr=res.pval$weights.nulldistr,
+              active=active,beta=est.beta))
+}
+
+diffregr_multisplit<- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,screen.meth='lasso.cvmin',
+                              gamma.min=0.05,compute.evals='est2.my.ev2',acc=1e-04,verbose=FALSE){
+
+  n1 <- nrow(x1)
+  n2 <- nrow(x2)
+  
+  res.multisplit <- lapply(seq(b.splits),
+                          function(i){
+                            split1 <- sample(1:n1,round(n1*frac.split),replace=FALSE)
+                            split2 <- sample(1:n2,round(n2*frac.split),replace=FALSE)
+                            res.singlesplit <- diffregr_singlesplit(y1,y2,x1,x2,split1,split2,screen.meth,
+                                                                    compute.evals,acc,verbose)                      
+                          })
+  pval.onesided <- sapply(res.multisplit,function(x){x[['pval.onesided']]},simplify='array')
+  pval.twosided <- sapply(res.multisplit,function(x){x[['pval.twosided']]},simplify='array')
+  teststat <- sapply(res.multisplit,function(x){x[['teststat']]},simplify='array')
+  weights.nulldistr <- sapply(res.multisplit,function(x){x[['weights.nulldistr']]},simplify='array')
   aggpval.onesided <- min(1,(1-log(gamma.min))*optimize(f=agg.pval,interval=c(gamma.min,1),maximum=FALSE,pval=pval.onesided[!is.na(pval.onesided)])$objective)
   aggpval.twosided <- min(1,(1-log(gamma.min))*optimize(f=agg.pval,interval=c(gamma.min,1),maximum=FALSE,pval=pval.twosided[!is.na(pval.twosided)])$objective)
     
-  return(list(pval.onesided=pval.onesided,pval.twosided=pval.twosided,sspval.onesided=sspval.onesided,
-              sspval.twosided=sspval.twosided,
+  return(list(pval.onesided=pval.onesided,pval.twosided=pval.twosided,
+              sspval.onesided=pval.onesided[1],sspval.twosided=pval.twosided[1],
+              medpval.onesided=median(pval.onesided,na.rm=TRUE),medpval.twosided=median(pval.twosided,na.rm=TRUE),
               aggpval.onesided=aggpval.onesided,aggpval.twosided=aggpval.twosided,
-              LR.last=teststat,active.last=active,beta.last=est.beta))
+              teststat=teststat,weights.nulldistr=weights.nulldistr,
+              active.last=res.multisplit[[b.splits]]$active,beta.last=res.multisplit[[b.splits]]$beta))
 }
-
-
 
 twosample_single_regr <- function(y1,y2,x1,x2,n.screen.pop1=100,n.screen.pop2=100,screen.meth=lasso.cvmin,compute.evals='est2.my.ev2'){
 
