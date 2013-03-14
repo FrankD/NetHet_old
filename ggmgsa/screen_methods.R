@@ -217,33 +217,16 @@ bic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package
   if(is.null(lambda)){
     lambda <- 0.5*nrow(x)*fit.path$rholist
   }
+  index.opt <- which.min(myscore)
+  wi <- fit.path$wi[,,index.opt]
+  wi[abs(wi)<10^{-3}]<-0
+  w <- fit.path$w[,,index.opt]
   
-  if(ncol(x)<nrow(x)){
-    loglik.la0 <- sum(dmvnorm(x,mean=Mu,sigma=var(x),log=TRUE))
-    degfree.la0 <- ncol(x)+(ncol(x)*(ncol(x)+1)/2)
-    myscore.la0 <- -loglik.la0+log(nrow(x))*degfree.la0/2
-    myscore <- c(myscore.la0,myscore)
-    index.opt <- which.min(myscore)
-    if(index.opt==1){
-      w <- var(x)
-      wi <- solve(var(x))
-    }else{
-      wi <- fit.path$wi[,,index.opt-1]
-      wi[abs(wi)<10^{-3}]<-0
-      w <- fit.path$w[,,index.opt-1]
-    }
-    lambda <- c(0,lambda)
-  }else{
-    index.opt <- which.min(myscore)
-    wi <- fit.path$wi[,,index.opt]
-    wi[abs(wi)<10^{-3}]<-0
-    w <- fit.path$w[,,index.opt]
-  }
   if (plot.it){
     plot(lambda,myscore,type='b',xlab='lambda')
   }
   
-  list(lambda=lambda,bic.score=myscore,Mu=Mu,wi=wi,w=w)
+  list(lambda=lambda,la.opt=lambda[index.opt],bic.score=myscore,Mu=Mu,wi=wi,w=w)
 }
 
 aic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package='huge')
@@ -278,37 +261,19 @@ aic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package
   loglik <- simplify2array(loglik,higher=TRUE)
   degfree <- simplify2array(degfree,higher=TRUE)
   myscore <- -loglik+2*degfree/2
-
   if(is.null(lambda)){
     lambda <- 0.5*nrow(x)*fit.path$rholist
   }
-  
-  if(ncol(x)<nrow(x)){
-    loglik.la0 <- sum(dmvnorm(x,mean=Mu,sigma=var(x),log=TRUE))
-    degfree.la0 <- ncol(x)+(ncol(x)*(ncol(x)+1)/2)
-    myscore.la0 <- -loglik.la0+2*degfree.la0/2
-    myscore <- c(myscore.la0,myscore)
-    index.opt <- which.min(myscore)
-    if(index.opt==1){
-      w <- var(x)
-      wi <- solve(var(x))
-    }else{
-      wi <- fit.path$wi[,,index.opt-1]
-      wi[abs(wi)<10^{-3}]<-0
-      w <- fit.path$w[,,index.opt-1]
-    }
-    lambda <- c(0,lambda)
-  }else{
-    index.opt <- which.min(myscore)
-    wi <- fit.path$wi[,,index.opt]
-    wi[abs(wi)<10^{-3}]<-0
-    w <- fit.path$w[,,index.opt]
-  }
+  index.opt <- which.min(myscore)
+  wi <- fit.path$wi[,,index.opt]
+  wi[abs(wi)<10^{-3}]<-0
+  w <- fit.path$w[,,index.opt]
+
   if (plot.it){
     plot(lambda,myscore,type='b',xlab='lambda')
   }
   
-  list(lambda=lambda,bic.score=myscore,Mu=Mu,wi=wi,w=w)
+  list(lambda=lambda,la.opt=lambda[index.opt],bic.score=myscore,Mu=Mu,wi=wi,w=w)
 }
 
 screen_bic.glasso <- function(x,include.mean=TRUE,
@@ -320,6 +285,9 @@ screen_bic.glasso <- function(x,include.mean=TRUE,
   my.grid <- make_grid(gridmin,gridmax,length.lambda)[length.lambda:1]
   
   fit.bicgl <- bic.glasso(x,lambda=my.grid,penalize.diagonal=penalize.diagonal,plot.it=plot.it,use.package=use.package)
+  cat('la.min:',gridmin,'\n')
+  cat('la.max:',gridmax,'\n')
+  cat('la.opt:',fit.bicgl$la.opt,'\n')
   wi <- fit.bicgl$wi
   wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
   list(wi=wi.trunc,wi.orig=wi) 
@@ -334,6 +302,9 @@ screen_aic.glasso <- function(x,include.mean=TRUE,
   my.grid <- make_grid(gridmin,gridmax,length.lambda)[length.lambda:1]
   
   fit.aicgl <- aic.glasso(x,lambda=my.grid,penalize.diagonal=penalize.diagonal,plot.it=plot.it,use.package=use.package)
+  cat('la.min:',gridmin,'\n')
+  cat('la.max:',gridmax,'\n')
+  cat('la.opt:',fit.aicgl$la.opt,'\n')
   wi <- fit.aicgl$wi
   wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
   list(wi=wi.trunc,wi.orig=wi) 
@@ -584,3 +555,131 @@ screen_mb2 <- function(x,include.mean=NULL,
 ## }
                         
                   
+## bic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package='huge')
+## {
+##   ##glasso; lambda.opt with bic
+##   Mu <- colMeans(x)
+##   samplecov <- var(x)
+
+##   if(is.null(lambda)){
+##     la <- lambda
+##   }else{
+##     la <- 2*lambda/nrow(x)
+##   }
+
+##   fit.path <- eval(as.name(paste(use.package,'path',sep='')))(samplecov,rholist=la,penalize.diagonal=penalize.diagonal,trace=0)
+
+##   loglik <- lapply(seq(length(fit.path$rholist)),
+##                    function(i){
+##                      return(sum(dmvnorm(x,mean=Mu,sigma=fit.path$w[,,i],log=TRUE)))
+##                    }
+##                    )
+##   degfree <- lapply(seq(length(fit.path$rholist)),
+##                     function(i){
+##                       wi <- fit.path$wi[,,i]
+##                       wi[abs(wi)<10^{-3}]<-0
+##                       p <- ncol(wi)
+##                       n.zero<-sum(wi==0)
+##                       return(p+(p*(p+1)/2)-n.zero/2)
+##                     }
+##                     )
+##   loglik <- simplify2array(loglik,higher=TRUE)
+##   degfree <- simplify2array(degfree,higher=TRUE)
+##   myscore <- -loglik+log(nrow(x))*degfree/2
+
+##   if(is.null(lambda)){
+##     lambda <- 0.5*nrow(x)*fit.path$rholist
+##   }
+  
+##   if(ncol(x)<nrow(x)){
+##     loglik.la0 <- sum(dmvnorm(x,mean=Mu,sigma=var(x),log=TRUE))
+##     degfree.la0 <- ncol(x)+(ncol(x)*(ncol(x)+1)/2)
+##     myscore.la0 <- -loglik.la0+log(nrow(x))*degfree.la0/2
+##     myscore <- c(myscore.la0,myscore)
+##     index.opt <- which.min(myscore)
+##     if(index.opt==1){
+##       w <- var(x)
+##       wi <- solve(var(x))
+##     }else{
+##       wi <- fit.path$wi[,,index.opt-1]
+##       wi[abs(wi)<10^{-3}]<-0
+##       w <- fit.path$w[,,index.opt-1]
+##     }
+##     lambda <- c(0,lambda)
+##   }else{
+##     index.opt <- which.min(myscore)
+##     wi <- fit.path$wi[,,index.opt]
+##     wi[abs(wi)<10^{-3}]<-0
+##     w <- fit.path$w[,,index.opt]
+##   }
+##   if (plot.it){
+##     plot(lambda,myscore,type='b',xlab='lambda')
+##   }
+  
+##   list(lambda=lambda,bic.score=myscore,Mu=Mu,wi=wi,w=w)
+## }
+
+## aic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package='huge')
+## {
+##   ##glasso; lambda.opt with aicc
+##   aic.score <-rep(NA,length(lambda))
+##   Mu <- colMeans(x)
+##   samplecov <- var(x)
+
+##   if(is.null(lambda)){
+##     la <- lambda
+##   }else{
+##     la <- 2*lambda/nrow(x)
+##   }
+
+##   fit.path <- eval(as.name(paste(use.package,'path',sep='')))(samplecov,rholist=la,penalize.diagonal=penalize.diagonal,trace=0)
+
+##   loglik <- lapply(seq(length(fit.path$rholist)),
+##                    function(i){
+##                      return(sum(dmvnorm(x,mean=Mu,sigma=fit.path$w[,,i],log=TRUE)))
+##                    }
+##                    )
+##   degfree <- lapply(seq(length(fit.path$rholist)),
+##                     function(i){
+##                       wi <- fit.path$wi[,,i]
+##                       wi[abs(wi)<10^{-3}]<-0
+##                       p <- ncol(wi)
+##                       n.zero<-sum(wi==0)
+##                       return(p+(p*(p+1)/2)-n.zero/2)
+##                     }
+##                     )
+##   loglik <- simplify2array(loglik,higher=TRUE)
+##   degfree <- simplify2array(degfree,higher=TRUE)
+##   myscore <- -loglik+2*degfree/2
+
+##   if(is.null(lambda)){
+##     lambda <- 0.5*nrow(x)*fit.path$rholist
+##   }
+  
+##   if(ncol(x)<nrow(x)){
+##     loglik.la0 <- sum(dmvnorm(x,mean=Mu,sigma=var(x),log=TRUE))
+##     degfree.la0 <- ncol(x)+(ncol(x)*(ncol(x)+1)/2)
+##     myscore.la0 <- -loglik.la0+2*degfree.la0/2
+##     myscore <- c(myscore.la0,myscore)
+##     index.opt <- which.min(myscore)
+##     if(index.opt==1){
+##       w <- var(x)
+##       wi <- solve(var(x))
+##     }else{
+##       wi <- fit.path$wi[,,index.opt-1]
+##       wi[abs(wi)<10^{-3}]<-0
+##       w <- fit.path$w[,,index.opt-1]
+##     }
+##     lambda <- c(0,lambda)
+##   }else{
+##     index.opt <- which.min(myscore)
+##     wi <- fit.path$wi[,,index.opt]
+##     wi[abs(wi)<10^{-3}]<-0
+##     w <- fit.path$w[,,index.opt]
+##   }
+##   if (plot.it){
+##     plot(lambda,myscore,type='b',xlab='lambda')
+##   }
+  
+##   list(lambda=lambda,bic.score=myscore,Mu=Mu,wi=wi,w=w)
+## }
