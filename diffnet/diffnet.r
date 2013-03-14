@@ -95,7 +95,7 @@ cv.glasso <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se
   wi[abs(wi)<10^{-3}]<-0
   colnames(w)<-rownames(w)<-colnames(wi)<-rownames(wi)<-colnames(x)  
 
-  object <- list(lambda=lambda,residmat=residmat,cv=cv,cv.error=cv.error,w=w,wi=wi,mu=colMeans(x))
+  object <- list(rho.opt=2*lambda[which.min(cv)]/nrow(x),lambda=lambda,residmat=residmat,cv=cv,cv.error=cv.error,w=w,wi=wi,mu=colMeans(x))
   if (plot.it){
     plotCV(lambda,cv,cv.error,se=se)
   }
@@ -138,7 +138,7 @@ cvtrunc.glasso <- function(x,folds=10,lambda,trunc.k=5,penalize.diagonal=FALSE,i
   wi.trunc[-order(abs(wi.trunc),decreasing=TRUE)[1:nonzero]] <- 0
   diag(wi.trunc) <- diag(wi)
 
-  list(wi=wi.trunc)
+  list(rho.opt=2*lambda[which.min(cv)]/nrow(x),wi=wi.trunc)
   
 }
 
@@ -185,7 +185,7 @@ cv.glasso.1se <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALS
   wi[abs(wi)<10^{-3}]<-0
   colnames(w)<-rownames(w)<-colnames(wi)<-rownames(wi)<-colnames(x)  
 
-  object <- list(lambda=lambda,residmat=residmat,cv=cv,cv.error=cv.error,w=w,wi=wi,mu=colMeans(x),la.1se=la.1se)
+  object <- list(rho.opt=2*la.1se/nrow(x),lambda=lambda,residmat=residmat,cv=cv,cv.error=cv.error,w=w,wi=wi,mu=colMeans(x),la.1se=la.1se)
   if (plot.it){
     plotCV(lambda,cv,cv.error,se=se)
   }
@@ -209,7 +209,7 @@ glasso.parcor.launi <- function(x,maxiter=1000,term=10^{-3},include.mean=NULL,la
     err <- max(abs(param-param.old)/(1+abs(param)))
     iter <- iter+1
   }
-  list(w=gl$w,wi=gl$wi,mu=colMeans(x),iter=iter)
+  list(rho.opt=rho.uni,w=gl$w,wi=gl$wi,mu=colMeans(x),iter=iter)
 }
 
 glasso.parcor.launi.trunc <- function(x,trunc.k=5,maxiter=1000,term=10^{-3},include.mean=NULL,lambda=NULL){
@@ -238,7 +238,7 @@ glasso.parcor.launi.trunc <- function(x,trunc.k=5,maxiter=1000,term=10^{-3},incl
   wi.trunc[-order(abs(wi.trunc),decreasing=TRUE)[1:nonzero]] <- 0
   diag(wi.trunc) <- diag(wi)
 
-  list(wi=wi.trunc)
+  list(rho.opt=rho.uni,wi=wi.trunc)
  
 }
 
@@ -311,7 +311,7 @@ bic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE)
     plot(lambda,myscore,type='b',xlab='lambda')
   }
   
-  list(lambda=lambda,bic.score=myscore,Mu=Mu,wi=wi,w=w)
+  list(rho.opt=2*lambda[which.min(myscore)]/nrow(x),lambda=lambda,bic.score=myscore,Mu=Mu,wi=wi,w=w)
 }
 
 screen_bic.glasso <- function(x,length.lambda=20,trunc.k=5,plot.it=TRUE,include.mean=TRUE){
@@ -327,7 +327,7 @@ screen_bic.glasso <- function(x,length.lambda=20,trunc.k=5,plot.it=TRUE,include.
   wi.trunc[-order(abs(wi.trunc),decreasing=TRUE)[1:nonzero]] <- 0
   diag(wi.trunc) <- diag(fit.bicgl$wi)
 
-  list(wi=wi.trunc)
+  list(rho.opt=fit.bicgl$rho.opt,wi=wi.trunc)
 }
 
 rho.max <- function(s){
@@ -403,7 +403,7 @@ bic.glasso.invcor <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE)
     plot(lambda,myscore,type='b',xlab='lambda')
   }
   
-  list(lambda=lambda,bic.score=myscore,Mu=Mu,wi=wi,w=w)
+  list(rho.opt=2*lambda[which.min(myscore)]/nrow(x),lambda=lambda,bic.score=myscore,Mu=Mu,wi=wi,w=w)
 }
 
 screen_bic.glasso.invcor <- function(x,length.lambda=20,trunc.k=5,plot.it=TRUE,include.mean=TRUE){
@@ -419,15 +419,24 @@ screen_bic.glasso.invcor <- function(x,length.lambda=20,trunc.k=5,plot.it=TRUE,i
   wi.trunc[-order(abs(wi.trunc),decreasing=TRUE)[1:nonzero]] <- 0
   diag(wi.trunc) <- diag(fit.bicgl$wi)
 
-  list(wi=wi.trunc)
+  list(rho.opt=fit.bicgl$rho.opt,wi=wi.trunc)
 }
   
 
 ##############################
 ##--------P-VALUES----------##
 ##############################
-mle.ggm <- function(x,wi,algorithm='glasso'){
+mle.ggm <- function(x,wi,algorithm='glasso_rho0',rho=NULL){
+  if(is.null(rho)){
+    algorithm <- 'glasso_rho0'
+    cat('screening method with rho.opt=NULL; set algorithm="glasso_rho0" in mle.ggm')
+  }
+    
   if (algorithm=='glasso'){
+    fit.mle <- glasso(var(x),rho=rho,zero=which(wi==0,arr.in=TRUE))
+    return(list(w=fit.mle$w,wi=fit.mle$wi))
+  }
+  if (algorithm=='glasso_rho0'){
     fit.mle <- glasso(var(x),rho=10^{-10},zero=which(wi==0,arr.in=TRUE))
     return(list(w=fit.mle$w,wi=fit.mle$wi))
   }
@@ -870,7 +879,7 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
 ##' @return 
 ##' @author n.stadler
 diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glasso',
-                               compute.evals='est2.my.ev2',algorithm.mleggm='glasso',include.mean=FALSE,
+                               compute.evals='est2.my.ev2',algorithm.mleggm='glasso_rho0',include.mean=FALSE,
                                diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,...){
   
   n1 <- nrow(x1)
@@ -908,7 +917,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
     est.wi[['modJ']] <- solve(w)
   }
   if (length(active[['modJ']])!=df.param){
-    fit.mle <- mle.ggm(xx.valid,fit.screen$wi,algorithm=algorithm.mleggm)
+    fit.mle <- mle.ggm(xx.valid,fit.screen$wi,algorithm=algorithm.mleggm,rho=fit.screen$rho.opt)
     w <- fit.mle$w
     if(!diag.invcov){
       w <-w*sqrt(tcrossprod(diag(solve(fit.mle$w))))
@@ -944,7 +953,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
       est.wi[[paste('modIpop',j,sep='')]] <- solve(w)
     }
     if (length(active[[paste('modIpop',j,sep='')]])!=df.param){
-      fit.mle <- mle.ggm(xx.valid,fit.screen$wi,algorithm=algorithm.mleggm)
+      fit.mle <- mle.ggm(xx.valid,fit.screen$wi,algorithm=algorithm.mleggm,rho=fit.screen$rho.opt)
       w <- fit.mle$w
       if(!diag.invcov){
         w <-w*sqrt(tcrossprod(diag(solve(fit.mle$w))))
@@ -996,7 +1005,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
 ##' @return 
 ##' @author n.stadler
 diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='screen_bic.glasso',include.mean=FALSE,
-                              gamma.min=0.05,compute.evals='est2.my.ev2',algorithm.mleggm='glasso',diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,...){
+                              gamma.min=0.05,compute.evals='est2.my.ev2',algorithm.mleggm='glasso_rho0',diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,...){
 
   ##????Important Notes: Pval can be NA, because...
   ##????
