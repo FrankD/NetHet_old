@@ -98,7 +98,7 @@ cv.glasso <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se
   wi[abs(wi)<10^{-3}]<-0
   colnames(w)<-rownames(w)<-colnames(wi)<-rownames(wi)<-colnames(x)  
 
-  object <- list(lambda=lambda,residmat=residmat,cv=cv,cv.error=cv.error,w=w,wi=wi,mu=colMeans(x))
+  object <- list(rho.opt=2*lambda[which.min(cv)]/nrow(x),lambda=lambda,residmat=residmat,cv=cv,cv.error=cv.error,w=w,wi=wi,mu=colMeans(x))
   if (plot.it){
     plotCV(lambda,cv,cv.error,se=se)
   }
@@ -179,7 +179,7 @@ screen_cv.glasso <- function(x,include.mean=FALSE,
   if (plot.it){
     plotCV(lambda,cv,cv.error,se=se)
   }
-  list(wi=wi.trunc,wi.orig=wi)
+  list(rho.opt=2*lambda[which.min(cv)]/nrow(x),wi=wi.trunc,wi.orig=wi)
 }
 
 bic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package='huge')
@@ -226,7 +226,7 @@ bic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package
     plot(lambda,myscore,type='b',xlab='lambda')
   }
   
-  list(lambda=lambda,la.opt=lambda[index.opt],bic.score=myscore,Mu=Mu,wi=wi,w=w)
+  list(rho.opt=2*lambda[which.min(myscore)]/nrow(x),lambda=lambda,la.opt=lambda[index.opt],bic.score=myscore,Mu=Mu,wi=wi,w=w)
 }
 
 aic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package='huge')
@@ -273,7 +273,7 @@ aic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package
     plot(lambda,myscore,type='b',xlab='lambda')
   }
   
-  list(lambda=lambda,la.opt=lambda[index.opt],bic.score=myscore,Mu=Mu,wi=wi,w=w)
+  list(rho.opt=2*lambda[which.min(myscore)]/nrow(x),lambda=lambda,la.opt=lambda[index.opt],bic.score=myscore,Mu=Mu,wi=wi,w=w)
 }
 
 screen_bic.glasso <- function(x,include.mean=TRUE,
@@ -290,7 +290,7 @@ screen_bic.glasso <- function(x,include.mean=TRUE,
   cat('la.opt:',fit.bicgl$la.opt,'\n')
   wi <- fit.bicgl$wi
   wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
-  list(wi=wi.trunc,wi.orig=wi) 
+  list(rho.opt=fit.bicgl$rho.opt,wi=wi.trunc,wi.orig=wi) 
 }
 
 screen_aic.glasso <- function(x,include.mean=TRUE,
@@ -307,7 +307,7 @@ screen_aic.glasso <- function(x,include.mean=TRUE,
   cat('la.opt:',fit.aicgl$la.opt,'\n')
   wi <- fit.aicgl$wi
   wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
-  list(wi=wi.trunc,wi.orig=wi) 
+  list(rho.opt=fit.aicgl$rho.opt,wi=wi.trunc,wi.orig=wi) 
 }
 
 screen_lasso <- function(x,include.mean=NULL,
@@ -315,7 +315,7 @@ screen_lasso <- function(x,include.mean=NULL,
   
   wi <- adalasso.net(x, k = 10,use.Gram=FALSE,both=FALSE,verbose=FALSE)$pcor.lasso
   wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
-  list(wi=wi.trunc,wi.orig=wi)
+  list(rho.opt=NULL,wi=wi.trunc,wi.orig=wi)
 }
 
 screen_shrink <- function(x,include.mean=NULL,
@@ -324,7 +324,7 @@ screen_shrink <- function(x,include.mean=NULL,
   adj <- performance.pcor(wi, fdr=TRUE,verbose=FALSE,plot.it=FALSE)$adj
   wi[adj==0] <- 0
   wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
-  list(wi=wi.trunc,wi.orig=wi)
+  list(rho.opt=NULL,wi=wi.trunc,wi.orig=wi)
 }
 
 screen_mb <- function(x,include.mean=NULL,
@@ -363,7 +363,7 @@ screen_mb <- function(x,include.mean=NULL,
     plotCV(lambda,cv,cv.error,se=se)
   }
   
-  list(wi=wi)
+  list(rho.opt=2*lambda[which.min(cv)]/nrow(x),wi=wi)
 }
 
 screen_mb2 <- function(x,include.mean=NULL,
@@ -392,7 +392,12 @@ screen_mb2 <- function(x,include.mean=NULL,
   colnames(wi)<-rownames(wi)<-colnames(x)
   wi <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
   
-  list(wi=wi)
+  list(rho.opt=NULL,wi=wi)
+}
+
+screen_full <- function(x,include.mean=NULL,length.lambda=NULL,trunc.method=NULL,trunc.k=NULL){
+ wi <- diag(1,ncol(x))
+ list(rho.opt=NULL,wi=wi)
 }
 
 
