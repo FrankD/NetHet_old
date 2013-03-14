@@ -3,6 +3,7 @@ library('limma')
 library('multtest')
 #library('genefilter')
 library(ICSNP)
+library(multicore)
 #library(qvalue)
 
 GSEA.Gct2Frame <- function(filename = "NULL") { 
@@ -294,17 +295,34 @@ gsea.diffnet.singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust=
   n2 <- nrow(x2)
   split1 <- sample(1:n1,round(n1*0.5),replace=FALSE)
   split2 <- sample(1:n2,round(n2*0.5),replace=FALSE)
-  pvals<- sapply(seq(length(gene.sets)),
+  res<- sapply(seq(length(gene.sets)),
                  function(i){
                    y <- gene.sets[[i]]
                    cat('gene set:',i,'\n')
                    ind.genes <- which(gene.names%in%y)
-                   diffnet_singlesplit(x1[,ind.genes],x2[,ind.genes],split1,split2,...)$pval.onesided
+                   fit <- diffnet_singlesplit(x1[,ind.genes],x2[,ind.genes],split1,split2,...)
+                   c(fit$pval.onesided,fit$teststat)
                  })
-  pvals.corrected <- my.p.adjust(pvals,method=method.p.adjust)
-  return(list(pvals=pvals.corrected))
+  rownames(res) <- c('pvals','teststat')
+  pvals.corrected <- my.p.adjust(res['pvals',],method=method.p.adjust)
+  return(list(pvals=pvals.corrected,teststat=res['teststat',]))
 }
 
+## gsea.diffnet.singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust='fdr',...){
+##   n1 <- nrow(x1)
+##   n2 <- nrow(x2)
+##   split1 <- sample(1:n1,round(n1*0.5),replace=FALSE)
+##   split2 <- sample(1:n2,round(n2*0.5),replace=FALSE)
+##   res<- sapply(seq(length(gene.sets)),
+##                  function(i){
+##                    y <- gene.sets[[i]]
+##                    cat('gene set:',i,'\n')
+##                    ind.genes <- which(gene.names%in%y)
+##                    diffnet_singlesplit(x1[,ind.genes],x2[,ind.genes],split1,split2,...)$pval.onesided
+##                  })
+##   pvals.corrected <- my.p.adjust(res,method=method.p.adjust)
+##   return(list(pvals=pvals.corrected))
+## }
 
 aggpval <- function(pval,gamma.min=0.05){
   
@@ -320,48 +338,103 @@ gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.n
   res <- lapply(seq(no.splits),
                 function(i){
                   cat('split:',i,'\n')
-                  pvals <- gsea.diffnet.singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
-                                                    method.p.adjust=method.p.adjust,...)$pvals
-                  cat('pvals: ',pvals,'\n')
-                  return(pvals)
+                  res <- gsea.diffnet.singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
+                                                    method.p.adjust=method.p.adjust,...)
+                  cat('pvals: ',res$pvals,'\n')
+                  mat <- cbind(res$pvals,res$teststat)
+                  colnames(mat) <- c('pvals','teststat')
+                  return(mat)
                 }
                 )
-  res <- matrix(simplify2array(res,higher=TRUE),nrow=length(gene.sets),ncol=no.splits)
-  pval.agg <- apply(res,1,aggpval)
+  res.pval <- sapply(seq(no.splits),function(i){res[[i]][,'pvals']})
+  res.teststat <- sapply(seq(no.splits),function(i){res[[i]][,'teststat']})
+  pval.agg <- apply(res.pval,1,aggpval)
 
   if(is.null(gs.names)){
-    return(list(pvalmed=apply(res,1,median,na.rm=TRUE),pvalagg=pval.agg,pval=res))
+    return(list(pvalmed=apply(res.pval,1,median,na.rm=TRUE),pvalagg=pval.agg,
+                pval=res.pval,teststatmed=apply(res.teststat,1,median,na.rm=TRUE),teststat=res.teststat))
   }else{
-    return(list(pvalmed=apply(res,1,median,na.rm=TRUE),
-                gs.names=gs.names,
-                pvalagg=pval.agg,pval=res))
+    return(list(pvalmed=apply(res.pval,1,median,na.rm=TRUE),pvalagg=pval.agg,
+                pval=res.pval,teststatmed=apply(res.teststat,1,median,na.rm=TRUE),
+                teststat=res.teststat,gs.names=gs.names))
   }
 }
+
+## gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',...){
+
+##   res <- lapply(seq(no.splits),
+##                 function(i){
+##                   cat('split:',i,'\n')
+##                   pvals <- gsea.diffnet.singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
+##                                                     method.p.adjust=method.p.adjust,...)$pvals
+##                   cat('pvals: ',pvals,'\n')
+##                   return(pvals)
+##                 }
+##                 )
+##   res <- matrix(simplify2array(res,higher=TRUE),nrow=length(gene.sets),ncol=no.splits)
+##   pval.agg <- apply(res,1,aggpval)
+
+##   if(is.null(gs.names)){
+##     return(list(pvalmed=apply(res,1,median,na.rm=TRUE),pvalagg=pval.agg,pval=res))
+##   }else{
+##     return(list(pvalmed=apply(res,1,median,na.rm=TRUE),
+##                 gs.names=gs.names,
+##                 pvalagg=pval.agg,pval=res))
+##   }
+## }
 
 par.gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',...){
 
   res <- mclapply(seq(no.splits),
                 function(i){
-                  cat('split: ',i,'\n')
-                  pvals <- gsea.diffnet.singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
-                                                    method.p.adjust=method.p.adjust,...)$pvals
-                  cat('pvals: ',pvals,'\n')
-                  
-                  return(pvals)
-                },
-                  mc.set.seed=TRUE, mc.preschedule = TRUE)
-  res <- matrix(simplify2array(res,higher=TRUE),nrow=length(gene.sets),ncol=no.splits)
-  pval.agg <- apply(res,1,aggpval)
+                  cat('split:',i,'\n')
+                  res <- gsea.diffnet.singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
+                                                    method.p.adjust=method.p.adjust,...)
+                  cat('pvals: ',res$pvals,'\n')
+                  mat <- cbind(res$pvals,res$teststat)
+                  colnames(mat) <- c('pvals','teststat')
+                  return(mat)
+                }, mc.set.seed=TRUE, mc.preschedule = TRUE)
+                
+  res.pval <- sapply(seq(no.splits),function(i){res[[i]][,'pvals']})
+  res.teststat <- sapply(seq(no.splits),function(i){res[[i]][,'teststat']})
+  pval.agg <- apply(res.pval,1,aggpval)
 
-   if(is.null(gs.names)){
-    return(list(pvalmed=apply(res,1,median,na.rm=TRUE),pvalagg=pval.agg,pval=res))
+  if(is.null(gs.names)){
+    return(list(pvalmed=apply(res.pval,1,median,na.rm=TRUE),pvalagg=pval.agg,
+                pval=res.pval,teststatmed=apply(res.teststat,1,median,na.rm=TRUE),teststat=res.teststat))
   }else{
-    return(list(pvalmed=apply(res,1,median,na.rm=TRUE),
-                gs.names=gs.names,
-                pvalagg=pval.agg,pval=res))
+    return(list(pvalmed=apply(res.pval,1,median,na.rm=TRUE),pvalagg=pval.agg,
+                pval=res.pval,teststatmed=apply(res.teststat,1,median,na.rm=TRUE),
+                teststat=res.teststat,gs.names=gs.names))
   }
-  
 }
+
+
+## par.gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',...){
+
+##   res <- mclapply(seq(no.splits),
+##                 function(i){
+##                   cat('split: ',i,'\n')
+##                   pvals <- gsea.diffnet.singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
+##                                                     method.p.adjust=method.p.adjust,...)$pvals
+##                   cat('pvals: ',pvals,'\n')
+                  
+##                   return(pvals)
+##                 },
+##                   mc.set.seed=TRUE, mc.preschedule = TRUE)
+##   res <- matrix(simplify2array(res,higher=TRUE),nrow=length(gene.sets),ncol=no.splits)
+##   pval.agg <- apply(res,1,aggpval)
+
+##    if(is.null(gs.names)){
+##     return(list(pvalmed=apply(res,1,median,na.rm=TRUE),pvalagg=pval.agg,pval=res))
+##   }else{
+##     return(list(pvalmed=apply(res,1,median,na.rm=TRUE),
+##                 gs.names=gs.names,
+##                 pvalagg=pval.agg,pval=res))
+##   }
+  
+## }
 
 gsea.diffregr.singlesplit <- function(y1,y2,x1,x2,gene.sets,gene.names,method.p.adjust='fdr',screen.meth='lasso.cvtrunc'){
   n1 <- nrow(x1)
