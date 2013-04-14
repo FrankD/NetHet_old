@@ -1028,13 +1028,18 @@ diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='scre
   weights.nulldistr <- sapply(res.multisplit,function(x){x[['weights.nulldistr']]},simplify='array')
   aggpval.onesided <- min(1,(1-log(gamma.min))*optimize(f=agg.pval,interval=c(gamma.min,1),maximum=FALSE,pval=pval.onesided[!is.na(pval.onesided)])$objective)
   aggpval.twosided <- min(1,(1-log(gamma.min))*optimize(f=agg.pval,interval=c(gamma.min,1),maximum=FALSE,pval=pval.twosided[!is.na(pval.twosided)])$objective)
+  k <- ncol(x1)
+  medwi <- list(modJ=matrix(apply(sapply(res.multisplit,function(x){x[['wi']][['modJ']]}),1,median),k,k),
+                modIpop1=matrix(apply(sapply(res.multisplit,function(x){x[['wi']][['modIpop1']]}),1,median),k,k),
+                modIpop2=matrix(apply(sapply(res.multisplit,function(x){x[['wi']][['modIpop2']]}),1,median),k,k))
+  
     
   return(list(pval.onesided=pval.onesided,pval.twosided=pval.twosided,
               sspval.onesided=pval.onesided[1],sspval.twosided=pval.twosided[1],
               medpval.onesided=median(pval.onesided,na.rm=TRUE),medpval.twosided=median(pval.twosided,na.rm=TRUE),
               aggpval.onesided=aggpval.onesided,aggpval.twosided=aggpval.twosided,
               teststat=teststat,weights.nulldistr=weights.nulldistr,
-              active.last=res.multisplit[[b.splits]]$active,sig.last=res.multisplit[[b.splits]]$sig,wi.last=res.multisplit[[b.splits]]$wi))
+              active.last=res.multisplit[[b.splits]]$active,medwi=medwi,sig.last=res.multisplit[[b.splits]]$sig,wi.last=res.multisplit[[b.splits]]$wi))
 }
 
 
