@@ -69,7 +69,7 @@ hugepath <- function(s,rholist,penalize.diagonal=NULL,trace=NULL){
 ##' @param include.mean 
 ##' @return 
 ##' @author n.stadler
-cv.glasso <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se=TRUE,include.mean=FALSE)
+cv.glasso <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se=TRUE,include.mean=FALSE,covMethod=NULL)
 {
   colnames(x)<-paste('x',1:ncol(x),sep='')  
   all.folds <- cv.fold(nrow(x),folds)
@@ -136,9 +136,9 @@ mytrunc.method <- function(n,wi,method='linear.growth',trunc.k=5){
   }
 }
 
-screen_cv.glasso <- function(x,include.mean=FALSE,
+screen_cv.glasso <- function(x,include.mean=FALSE,covMethod=NULL,
                              folds=10,length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,
-                             trunc.method='linear.growth',trunc.k=5,plot.it=FALSE,se=FALSE,use.package='huge')
+                             trunc.method='linear.growth',trunc.k=5,plot.it=FALSE,se=FALSE,use.package='huge',verbose=TRUE)
 {
   
   gridmax <- lambda.max(x)
@@ -166,9 +166,11 @@ screen_cv.glasso <- function(x,include.mean=FALSE,
   cv <- apply(residmat,2,mean)
   cv.error <- sqrt(apply(residmat,2,var)/folds)
   gl.opt<-glasso(var(x),rho=2*lambda[which.min(cv)]/nrow(x),penalize.diagonal=penalize.diagonal)
-  cat('la.min:',gridmin,'\n')
-  cat('la.max:',gridmax,'\n')
-  cat('la.opt:',lambda[which.min(cv)],'\n')
+  if(verbose){
+    cat('la.min:',gridmin,'\n')
+    cat('la.max:',gridmax,'\n')
+    cat('la.opt:',lambda[which.min(cv)],'\n')
+  }
   w<-gl.opt$w
   wi<-gl.opt$wi
   wi[abs(wi)<10^{-3}]<-0
@@ -276,41 +278,45 @@ aic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package
   list(rho.opt=2*lambda[which.min(myscore)]/nrow(x),lambda=lambda,la.opt=lambda[index.opt],bic.score=myscore,Mu=Mu,wi=wi,w=w)
 }
 
-screen_bic.glasso <- function(x,include.mean=TRUE,
+screen_bic.glasso <- function(x,include.mean=TRUE,covMethod=NULL,
                               length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,plot.it=FALSE,
-                              trunc.method='linear.growth',trunc.k=5,use.package='huge'){
+                              trunc.method='linear.growth',trunc.k=5,use.package='huge',verbose=TRUE){
 
   gridmax <- lambda.max(x)
   gridmin <- gridmax*lambdamin.ratio
   my.grid <- make_grid(gridmin,gridmax,length.lambda)[length.lambda:1]
   
   fit.bicgl <- bic.glasso(x,lambda=my.grid,penalize.diagonal=penalize.diagonal,plot.it=plot.it,use.package=use.package)
-  cat('la.min:',gridmin,'\n')
-  cat('la.max:',gridmax,'\n')
-  cat('la.opt:',fit.bicgl$la.opt,'\n')
+  if(verbose){
+    cat('la.min:',gridmin,'\n')
+    cat('la.max:',gridmax,'\n')
+    cat('la.opt:',fit.bicgl$la.opt,'\n')
+  }
   wi <- fit.bicgl$wi
   wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
   list(rho.opt=fit.bicgl$rho.opt,wi=wi.trunc,wi.orig=wi) 
 }
 
-screen_aic.glasso <- function(x,include.mean=TRUE,
+screen_aic.glasso <- function(x,include.mean=TRUE,covMethod=NULL,
                               length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,plot.it=FALSE,
-                              trunc.method='linear.growth',trunc.k=5,use.package='huge'){
+                              trunc.method='linear.growth',trunc.k=5,use.package='huge',verbose=TRUE){
 
   gridmax <- lambda.max(x)
   gridmin <- gridmax*lambdamin.ratio
   my.grid <- make_grid(gridmin,gridmax,length.lambda)[length.lambda:1]
   
   fit.aicgl <- aic.glasso(x,lambda=my.grid,penalize.diagonal=penalize.diagonal,plot.it=plot.it,use.package=use.package)
-  cat('la.min:',gridmin,'\n')
-  cat('la.max:',gridmax,'\n')
-  cat('la.opt:',fit.aicgl$la.opt,'\n')
+  if(verbose){
+    cat('la.min:',gridmin,'\n')
+    cat('la.max:',gridmax,'\n')
+    cat('la.opt:',fit.aicgl$la.opt,'\n')
+  }
   wi <- fit.aicgl$wi
   wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
   list(rho.opt=fit.aicgl$rho.opt,wi=wi.trunc,wi.orig=wi) 
 }
 
-screen_lasso <- function(x,include.mean=NULL,
+screen_lasso <- function(x,include.mean=NULL,covMethod=NULL,
                          trunc.method='linear.growth',trunc.k=5){
   
   wi <- adalasso.net(x, k = 10,use.Gram=FALSE,both=FALSE,verbose=FALSE)$pcor.lasso
@@ -318,7 +324,7 @@ screen_lasso <- function(x,include.mean=NULL,
   list(rho.opt=NULL,wi=wi.trunc,wi.orig=wi)
 }
 
-screen_shrink <- function(x,include.mean=NULL,
+screen_shrink <- function(x,include.mean=NULL,covMethod=NULL,
                           trunc.method='linear.growth',trunc.k=5){
   wi <- ggm.estimate.pcor(x)
   adj <- performance.pcor(wi, fdr=TRUE,verbose=FALSE,plot.it=FALSE)$adj
@@ -327,9 +333,9 @@ screen_shrink <- function(x,include.mean=NULL,
   list(rho.opt=NULL,wi=wi.trunc,wi.orig=wi)
 }
 
-screen_mb <- function(x,include.mean=NULL,
+screen_mb <- function(x,include.mean=NULL,covMethod=NULL,
                       folds=10,length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,
-                      trunc.method='linear.growth',trunc.k=5,plot.it=FALSE,se=FALSE)
+                      trunc.method='linear.growth',trunc.k=5,plot.it=FALSE,se=FALSE,verbose=TRUE)
 {
   p <- ncol(x)
   gridmax <- lambda.max(x)
@@ -350,9 +356,11 @@ screen_mb <- function(x,include.mean=NULL,
   cv <- apply(residmat,2,mean)
   cv.error <- sqrt(apply(residmat,2,var)/folds)
   gl.opt<-glasso(var(x),rho=2*lambda[which.min(cv)]/nrow(x),penalize.diagonal=penalize.diagonal,approx=TRUE)
-  cat('la.min:',gridmin,'\n')
-  cat('la.max:',gridmax,'\n')
-  cat('la.opt:',lambda[which.min(cv)],'\n')
+  if(verbose){
+    cat('la.min:',gridmin,'\n')
+    cat('la.max:',gridmax,'\n')
+    cat('la.opt:',lambda[which.min(cv)],'\n')
+  }
   
   wi<-Beta2parcor(gl.opt$wi)
   #wi[abs(wi)<10^{-3}]<-0
@@ -366,7 +374,7 @@ screen_mb <- function(x,include.mean=NULL,
   list(rho.opt=2*lambda[which.min(cv)]/nrow(x),wi=wi)
 }
 
-screen_mb2 <- function(x,include.mean=NULL,
+screen_mb2 <- function(x,include.mean=NULL,covMethod=NULL,
                        length.lambda=20,
                        trunc.method='linear.growth',trunc.k=5,plot.it=FALSE,verbose=FALSE)
 {
@@ -395,7 +403,7 @@ screen_mb2 <- function(x,include.mean=NULL,
   list(rho.opt=NULL,wi=wi)
 }
 
-screen_full <- function(x,include.mean=NULL,length.lambda=NULL,trunc.method=NULL,trunc.k=NULL){
+screen_full <- function(x,include.mean=NULL,covMethod=NULL,length.lambda=NULL,trunc.method=NULL,trunc.k=NULL){
  wi <- diag(1,ncol(x))
  list(rho.opt=NULL,wi=wi)
 }
