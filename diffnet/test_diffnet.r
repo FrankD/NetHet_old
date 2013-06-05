@@ -6,20 +6,20 @@ rm(list=ls())
 source('twosample_diffnet-20072012.R')
 sessionInfo()
 
-R version 2.15.2 (2012-10-26)
-Platform: i386-apple-darwin9.8.0/i386 (32-bit)
+## R version 2.15.2 (2012-10-26)
+## Platform: i386-apple-darwin9.8.0/i386 (32-bit)
 
-locale:
-[1] C
+## locale:
+## [1] C
 
-attached base packages:
-[1] stats     graphics  grDevices utils     datasets  methods   base     
+## attached base packages:
+## [1] stats     graphics  grDevices utils     datasets  methods   base     
 
-other attached packages:
-[1] CompQuadForm_1.4 glasso_1.7       mvtnorm_0.9-9994
+## other attached packages:
+## [1] CompQuadForm_1.4 glasso_1.7       mvtnorm_0.9-9994
 
-loaded via a namespace (and not attached):
-[1] tools_2.15.2
+## loaded via a namespace (and not attached):
+## [1] tools_2.15.2
 
 #################
 ##Generate Data##
