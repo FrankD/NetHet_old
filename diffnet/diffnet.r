@@ -17,7 +17,8 @@ library(mvtnorm)
 library(glasso)
 library(CompQuadForm)
 library(ggm)
-
+library(robustbase)
+library(robust)
 ##load C-code
 #dyn.load("../code/betamat_diffnet.so")
 
@@ -66,14 +67,14 @@ cv.fold <- function(n,folds=10){
 ##' @param include.mean 
 ##' @return 
 ##' @author n.stadler
-cv.glasso <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se=TRUE,include.mean=TRUE)
+cv.glasso <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se=TRUE,include.mean=TRUE,covMethod='standard')
 {
   colnames(x)<-paste('x',1:ncol(x),sep='')  
   all.folds <- cv.fold(nrow(x),folds)
   residmat <- matrix(NA,folds,length(lambda))
   for (cvfold in 1:folds){
     omit <- all.folds[[cvfold]]
-    s <- var(x[-omit,])
+    s <- mcov(x[-omit,],covMethod)
     if (include.mean==TRUE){
       mu <- colMeans(x[-omit,,drop=FALSE])
     }else{
@@ -88,7 +89,7 @@ cv.glasso <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se
   }
   cv <- apply(residmat,2,mean)
   cv.error <- sqrt(apply(residmat,2,var)/folds)
-  gl.opt<-glasso(var(x),rho=2*lambda[which.min(cv)]/nrow(x),penalize.diagonal=penalize.diagonal)
+  gl.opt<-glasso(mcov(x,covMethod),rho=2*lambda[which.min(cv)]/nrow(x),penalize.diagonal=penalize.diagonal)
   cat('la.opt:',lambda[which.min(cv)],'\n')
   w<-gl.opt$w
   wi<-gl.opt$wi
@@ -102,14 +103,14 @@ cv.glasso <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se
   invisible(object)
 }
 
-cvtrunc.glasso <- function(x,folds=10,lambda,trunc.k=5,penalize.diagonal=FALSE,include.mean=TRUE)
+cvtrunc.glasso <- function(x,folds=10,lambda,trunc.k=5,penalize.diagonal=FALSE,include.mean=TRUE,covMethod)
 {
   colnames(x)<-paste('x',1:ncol(x),sep='')  
   all.folds <- cv.fold(nrow(x),folds)
   residmat <- matrix(NA,folds,length(lambda))
   for (cvfold in 1:folds){
     omit <- all.folds[[cvfold]]
-    s <- var(x[-omit,])
+    s <- mcov(x[-omit,],covMethod)
     if (include.mean==TRUE){
       mu <- colMeans(x[-omit,,drop=FALSE])
     }else{
@@ -124,7 +125,7 @@ cvtrunc.glasso <- function(x,folds=10,lambda,trunc.k=5,penalize.diagonal=FALSE,i
   }
   cv <- apply(residmat,2,mean)
   cv.error <- sqrt(apply(residmat,2,var)/folds)
-  gl.opt<-glasso(var(x),rho=2*lambda[which.min(cv)]/nrow(x),penalize.diagonal=penalize.diagonal)
+  gl.opt<-glasso(mcov(x,covMethod),rho=2*lambda[which.min(cv)]/nrow(x),penalize.diagonal=penalize.diagonal)
   cat('la.opt:',lambda[which.min(cv)],'\n')
   w<-gl.opt$w
   wi<-gl.opt$wi
@@ -155,7 +156,7 @@ cvtrunc.glasso <- function(x,folds=10,lambda,trunc.k=5,penalize.diagonal=FALSE,i
 ##' @param include.mean 
 ##' @return 
 ##' @author n.stadler
-cv.glasso.1se <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se=TRUE,include.mean=TRUE)
+cv.glasso.1se <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se=TRUE,include.mean=TRUE,covMethod)
 {
   colnames(x)<-paste('x',1:ncol(x),sep='')  
   all.folds <- cv.fold(nrow(x),folds)
@@ -163,7 +164,7 @@ cv.glasso.1se <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALS
 
   for (cvfold in 1:folds){
     omit <- all.folds[[cvfold]]
-    s <- var(x[-omit,])
+    s <- mcov(x[-omit,],covMethod)
     if (include.mean==TRUE){
       mu <- colMeans(x[-omit,,drop=FALSE])
     }else{
@@ -179,7 +180,7 @@ cv.glasso.1se <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALS
   cv <- apply(residmat,2,mean)
   cv.error <- sqrt(apply(residmat,2,var)/folds)
   la.1se <- max(lambda[which(cv < min(cv)+cv.error[which.min(cv)])])
-  gl.opt<-glasso(var(x),rho=2*la.1se/nrow(x),penalize.diagonal=penalize.diagonal)
+  gl.opt<-glasso(mcov(x,covMethod),rho=2*la.1se/nrow(x),penalize.diagonal=penalize.diagonal)
   w<-gl.opt$w
   wi<-gl.opt$wi
   wi[abs(wi)<10^{-3}]<-0
@@ -192,9 +193,9 @@ cv.glasso.1se <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALS
   invisible(object)
 }
 
-glasso.parcor.launi <- function(x,maxiter=1000,term=10^{-3},include.mean=NULL,lambda=NULL){
+glasso.parcor.launi <- function(x,maxiter=1000,term=10^{-3},include.mean=NULL,lambda=NULL,covMethod){
   p <- ncol(x)
-  s <- var(x)
+  s <- mcov(x,covMethod)
   rho.uni <- sqrt(2*log(ncol(x))/nrow(x))
 
   ww <- rep(1,p)#sqrt(diag(s))
@@ -212,9 +213,9 @@ glasso.parcor.launi <- function(x,maxiter=1000,term=10^{-3},include.mean=NULL,la
   list(rho.opt=rho.uni,w=gl$w,wi=gl$wi,mu=colMeans(x),iter=iter)
 }
 
-glasso.parcor.launi.trunc <- function(x,trunc.k=5,maxiter=1000,term=10^{-3},include.mean=NULL,lambda=NULL){
+glasso.parcor.launi.trunc <- function(x,trunc.k=5,maxiter=1000,term=10^{-3},include.mean=NULL,lambda=NULL,covMethod){
   p <- ncol(x)
-  s <- var(x)
+  s <- mcov(x,covMethod)
   rho.uni <- sqrt(2*log(ncol(x))/nrow(x))
 
   ww <- rep(1,p)#sqrt(diag(s))
@@ -242,19 +243,19 @@ glasso.parcor.launi.trunc <- function(x,trunc.k=5,maxiter=1000,term=10^{-3},incl
  
 }
 
-lambda.max <- function(x){
+lambda.max <- function(x,covMethod){
   n <- nrow(x)
-  s.var <- var(x)
+  s.var <- mcov(x,covMethod)
   diag(s.var) <- 0
   return(n*max(abs(s.var))/2)
 }
 
-bic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE)
+bic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,covMethod)
 {
   ##glasso; lambda.opt with bic
   aic.score <-rep(NA,length(lambda))
   Mu <- colMeans(x)
-  samplecov <- var(x)
+  samplecov <- mcov(x,covMethod)
 
   if(is.null(lambda)){
     la <- lambda
@@ -287,14 +288,14 @@ bic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE)
   }
   
   if(ncol(x)<nrow(x)){
-    loglik.la0 <- sum(dmvnorm(x,mean=Mu,sigma=var(x),log=TRUE))
+    loglik.la0 <- sum(dmvnorm(x,mean=Mu,sigma=mcov(x,covMethod),log=TRUE))
     degfree.la0 <- ncol(x)+(ncol(x)*(ncol(x)+1)/2)
     myscore.la0 <- -loglik.la0+log(nrow(x))*degfree.la0/2
     myscore <- c(myscore.la0,myscore)
     index.opt <- which.min(myscore)
     if(index.opt==1){
       w <- var(x)
-      wi <- solve(var(x))
+      wi <- solve(mcov(x,covMethod))
     }else{
       wi <- fit.path$wi[,,index.opt-1]
       wi[abs(wi)<10^{-3}]<-0
@@ -314,13 +315,13 @@ bic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE)
   list(rho.opt=2*lambda[which.min(myscore)]/nrow(x),lambda=lambda,bic.score=myscore,Mu=Mu,wi=wi,w=w)
 }
 
-screen_bic.glasso <- function(x,length.lambda=20,trunc.k=5,plot.it=TRUE,include.mean=TRUE){
+screen_bic.glasso <- function(x,length.lambda=20,trunc.k=5,plot.it=TRUE,include.mean=TRUE,covMethod){
 
-  gridmax <- lambda.max(x)
+  gridmax <- lambda.max(x,covMethod)
   gridmin <- gridmax/length.lambda
   my.grid <- lambdagrid_mult(gridmin,gridmax,length.lambda)[length.lambda:1]
   
-  fit.bicgl <- bic.glasso(x,lambda=my.grid,penalize.diagonal=FALSE,plot.it=plot.it)
+  fit.bicgl <- bic.glasso(x,lambda=my.grid,penalize.diagonal=FALSE,plot.it=plot.it,covMethod)
   wi.trunc <- fit.bicgl$wi
   diag(wi.trunc) <- 0
   nonzero <- min(2*ceiling(ncol(x)*ceiling(nrow(x)/trunc.k)/2),sum(wi.trunc!=0))
@@ -335,12 +336,12 @@ rho.max <- function(s){
   return(max(abs(s)))
 }
 
-bic.glasso.invcor <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE)
+bic.glasso.invcor <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,covMethod)
 {
   ##glasso; lambda.opt with bic
   aic.score <-rep(NA,length(lambda))
   Mu <- colMeans(x)
-  samplecov <- var(x)
+  samplecov <- mcov(x,covMethod)
 
   if(is.null(lambda)){
     la <- lambda
@@ -377,14 +378,14 @@ bic.glasso.invcor <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE)
   }
   
   if(ncol(x)<nrow(x)){
-    loglik.la0 <- sum(dmvnorm(x,mean=Mu,sigma=var(x),log=TRUE))
+    loglik.la0 <- sum(dmvnorm(x,mean=Mu,sigma=mcov(x,covMethod),log=TRUE))
     degfree.la0 <- ncol(x)+(ncol(x)*(ncol(x)+1)/2)
     myscore.la0 <- -loglik.la0+log(nrow(x))*degfree.la0/2
     myscore <- c(myscore.la0,myscore)
     index.opt <- which.min(myscore)
     if(index.opt==1){
-      w <- var(x)
-      wi <- solve(var(x))
+      w <- mcov(x,covMethod)
+      wi <- solve(mcov(x,covMethod))
     }else{
       wi <- fit.path$wi[,,index.opt-1]
       wi[abs(wi)<10^{-3}]<-0
@@ -406,13 +407,13 @@ bic.glasso.invcor <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE)
   list(rho.opt=2*lambda[which.min(myscore)]/nrow(x),lambda=lambda,bic.score=myscore,Mu=Mu,wi=wi,w=w)
 }
 
-screen_bic.glasso.invcor <- function(x,length.lambda=20,trunc.k=5,plot.it=TRUE,include.mean=TRUE){
+screen_bic.glasso.invcor <- function(x,length.lambda=20,trunc.k=5,plot.it=TRUE,include.mean=TRUE,covMethod){
 
-  gridmax <- nrow(x)*rho.max(cor(x))/2
+  gridmax <- nrow(x)*rho.max(cov2cor(mcov(x,covMethod)))/2
   gridmin <- gridmax/length.lambda
   my.grid <- lambdagrid_mult(gridmin,gridmax,length.lambda)[length.lambda:1]
   
-  fit.bicgl <- bic.glasso.invcor(x,lambda=my.grid,penalize.diagonal=FALSE,plot.it=plot.it)
+  fit.bicgl <- bic.glasso.invcor(x,lambda=my.grid,penalize.diagonal=FALSE,plot.it=plot.it,covMethod)
   wi.trunc <- fit.bicgl$wi
   diag(wi.trunc) <- 0
   nonzero <- min(2*ceiling(ncol(x)*ceiling(nrow(x)/trunc.k)/2),sum(wi.trunc!=0))
@@ -421,27 +422,39 @@ screen_bic.glasso.invcor <- function(x,length.lambda=20,trunc.k=5,plot.it=TRUE,i
 
   list(rho.opt=fit.bicgl$rho.opt,wi=wi.trunc)
 }
+
+##########################
+##-------covMethod------##
+##########################
+mcov <- function(x,covMethod='standard'){
+  if (covMethod=='standard'){
+    return(var(x))
+  }
+  if (covMethod=='robust'){
+    return(covRob(x)$cov)
+  }
+}
   
 
 ##############################
 ##--------P-VALUES----------##
 ##############################
-mle.ggm <- function(x,wi,algorithm='glasso_rho0',rho=NULL){
+mle.ggm <- function(x,wi,algorithm='glasso_rho0',rho=NULL,covMethod){
   if(is.null(rho)){
     algorithm <- 'glasso_rho0'
     cat('screening method with rho.opt=NULL; set algorithm="glasso_rho0" in mle.ggm')
   }
     
   if (algorithm=='glasso'){
-    fit.mle <- glasso(var(x),rho=rho,zero=which(wi==0,arr.in=TRUE))
+    fit.mle <- glasso(mcov(x,covMethod=covMethod),rho=rho,zero=which(wi==0,arr.in=TRUE))
     return(list(w=fit.mle$w,wi=fit.mle$wi))
   }
   if (algorithm=='glasso_rho0'){
-    fit.mle <- glasso(var(x),rho=10^{-10},zero=which(wi==0,arr.in=TRUE))
+    fit.mle <- glasso(mcov(x,covMethod=covMethod),rho=10^{-10},zero=which(wi==0,arr.in=TRUE))
     return(list(w=fit.mle$w,wi=fit.mle$wi))
   }
   if (algorithm=='fitcongraph'){
-    s <- var(x)
+    s <- mcov(x,covMethod=covMethod)
     adj <- wi!=0
     colnames(s) <- rownames(s) <- colnames(adj) <- rownames(adj) <- 1:ncol(x)
     fit.mle <- fitConGraph(adj,s,nrow(x))
@@ -533,7 +546,7 @@ ww.mat <- function(imat,act,act1,act2){
   bf[length(act1)+(1:(length(act2))),length(act1)+(1:(length(act2)))] <- imat[act2,act2]
   bg <- 2*imat[act,act,drop=FALSE]
   mat <- rbind(cbind(diag(1,length(act1)+length(act2)),bfg%*%solve(bg)),cbind(-t(bfg)%*%solve(bf),diag(-1,length(act))))
-  eval <- as.real(eigen(mat)$values)
+  eval <- as.double(eigen(mat)$values)
   eval[abs(eval)<10^{-6}] <- 0
   
   return(list(ww.mat=mat,eval=eval))
@@ -569,7 +582,7 @@ ww.mat2 <- function(imat,act,act1,act2){
     mat <- bfg%*%solve(bg)%*%bgf%*%solve(bf)
     eval<-rep(-1,dimg-dimf)
   }
-  eval.mu <- as.real(eigen(mat)$values)
+  eval.mu <- as.double(eigen(mat)$values)
   eval2 <- 1-eval.mu
   eval2[abs(eval2)<10^{-6}] <- 0
   eval <- c(eval,sqrt(eval2),-sqrt(eval2))
@@ -701,7 +714,7 @@ est2.ww.mat2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
     eval<-rep(-1,dimg-dimf)
   }
   eval.mu.complex<-eigen(mat)$values
-  onemineval.mu <- 1-as.real(eval.mu.complex)
+  onemineval.mu <- 1-as.double(eval.mu.complex)
   onemineval.mu[abs(onemineval.mu)<10^{-6}]<-0
   eval <- c(eval,sqrt(onemineval.mu),-sqrt(onemineval.mu))
   if(include.mean==TRUE){
@@ -766,7 +779,7 @@ est2.my.ev2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
         aux.mat <- aux.mat+(t(qbc)%*%solve(qbb)%*%qbc)%*%solve(qcc)
       }
       ev.aux.complex <- eigen(aux.mat)$values
-      ev.aux <- as.real(ev.aux.complex)
+      ev.aux <- as.double(ev.aux.complex)
       ev.aux <-  sqrt(1-ev.aux)
     }
     eval<-rep(1,dimf-dimg)
@@ -796,7 +809,7 @@ est2.my.ev2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
     }
     if ((length(aa)!=0)|(length(bb)!=0)){ ##if (length(aa)==0)&(length(bb)==0) 'MI included in MJ; therefore -X^2(dim(MJ)-dim(MI)) distributed'
       ev.aux.complex <- eigen(aux.mat)$values
-      ev.aux <- as.real(ev.aux.complex)
+      ev.aux <- as.double(ev.aux.complex)
       ev.aux <-  sqrt(1-ev.aux)
     }
     eval<-rep(-1,dimg-dimf)
@@ -879,7 +892,7 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
 ##' @return 
 ##' @author n.stadler
 diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glasso',
-                               compute.evals='est2.my.ev2',algorithm.mleggm='glasso_rho0',include.mean=FALSE,
+                               compute.evals='est2.my.ev2',algorithm.mleggm='glasso_rho0',covMethod,include.mean=FALSE,
                                diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,...){
   
   n1 <- nrow(x1)
@@ -896,7 +909,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
   ###############
   xx.train <- rbind(x1[split1,],x2[split2,])
   xx.valid <- rbind(x1[-split1,],x2[-split2,])
-  fit.screen <- eval(as.name(screen.meth))(xx.train,include.mean=include.mean,...)
+  fit.screen <- eval(as.name(screen.meth))(xx.train,include.mean=include.mean,covMethod=covMethod,...)
   act <- which(fit.screen$wi[upper.tri(diag(1,k),diag=TRUE)]!=0)
   if(!diag.invcov){
     ind.diag <- which(diag(1,k)[upper.tri(diag(1,k),diag=TRUE)]!=0)
@@ -909,7 +922,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
     est.mu[['modJ']] <- rep(0,k)
   }
   if (length(active[['modJ']])==df.param){
-    w <- var(xx.valid)
+    w <- mcov(xx.valid,covMethod=covMethod)
     if(!diag.invcov){
       w <-w*sqrt(tcrossprod(diag(solve(w))))
     }
@@ -917,7 +930,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
     est.wi[['modJ']] <- solve(w)
   }
   if (length(active[['modJ']])!=df.param){
-    fit.mle <- mle.ggm(xx.valid,fit.screen$wi,algorithm=algorithm.mleggm,rho=fit.screen$rho.opt)
+    fit.mle <- mle.ggm(xx.valid,fit.screen$wi,algorithm=algorithm.mleggm,rho=fit.screen$rho.opt,covMethod=covMethod)
     w <- fit.mle$w
     if(!diag.invcov){
       w <-w*sqrt(tcrossprod(diag(solve(fit.mle$w))))
@@ -932,7 +945,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
     split.train <- eval(as.name(paste('split',j,sep='')))
     xx.train <- eval(as.name(paste('x',j,sep='')))[split.train,]
     xx.valid <- eval(as.name(paste('x',j,sep='')))[-split.train,]
-    fit.screen <- eval(as.name(screen.meth))(xx.train,include.mean=include.mean,...)
+    fit.screen <- eval(as.name(screen.meth))(xx.train,include.mean=include.mean,covMethod=covMethod,...)
     act <- which(fit.screen$wi[upper.tri(diag(1,k),diag=TRUE)]!=0)
     if(!diag.invcov){
       ind.diag <- which(diag(1,k)[upper.tri(diag(1,k),diag=TRUE)]!=0)
@@ -945,7 +958,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
       est.mu[[paste('modIpop',j,sep='')]] <- rep(0,k)
     }
     if (length(active[[paste('modIpop',j,sep='')]])==df.param){
-      w <- var(xx.valid)
+      w <- mcov(xx.valid,covMethod=covMethod)
       if(!diag.invcov){
         w <-w*sqrt(tcrossprod(diag(solve(w))))
       }
@@ -953,7 +966,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
       est.wi[[paste('modIpop',j,sep='')]] <- solve(w)
     }
     if (length(active[[paste('modIpop',j,sep='')]])!=df.param){
-      fit.mle <- mle.ggm(xx.valid,fit.screen$wi,algorithm=algorithm.mleggm,rho=fit.screen$rho.opt)
+      fit.mle <- mle.ggm(xx.valid,fit.screen$wi,algorithm=algorithm.mleggm,rho=fit.screen$rho.opt,covMethod=covMethod)
       w <- fit.mle$w
       if(!diag.invcov){
         w <-w*sqrt(tcrossprod(diag(solve(fit.mle$w))))
@@ -1005,7 +1018,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
 ##' @return 
 ##' @author n.stadler
 diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='screen_bic.glasso',include.mean=FALSE,
-                              gamma.min=0.05,compute.evals='est2.my.ev2',algorithm.mleggm='glasso_rho0',diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,...){
+                              gamma.min=0.05,compute.evals='est2.my.ev2',algorithm.mleggm='glasso_rho0',covMethod='standard',diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,...){
 
   ##????Important Notes: Pval can be NA, because...
   ##????
@@ -1019,7 +1032,7 @@ diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='scre
                             split1 <- sample(1:n1,round(n1*frac.split),replace=FALSE)
                             split2 <- sample(1:n2,round(n2*frac.split),replace=FALSE)
                             res.singlesplit <- diffnet_singlesplit(x1,x2,split1,split2,screen.meth,
-                                                                   compute.evals,algorithm.mleggm,include.mean,diag.invcov,acc,show.trace,...)
+                                                                   compute.evals,algorithm.mleggm,covMethod,include.mean,diag.invcov,acc,show.trace,...)
                             
                           })
   pval.onesided <- sapply(res.multisplit,function(x){x[['pval.onesided']]},simplify='array')
