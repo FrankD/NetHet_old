@@ -155,19 +155,25 @@ my.ttest2 <- function(x1,x2){
   return(tstat)
 }
 
-agg.score.iriz <- function(ttstat,geneset,gene.name){
+agg.score.iriz.shift <- function(ttstat,geneset,gene.name){
   genes.gs <- which(gene.name%in%geneset)
   ttstat <- ttstat[genes.gs]
   aggscore <- sqrt(length(genes.gs))*mean(ttstat)
   return(aggscore)
 }
+agg.score.iriz.scale <- function(ttstat,geneset,gene.name){
+  genes.gs <- which(gene.name%in%geneset)
+  ttstat <- ttstat[genes.gs]
+  aggscore <- (sum((ttstat-mean(ttstat))^2)-(length(genes.gs)-1))/(2*(length(genes.gs)-1))
+  return(aggscore)
+}
 
-gsea.iriz <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',alternative='two-sided'){
+gsea.iriz.shift <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',alternative='two-sided'){
   
   no.genes <- ncol(x1)
 
   my.tstat <- sapply(1:no.genes,function(i){my.ttest2(x1[,i],x2[,i])})
-  agg.scores <- sapply(gene.sets,function(x){agg.score.iriz(my.tstat,x,gene.names)})
+  agg.scores <- sapply(gene.sets,function(x){agg.score.iriz.shift(my.tstat,x,gene.names)})
   if(alternative=='two-sided'){
     pvals <- my.p.adjust(2*(1-pnorm(abs(agg.scores))),method=method.p.adjust)
   }
@@ -186,6 +192,47 @@ gsea.iriz <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method.p.adjust='
                 agg.scores=agg.scores,pvals=pvals))
   }
 }
+
+gsea.iriz.scale <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',alternative='two-sided'){
+  
+  no.genes <- ncol(x1)
+
+  my.tstat <- sapply(1:no.genes,function(i){my.ttest2(x1[,i],x2[,i])})
+  agg.scores <- sapply(gene.sets,function(x){agg.score.iriz.scale(my.tstat,x,gene.names)})
+  if(alternative=='two-sided'){
+    pvals <- my.p.adjust(2*(1-pnorm(abs(agg.scores))),method=method.p.adjust)
+  }
+  if(alternative=='one-sided'){
+    pvals <- my.p.adjust(1-pnorm(agg.scores),method=method.p.adjust)
+  }
+
+  if(is.null(gs.names)){
+    return(list(tstat=my.tstat,
+                agg.scores.sort=agg.scores[order(pvals)],pvals.sort=pvals[order(pvals)],
+                agg.scores=agg.scores,pvals=pvals))
+  }else{
+    return(list(tstat=my.tstat,
+                agg.scores.sort=agg.scores[order(pvals)],pvals.sort=pvals[order(pvals)],
+                gs.names.sort=gs.names[order(pvals)],
+                agg.scores=agg.scores,pvals=pvals))
+  }
+}
+
+gsea.iriz <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',alternative='two-sided'){
+
+  fit.shift <- gsea.iriz.shift(x1,x2,gene.sets,gene.names,gs.names,method.p.adjust,alternative)
+  fit.scale <- gsea.iriz.scale(x1,x2,gene.sets,gene.names,gs.names,method.p.adjust,alternative)
+  pvals.shift <- fit.shift$pvals
+  agg.scores.shift <- fit.shift$agg.scores
+  pvals.scale <- fit.scale$pvals
+  agg.scores.scale <- fit.scale$agg.scores
+
+  return(list(pvals.shift=pvals.shift,agg.scores.shift=agg.scores.shift,
+              pvals.scale=pvals.scale,agg.scores.scale=agg.scores.scale,
+              pvals.combined=pmin(pvals.shift,pvals.scale)))
+}
+
+    
 
 ## gsea.iriz.new <- function(x,pheno,gene.sets,gs.names=NULL,gene.names,method.p.adjust='fdr',alternative='two-sided'){
   
@@ -301,11 +348,17 @@ gsea.diffnet.singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust=
                    cat('gene set:',i,'\n')
                    ind.genes <- which(gene.names%in%y)
                    fit <- diffnet_singlesplit(x1[,ind.genes],x2[,ind.genes],split1,split2,...)
-                   c(fit$pval.onesided,fit$teststat)
+                   dfu <- length(fit$active[['modIpop1']])
+                   dfv<- length(fit$active[['modIpop2']])
+                   dfuv<- length(fit$active[['modJ']])
+                   edge.intersect <- length(intersect(fit$active[['modIpop1']],fit$active[['modIpop2']]))/(length(union(fit$active[['modIpop1']],fit$active[['modIpop2']]))-length(ind.genes))
+                   teststat.aic <- fit$teststat-2*(dfu+dfv-dfuv)
+                   teststat.bic <- fit$teststat-log(0.5*(n1+n2))*(dfu+dfv-dfuv)
+                   c(fit$pval.onesided,fit$teststat,teststat.bic,teststat.aic,edge.intersect,dfu,dfv,dfuv)
                  })
-  rownames(res) <- c('pvals','teststat')
+  rownames(res) <- c('pvals','teststat','teststat.bic','teststat.aic','rel.edgeinter','dfu','dfv','dfuv')
   pvals.corrected <- my.p.adjust(res['pvals',],method=method.p.adjust)
-  return(list(pvals=pvals.corrected,teststat=res['teststat',]))
+  return(list(pvals=pvals.corrected,teststat=res['teststat',],teststat.bic=res['teststat.bic',],teststat.aic=res['teststat.aic',],rel.edgeinter=res['rel.edgeinter',],dfu=res['dfu',],dfv=res['dfv',],dfuv=res['dfuv',]))
 }
 
 ## gsea.diffnet.singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust='fdr',...){
@@ -341,22 +394,36 @@ gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.n
                   res <- gsea.diffnet.singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
                                                     method.p.adjust=method.p.adjust,...)
                   cat('pvals: ',res$pvals,'\n')
-                  mat <- cbind(res$pvals,res$teststat)
-                  colnames(mat) <- c('pvals','teststat')
+                  mat <- cbind(res$pvals,res$teststat,res$teststat.bic,res$teststat.aic,res$rel.edgeinter,res$dfu,res$dfv,res$dfuv)
+                  colnames(mat) <- c('pvals','teststat','teststat.bic','teststat.aic','rel.edgeinter','dfu','dfv','dfuv')
                   return(mat)
                 }
                 )
   res.pval <- sapply(seq(no.splits),function(i){res[[i]][,'pvals']})
   res.teststat <- sapply(seq(no.splits),function(i){res[[i]][,'teststat']})
+  res.teststat.bic <- sapply(seq(no.splits),function(i){res[[i]][,'teststat.bic']})
+  res.teststat.aic <- sapply(seq(no.splits),function(i){res[[i]][,'teststat.aic']})
+  res.rel.edgeinter <- sapply(seq(no.splits),function(i){res[[i]][,'rel.edgeinter']})
+  res.dfu <- sapply(seq(no.splits),function(i){res[[i]][,'dfu']})
+  res.dfv <- sapply(seq(no.splits),function(i){res[[i]][,'dfv']})
+  res.dfuv <- sapply(seq(no.splits),function(i){res[[i]][,'dfuv']})
   pval.agg <- apply(res.pval,1,aggpval)
 
   if(is.null(gs.names)){
     return(list(pvalmed=apply(res.pval,1,median,na.rm=TRUE),pvalagg=pval.agg,
-                pval=res.pval,teststatmed=apply(res.teststat,1,median,na.rm=TRUE),teststat=res.teststat))
+                pval=res.pval,
+                teststatmed=apply(res.teststat,1,median,na.rm=TRUE),
+                teststatmed.bic=apply(res.teststat.bic,1,median,na.rm=TRUE),
+                teststatmed.aic=apply(res.teststat.aic,1,median,na.rm=TRUE),
+                teststat=res.teststat,teststat.aic=res.teststat.aic,rel.edgeinter=res.rel.edgeinter,dfu=res.dfu,dfv=res.dfv,dfuv=res.dfuv))
   }else{
     return(list(pvalmed=apply(res.pval,1,median,na.rm=TRUE),pvalagg=pval.agg,
-                pval=res.pval,teststatmed=apply(res.teststat,1,median,na.rm=TRUE),
-                teststat=res.teststat,gs.names=gs.names))
+                pval=res.pval,
+                teststatmed=apply(res.teststat,1,median,na.rm=TRUE),
+                teststatmed.bic=apply(res.teststat.bic,1,median,na.rm=TRUE),
+                teststatmed.aic=apply(res.teststat.aic,1,median,na.rm=TRUE),
+                teststat=res.teststat,teststat.aic=res.teststat.aic,rel.edgeinter=res.rel.edgeinter,dfu=res.dfu,dfv=res.dfv,dfuv=res.dfuv,
+                gs.names=gs.names))
   }
 }
 
@@ -386,30 +453,52 @@ gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.n
 par.gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',...){
 
   res <- mclapply(seq(no.splits),
-                function(i){
-                  cat('split:',i,'\n')
-                  res <- gsea.diffnet.singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
+                  function(i){
+                    cat('split:',i,'\n')
+                    res <- gsea.diffnet.singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
                                                     method.p.adjust=method.p.adjust,...)
-                  cat('pvals: ',res$pvals,'\n')
-                  mat <- cbind(res$pvals,res$teststat)
-                  colnames(mat) <- c('pvals','teststat')
-                  return(mat)
-                }, mc.set.seed=TRUE, mc.preschedule = TRUE)
-                
+
+                    cat('pvals: ',res$pvals,'\n')
+                    mat <- cbind(res$pvals,res$teststat,res$teststat.bic,res$teststat.aic,res$rel.edgeinter,res$dfu,res$dfv,res$dfuv)
+                    colnames(mat) <- c('pvals','teststat','teststat.bic','teststat.aic','rel.edgeinter','dfu','dfv','dfuv')
+                    return(mat)
+                  }, mc.set.seed=TRUE, mc.preschedule = TRUE)
   res.pval <- sapply(seq(no.splits),function(i){res[[i]][,'pvals']})
   res.teststat <- sapply(seq(no.splits),function(i){res[[i]][,'teststat']})
+  res.teststat.bic <- sapply(seq(no.splits),function(i){res[[i]][,'teststat.bic']})
+  res.teststat.aic <- sapply(seq(no.splits),function(i){res[[i]][,'teststat.aic']})
+  res.rel.edgeinter <- sapply(seq(no.splits),function(i){res[[i]][,'rel.edgeinter']})
+  res.dfu <- sapply(seq(no.splits),function(i){res[[i]][,'dfu']})
+  res.dfv <- sapply(seq(no.splits),function(i){res[[i]][,'dfv']})
+  res.dfuv <- sapply(seq(no.splits),function(i){res[[i]][,'dfuv']})
   pval.agg <- apply(res.pval,1,aggpval)
 
   if(is.null(gs.names)){
     return(list(pvalmed=apply(res.pval,1,median,na.rm=TRUE),pvalagg=pval.agg,
-                pval=res.pval,teststatmed=apply(res.teststat,1,median,na.rm=TRUE),teststat=res.teststat))
+                pval=res.pval,
+                teststatmed=apply(res.teststat,1,median,na.rm=TRUE),
+                teststatmed.bic=apply(res.teststat.bic,1,median,na.rm=TRUE),
+                teststatmed.aic=apply(res.teststat.aic,1,median,na.rm=TRUE),
+                teststat=res.teststat,teststat.aic=res.teststat.aic,rel.edgeinter=res.rel.edgeinter,dfu=res.dfu,dfv=res.dfv,dfuv=res.dfuv))
   }else{
     return(list(pvalmed=apply(res.pval,1,median,na.rm=TRUE),pvalagg=pval.agg,
-                pval=res.pval,teststatmed=apply(res.teststat,1,median,na.rm=TRUE),
-                teststat=res.teststat,gs.names=gs.names))
+                pval=res.pval,
+                teststatmed=apply(res.teststat,1,median,na.rm=TRUE),
+                teststatmed.bic=apply(res.teststat.bic,1,median,na.rm=TRUE),
+                teststatmed.aic=apply(res.teststat.aic,1,median,na.rm=TRUE),
+                teststat=res.teststat,teststat.aic=res.teststat.aic,rel.edgeinter=res.rel.edgeinter,dfu=res.dfu,dfv=res.dfv,dfuv=res.dfuv,
+                gs.names=gs.names))
   }
 }
 
+shapiro_screen <- function(x1,x2,sign.level=0.01){
+  p <- ncol(x1)
+  pval1 <- sapply(1:p,function(j){shapiro.test(x1[,j])$p.value})
+  pval1.adj <- p.adjust(pval1,method='bonferroni')
+  pval2 <- sapply(1:p,function(j){shapiro.test(x2[,j])$p.value})
+  pval2.adj <- p.adjust(pval2,method='bonferroni')
+  return(list(x1.filt=x1[,-which(pmin(pval1.adj,pval2.adj)<sign.level)],x2.filt=x2[,-which(pmin(pval1.adj,pval2.adj)<sign.level)]))
+}
 
 ## par.gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',...){
 
