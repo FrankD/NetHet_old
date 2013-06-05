@@ -892,7 +892,7 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
 ##' @return 
 ##' @author n.stadler
 diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glasso',
-                               compute.evals='est2.my.ev2',algorithm.mleggm='glasso_rho0',covMethod,include.mean=FALSE,
+                               compute.evals='est2.my.ev2',algorithm.mleggm='glasso_rho0',covMethod='standard',include.mean=FALSE,
                                diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,...){
   
   n1 <- nrow(x1)
