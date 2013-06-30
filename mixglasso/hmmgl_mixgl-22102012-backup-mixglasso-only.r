@@ -44,9 +44,10 @@
 #####################
 library('glasso')
 library(mvtnorm)
-library(HiddenMarkov)
-library(abind)
+#library(HiddenMarkov)
+#library(abind)
 library(mclust)
+library(multicore)
 
 simMIX <- function(n,nr.states,mix.prob,Mu,Sig){
   # mix.prob: mixing probabilities
@@ -498,6 +499,34 @@ mixglasso<- function(x,nr.states,lambda=sqrt(2*nrow(x[apply(!is.na(x),1,all),])*
                                min.statesize=min.statesize,term=term,...)
   return(fit.mixgl)
 }
+
+Mixglasso <- function(x,nr.states,
+                      lambda=sqrt(2*nrow(x)*log(ncol(x)))/2,
+                      pen='glasso.parcor',
+                      init='kmeans.hc',my.cl=NULL,modelname.hc="VVV",nstart.kmeans=1,iter.max.kmeans=10,
+                      term=10^{-3},min.statesize=5,
+                      save.allfits=TRUE,filename=NULL,
+                      mc.set.seed=FALSE, mc.preschedule = FALSE,...){
+                  
+  res <- mclapply(nr.states,
+                  FUN=function(k){
+                    fit.mixgl <-mixglasso(x,k,lambda=lambda,pen=pen,
+                                          init=init,my.cl=my.cl,modelname.hc=modelname.hc,
+                                          nstart.kmeans=nstart.kmeans,iter.max.kmeans=iter.max.kmeans,
+                                          term=term,min.statesize=min.statesize,...)
+                    if (save.allfits){
+                      save(fit.mixgl,file=paste(filename,'_','fit.mixgl_k',k,'.rda',sep=''))
+                    }
+                    return(list(bic=fit.mixgl$bic,state=fit.mixgl$state,iter=fit.mixgl$iter,warn=fit.mixgl$warn))},
+                  mc.set.seed=mc.set.seed, mc.preschedule = mc.preschedule)
+  
+  res.bic <- sapply(res,function(x){x[['bic']]})
+  res.state <- sapply(res,function(x){x[['state']]})
+  res.iter <- sapply(res,function(x){x[['iter']]})
+  res.warn <- sapply(res,function(x){x[['warn']]})
+  return(list(bic=res.bic,state=res.state,iter=res.iter,warn=res.warn))
+}
+
 
 
 bwprun_mixglasso <- function(x,
