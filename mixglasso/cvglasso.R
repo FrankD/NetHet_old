@@ -7,6 +7,11 @@ library(huge)
 ##-------Screening---------##
 #############################
 
+##Convert inverse covariance to partial correlation
+invcov2parcor <- function(invcov){
+  return(-invcov*tcrossprod(sqrt(1/diag(invcov))))
+}
+
 ##Lambda-grid
 lambdagrid_mult <- function(lambda.min,lambda.max,nr.gridpoints){
     mult.const <- (lambda.max/lambda.min)^(1/(nr.gridpoints-1))
@@ -133,6 +138,6 @@ screen_cv.glasso <- function(x,include.mean=TRUE,covMethod=NULL,
   if (plot.it){
     plotCV(lambda,cv,cv.error,se=se)
   }
-  list(rho.opt=2*lambda[which.min(cv)]/nrow(x),wi=wi.trunc,wi.orig=wi)
+  list(rho.opt=2*lambda[which.min(cv)]/nrow(x),wi=wi.trunc,wi.orig=wi,mu=colMeans(x))
 }
 
