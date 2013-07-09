@@ -73,7 +73,7 @@ fit2$sspval.onesided
 
 
 set.seed(1)
-system.time(fit3 <- diffregr_multisplit(y1,y2,x1,x2,b.splits=5,screen.meth='lasso.cvtrunc'))
+system.time(fit3 <- diffregr_multisplit(y1,y2,x1,x2,b.splits=5,screen.meth='lasso.cvtrunc',k.trunc=5))
 str(fit3)
 fit3$sspval.onesided
 ## > List of 12
