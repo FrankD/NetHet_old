@@ -25,6 +25,9 @@ library(CompQuadForm)
 lasso.cvmin <- function(x,y){
   fit.cv <- cv.glmnet(x,y)
   beta <- as.numeric(coef(fit.cv,s='lambda.min')[-1])
+  p <- length(beta)
+  n <- nrow(x)
+  beta[-(order(abs(beta),decreasing=TRUE)[1:min(p,n)])] <- 0
   return(which(beta!=0))
 }
 
@@ -42,8 +45,7 @@ lasso.cvtrunc <- function(x,y,k.trunc=5){
   fit.cv <- cv.glmnet(x,y)
   beta <- as.numeric(coef(fit.cv,s='lambda.min')[-1])
   p <- length(beta)
-  gamma <- ceiling(n/k.trunc)
-  d <- ifelse(p>gamma,gamma,p)
+  d <- min(floor(n/k.trunc),p,n)
   beta[-order(abs(beta),decreasing=TRUE)[1:d]] <- 0
   return(which(beta!=0))
 }
@@ -51,6 +53,26 @@ lasso.cvtrunc <- function(x,y,k.trunc=5){
 lasso.cv1se <- function(x,y){
   fit.cv <- cv.glmnet(x,y)
   beta <- as.numeric(coef(fit.cv,s='lambda.1se')[-1])
+  return(which(beta!=0))
+}
+
+lasso.cvsqrt <- function(x,y){
+  n <- nrow(x)
+  fit.cv <- cv.glmnet(x,y)
+  beta <- as.numeric(coef(fit.cv,s='lambda.min')[-1])
+  p <- length(beta)
+  d <- min(floor(sqrt(n)),p,n)
+  beta[-order(abs(beta),decreasing=TRUE)[1:d]] <- 0
+  return(which(beta!=0))
+}
+
+lasso.cvfix <- function(x,y,no.predictors=10){
+  n <- nrow(x)
+  fit.cv <- cv.glmnet(x,y)
+  beta <- as.numeric(coef(fit.cv,s='lambda.min')[-1])
+  p <- length(beta)
+  d <- min(no.predictors,p,n)
+  beta[-order(abs(beta),decreasing=TRUE)[1:d]] <- 0
   return(which(beta!=0))
 }
 
@@ -379,7 +401,7 @@ diffregr_pval <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act,compute.eva
 
 diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='lasso.cvmin',
                                 compute.evals='est2.my.ev2',
-                                acc=1e-04,verbose=FALSE){
+                                acc=1e-04,verbose=FALSE,...){
   
   ##Multisplit Pvalues
   ##
@@ -404,7 +426,7 @@ diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='lasso.cvm
   yy.train <- c(y1[split1],y2[split2])
   xx.valid <- rbind(x1[-split1,],x2[-split2,])
   yy.valid <- c(y1[-split1],y2[-split2])
-  active[['modJ']] <- eval(as.name(screen.meth))(xx.train,yy.train)
+  active[['modJ']] <- eval(as.name(screen.meth))(xx.train,yy.train,...)
   if(length(active[['modJ']])!=0){
     est.beta[['modJ']] <- as.numeric(coef(lm(yy.valid~xx.valid[,active[['modJ']]]-1)))
   }else{
@@ -419,7 +441,7 @@ diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='lasso.cvm
     yy.train <- eval(as.name(paste('y',j,sep='')))[split.train]
     xx.valid <- eval(as.name(paste('x',j,sep='')))[-split.train,]
     yy.valid <- eval(as.name(paste('y',j,sep='')))[-split.train]
-    active[[paste('modIpop',j,sep='')]] <- eval(as.name(screen.meth))(xx.train,yy.train)
+    active[[paste('modIpop',j,sep='')]] <- eval(as.name(screen.meth))(xx.train,yy.train,...)
 
     if(length(active[[paste('modIpop',j,sep='')]])!=0){
       est.beta[[paste('modIpop',j,sep='')]] <- as.numeric(coef(lm(yy.valid~xx.valid[,active[[paste('modIpop',j,sep='')]]]-1)))
@@ -451,17 +473,17 @@ diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='lasso.cvm
 }
 
 diffregr_multisplit<- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,screen.meth='lasso.cvmin',
-                              gamma.min=0.05,compute.evals='est2.my.ev2',acc=1e-04,verbose=FALSE){
+                              gamma.min=0.05,compute.evals='est2.my.ev2',acc=1e-04,verbose=FALSE,...){
 
   n1 <- nrow(x1)
   n2 <- nrow(x2)
   
   res.multisplit <- lapply(seq(b.splits),
                           function(i){
-                            split1 <- sample(1:n1,round(n1*frac.split),replace=FALSE)
-                            split2 <- sample(1:n2,round(n2*frac.split),replace=FALSE)
+                            split1 <- sample(1:n1,floor((n1-1)*frac.split),replace=FALSE)
+                            split2 <- sample(1:n2,floor((n2-1)*frac.split),replace=FALSE)
                             res.singlesplit <- diffregr_singlesplit(y1,y2,x1,x2,split1,split2,screen.meth,
-                                                                    compute.evals,acc,verbose)                      
+                                                                    compute.evals,acc,verbose,...)                      
                           })
   pval.onesided <- sapply(res.multisplit,function(x){x[['pval.onesided']]},simplify='array')
   pval.twosided <- sapply(res.multisplit,function(x){x[['pval.twosided']]},simplify='array')
