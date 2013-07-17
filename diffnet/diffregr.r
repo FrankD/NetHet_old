@@ -22,6 +22,7 @@ library(CompQuadForm)
 #######################
 ##-----Screening-----##
 #######################
+
 lasso.cvmin <- function(x,y){
   fit.cv <- cv.glmnet(x,y)
   beta <- as.numeric(coef(fit.cv,s='lambda.min')[-1])
@@ -267,6 +268,98 @@ q.matrix3 <- function(beta.a,beta.b,beta,sig.a,sig.b,sig,Sig,act.a,act.b,ss){
     }
 }
 
+q.matrix4 <- function(b.mat,act.a,act.b,ss){
+
+ ##Estimate Q
+    aa<-seq(1,length(act.a))[!(act.a%in%ss)]
+    bb<-seq(1,length(act.b))[!(act.b%in%ss)]
+    s.a<-seq(1,length(act.a))[(act.a%in%ss)]
+    s.b<-seq(1,length(act.b))[(act.b%in%ss)]
+
+    if(length(ss)==0){
+        return(b.mat[aa,bb,drop=FALSE])
+    }else{
+        return(b.mat[aa,bb,drop=FALSE]-(b.mat[aa,s.b,drop=FALSE]%*%solve(b.mat[s.a,s.b,drop=FALSE])%*%b.mat[s.a,bb,drop=FALSE]))
+    }
+}
+
+est2.ww.mat2 <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
+  ##Estimate W and Eval(W) ('1st order' simplification of W)
+  ##
+  ##Input:
+  ##  data: y1,y2,x1,x2
+  ##  beta: estimate for joint model
+  ##  beta1,beta2: estimates for individual model
+  ##  act: active beta's for joint model
+  ##  act1,act2: active beta's for individual models
+  ##
+  ##8!8! does not include weights from estimating error variances... (TO DO)
+
+  n1 <- length(y1)
+  n2 <- length(y2)
+  y <- c(y1,y2)
+  x <- rbind(x1,x2)
+  n <- length(y)
+
+  ##get mle's for sigma
+  mu1<-mu2<-mu<-0
+  sig1 <- (sum(y1^2)/n1);sig2 <- (sum(y2^2)/n2);sig <- (sum(y^2)/n)
+  if(length(beta1)!=0){
+    mu1<-x1[,act1,drop=FALSE]%*%beta1
+    sig1 <- sum((y1-mu1)^2)/n1
+  }
+  if(length(beta2)!=0){
+    mu2<-x2[,act2,drop=FALSE]%*%beta2
+    sig2 <- sum((y2-mu2)^2)/n2
+  }
+  if(length(beta)!=0){
+    mu<-x[,act,drop=FALSE]%*%beta
+    sig <- sum((y-mu)^2)/n
+  }
+
+  ##expand beta's with zeros
+  exp.beta <- exp.beta1 <- exp.beta2 <- rep(0,ncol(x1))
+  exp.beta[act] <- beta
+  exp.beta1[act1] <- beta1
+  exp.beta2[act2] <- beta2
+
+  ##dimension of models
+  dimf1 <- length(act1)
+  dimf2 <- length(act2)
+  dimf <- dimf1+dimf2
+  dimg <- length(act)
+
+  ##compute beta.mat
+  bact.pop1<- beta.mat(act,act,exp.beta,exp.beta,exp.beta1,sig,sig,sig1,var(x1))
+  bact.pop2<- beta.mat(act,act,exp.beta,exp.beta,exp.beta2,sig,sig,sig2,var(x2))
+  bact1<- beta.mat(act1,act1,exp.beta1,exp.beta1,exp.beta1,sig1,sig1,sig1,var(x1))
+  bact2<- beta.mat(act2,act2,exp.beta2,exp.beta2,exp.beta2,sig2,sig2,sig2,var(x2))
+  bact1.act<- beta.mat(act1,act,exp.beta1,exp.beta,exp.beta1,sig1,sig,sig1,var(x1))
+  bact2.act<- beta.mat(act2,act,exp.beta2,exp.beta,exp.beta2,sig2,sig,sig2,var(x2))
+  
+  bfg <- rbind(bact1.act,bact2.act)
+  bgf <- t(bfg)
+  bf <- matrix(0,dimf,dimf)
+  bf[1:dimf1,1:dimf1] <- bact1
+  bf[dimf1+(1:dimf2),dimf1+(1:dimf2)] <- bact2
+  bg <- bact.pop1+bact.pop2
+  
+  if (dimf>=dimg){
+    mat <- bgf%*%solve(bf)%*%bfg%*%solve(bg)
+    eval<-rep(1,dimf-dimg)
+  }
+  if (dimf<dimg){
+    mat <- bfg%*%solve(bg)%*%bgf%*%solve(bf)
+    eval<-rep(-1,dimg-dimf)
+  }
+  eval.mu.complex<-eigen(mat)$values
+  eval.mu <- as.double(eval.mu.complex)
+  eval <- c(eval,sqrt(1-eval.mu),-sqrt(1-eval.mu))
+  
+  return(list(eval=eval,eval.mu.complex=eval.mu.complex))
+}
+
+
 est2.my.ev2 <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
 
   ##Estimate Evals ('2nd order' simplification of W)
@@ -372,6 +465,91 @@ est2.my.ev2 <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
     eval<-rep(-1,dimg-dimf)
     eval <- c(eval,rep(-1,(length(ss)+1)),rep(1,(length(ss)+1)),rep(0,2*(length(ss)+1)),ev.aux,-ev.aux)
   }# end if (dimf<dimg){
+  return(list(eval=eval,ev.aux.complex=ev.aux.complex))
+}
+
+est2.my.ev3 <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
+
+  ##Estimate Evals ('2nd order' simplification of W)
+  ##
+  ##Input:
+  ##  data: y1,y2,x1,x2
+  ##  beta: estimate for joint model
+  ##  beta1,beta2: estimates for individual model
+  ##  act: active beta's for joint model
+  ##  act1,act2: active beta's for individual models
+
+  n1 <- length(y1)
+  n2 <- length(y2)
+  y <- c(y1,y2)
+  x <- rbind(x1,x2)
+  n <- length(y)
+
+  ##get mle's for sigma
+  mu1<-mu2<-mu<-0
+  sig1 <- (sum(y1^2)/n1);sig2 <- (sum(y2^2)/n2);sig <- (sum(y^2)/n)
+  if(length(beta1)!=0){
+    mu1<-x1[,act1,drop=FALSE]%*%beta1
+    sig1 <- sum((y1-mu1)^2)/n1
+  }
+  if(length(beta2)!=0){
+    mu2<-x2[,act2,drop=FALSE]%*%beta2
+    sig2 <- sum((y2-mu2)^2)/n2
+  }
+  if(length(beta)!=0){
+    mu<-x[,act,drop=FALSE]%*%beta
+    sig <- sum((y-mu)^2)/n
+  }
+
+  ##expand beta's with zeros
+  exp.beta <- exp.beta1 <- exp.beta2 <- rep(0,ncol(x1))
+  exp.beta[act] <- beta
+  exp.beta1[act1] <- beta1
+  exp.beta2[act2] <- beta2
+
+  ##dimension of models
+  dimf1 <- length(act1)+1
+  dimf2 <- length(act2)+1
+  dimf <- dimf1+dimf2
+  dimg <- length(act)+1
+  
+  ##intersection of models
+  ss <- intersect(act,intersect(act1,act2))
+  if(length(ss)==0){cat('warning! no intersection between models','\n')}
+  aa <- setdiff(act1,ss)
+  bb <- setdiff(act2,ss)
+  cc <- setdiff(act,ss)
+
+  ev.aux <- ev.aux.complex<-numeric(0)
+  no.zero.ev.aux <- 0
+  #if (dimf>=dimg){
+    if (length(cc)!=0){
+      qcc1 <- q.matrix3(exp.beta,exp.beta,exp.beta1,sig,sig,sig1,var(x1),act,act,ss)
+      qcc2 <- q.matrix3(exp.beta,exp.beta,exp.beta2,sig,sig,sig2,var(x2),act,act,ss)
+      bmat <- beta.mat(act,act,exp.beta,exp.beta,exp.beta1,sig,sig,sig1,var(x1))+beta.mat(act,act,exp.beta,exp.beta,exp.beta2,sig,sig,sig2,var(x2))
+      qcc12 <- q.matrix4(bmat,act,act,ss)
+      aux.mat <- diag(1,length(cc))-qcc1%*%solve(qcc12)-qcc2%*%solve(qcc12)
+      if(length(aa)!=0){
+        qac <- q.matrix3(exp.beta1,exp.beta,exp.beta1,sig1,sig,sig1,var(x1),act1,act,ss)
+        qaa <- q.matrix3(exp.beta1,exp.beta1,exp.beta1,sig1,sig1,sig1,var(x1),act1,act1,ss)
+        aux.mat <- aux.mat+(t(qac)%*%solve(qaa)%*%qac)%*%solve(qcc12)
+      }
+      if(length(bb)!=0){
+        qbc <- q.matrix3(exp.beta2,exp.beta,exp.beta2,sig2,sig,sig2,var(x2),act2,act,ss)
+        qbb <- q.matrix3(exp.beta2,exp.beta2,exp.beta2,sig2,sig2,sig2,var(x2),act2,act2,ss)
+        aux.mat <- aux.mat+(t(qbc)%*%solve(qbb)%*%qbc)%*%solve(qcc12)
+      }
+      ev.aux.complex <- eigen(aux.mat)$values
+      ev.aux <- as.double(ev.aux.complex)
+      zero.ev.aux <- abs(ev.aux)<10^{-10}
+      no.zero.ev.aux <- sum(zero.ev.aux)
+      ev.aux <- ev.aux[!zero.ev.aux]
+      ev.aux <-  sqrt(1-ev.aux)
+    }
+    eval<-c(rep(1,dimf-dimg+no.zero.ev.aux),rep(-1,no.zero.ev.aux))
+    eval <- c(eval,rep(0,2*(length(ss)+1)),ev.aux,-ev.aux)
+  #}# end if (dimf>=dimg){
+  
   return(list(eval=eval,ev.aux.complex=ev.aux.complex))
 }
 
