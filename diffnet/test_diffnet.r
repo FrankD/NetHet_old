@@ -123,7 +123,29 @@ e3 <- est2.my.ev2(Sig,Sig,Sig,act1,act2,act,include.mean=TRUE);round(sort(e3$eva
 ## [113]  1.000000  1.000000  1.000000  1.000000  1.000000  1.000000  1.000000
 ## [120]  1.000000  1.000000  1.000000  1.000000  1.000000
 
-e4 <- est2.ww.mat2(Sig,Sig,Sig,act1,act2,act,include.mean=TRUE);round(sort(e4$eval),6)
+e4 <- est2.my.ev3(Sig,Sig,Sig,act1,act2,act,include.mean=TRUE);round(sort(e4$eval),6)
+##  [1] -0.913500 -0.903837 -0.718028 -0.692951 -0.406839 -0.401952 -0.287048
+##   [8]  0.000000  0.000000  0.000000  0.000000  0.000000  0.000000  0.000000
+##  [15]  0.000000  0.000000  0.000000  0.000000  0.000000  0.000000  0.000000
+##  [22]  0.000000  0.000000  0.000000  0.000000  0.000000  0.000000  0.000000
+##  [29]  0.000000  0.000000  0.000000  0.000000  0.000000  0.000000  0.000000
+##  [36]  0.000000  0.000000  0.000000  0.000000  0.000000  0.000000  0.000000
+##  [43]  0.000000  0.000000  0.000000  0.000000  0.000000  0.000000  0.000000
+##  [50]  0.000000  0.000000  0.000000  0.000000  0.000000  0.000000  0.000000
+##  [57]  0.000000  0.000000  0.000000  0.000000  0.000000  0.000000  0.000000
+##  [64]  0.000000  0.000000  0.000000  0.000000  0.000000  0.000000  0.000000
+##  [71]  0.000000  0.000000  0.000000  0.000000  0.000000  0.287048  0.401952
+##  [78]  0.406839  0.692951  0.718028  0.903837  0.913500  1.000000  1.000000
+##  [85]  1.000000  1.000000  1.000000  1.000000  1.000000  1.000000  1.000000
+##  [92]  1.000000  1.000000  1.000000  1.000000  1.000000  1.000000  1.000000
+##  [99]  1.000000  1.000000  1.000000  1.000000  1.000000  1.000000  1.000000
+## [106]  1.000000  1.000000  1.000000  1.000000  1.000000  1.000000  1.000000
+## [113]  1.000000  1.000000  1.000000  1.000000  1.000000  1.000000  1.000000
+## [120]  1.000000  1.000000  1.000000  1.000000  1.000000
+est2.my.ev2(Sig,Sig,Sig,act1=c(1:2,11:13),act2=1:4,act=1:15,include.mean=FALSE)$eval
+est2.my.ev3(Sig,Sig,Sig,act1=c(1:2,11:13),act2=1:4,act=1:15,include.mean=FALSE)$eval
+
+e5 <- est2.ww.mat2(Sig,Sig,Sig,act1,act2,act,include.mean=TRUE);round(sort(e5$eval),6)
 
 ##Test Pval-Aggregation (old function)
 set.seed(1)
@@ -137,7 +159,7 @@ fit.pval1$LR.last# 42.14646
 set.seed(1)
 source('diffnet.r')
 dyn.load("../code/betamat_diffnet.so")
-fit.pval2 <- diffnet_multisplit(xx1,xx2,b.splits=5,include.mean=FALSE,screen.meth='cv.glasso',algorithm.mleggm='glasso_rho0',lambda=la)
+fit.pval2 <- diffnet_multisplit(xx1,xx2,b.splits=5,include.mean=FALSE,screen.meth='cv.glasso',algorithm.mleggm='glasso_rho0',lambda=la,compute.evals='est2.my.ev2')
 fit.pval2$pval.onesided# 0.37426285 0.06497231 0.07142485 0.20118175 0.15120453
 fit.pval2$aggpval.onesided# 1
 fit.pval2$teststat#31.54678 53.48060 41.56653 42.62735 42.14646
@@ -145,8 +167,15 @@ fit.pval2$teststat#31.54678 53.48060 41.56653 42.62735 42.14646
 set.seed(1)
 source('diffnet.r')
 dyn.load("../code/betamat_diffnet.so")
-fit.pval3 <- diffnet_multisplit(xx1,xx2,b.splits=5,include.mean=TRUE,screen.meth='cv.glasso',algorithm.mleggm='glasso_rho0',lambda=la)
+fit.pval3 <- diffnet_multisplit(xx1,xx2,b.splits=5,include.mean=TRUE,screen.meth='cv.glasso',algorithm.mleggm='glasso_rho0',lambda=la,compute.evals='est2.my.ev2')
 fit.pval3$pval.onesided# 0.41430313 0.03970084 0.04280262 0.24598699 0.08501593
 fit.pval3$teststat# 38.72533 68.02944 56.17720 51.79453 57.12753
+
+set.seed(1)
+source('diffnet.r')
+dyn.load("../code/betamat_diffnet.so")
+fit.pval4 <- diffnet_multisplit(xx1,xx2,b.splits=5,include.mean=TRUE,screen.meth='cv.glasso',algorithm.mleggm='glasso_rho0',lambda=la,compute.evals='est2.my.ev3')
+fit.pval4$pval.onesided# 0.41396187 0.03941045 0.04237682 0.24559838 0.08484810
+fit.pval4$teststat#  38.72533 68.02944 56.17720 51.79453 57.12753
 
 

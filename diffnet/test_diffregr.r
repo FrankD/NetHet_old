@@ -55,7 +55,7 @@ fit1$sspval.onesided
 
 source('diffregr.r')
 set.seed(1)
-system.time(fit2 <- diffregr_multisplit(y1,y2,x1,x2,b.splits=5,screen.meth='lasso.cvmin'))
+system.time(fit2 <- diffregr_multisplit(y1,y2,x1,x2,b.splits=5,screen.meth='lasso.cvmin',compute.evals='est2.my.ev2'))
 str(fit2)
 fit2$sspval.onesided
 ## > str(fit2)
@@ -87,7 +87,7 @@ fit2$sspval.onesided
 ## [1] 0.4450814
 
 set.seed(1)
-system.time(fit3 <- diffregr_multisplit(y1,y2,x1,x2,b.splits=5,screen.meth='lasso.cvtrunc',k.trunc=5))
+system.time(fit3 <- diffregr_multisplit(y1,y2,x1,x2,b.splits=5,screen.meth='lasso.cvtrunc',k.trunc=5,compute.evals='est2.my.ev2'))
 str(fit3)
 fit3$sspval.onesided
 ## > str(fit3)
