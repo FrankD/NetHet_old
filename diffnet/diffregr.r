@@ -359,7 +359,9 @@ est2.ww.mat2 <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
   return(list(eval=eval,eval.mu.complex=eval.mu.complex))
 }
 
-
+##' Compute weights of sum-w-chi2 (2nd order simplification)
+##' *expansion of W in two directions ("dimf>dimg direction" & "dimf>dimg direction") 
+##' *simplified computation of weights is obtained by assuming H0 and that X_u~X_v holds
 est2.my.ev2 <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
 
   ##Estimate Evals ('2nd order' simplification of W)
@@ -468,6 +470,10 @@ est2.my.ev2 <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
   return(list(eval=eval,ev.aux.complex=ev.aux.complex))
 }
 
+
+##' Compute weights of sum-w-chi2 (2nd order simplification)
+##' *expansion of W in one directions ("dimf>dimg direction") 
+##' *simplified computation of weights is obtained without further invoking H0, or assuming X_u~X_v
 est2.my.ev3 <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
 
   ##Estimate Evals ('2nd order' simplification of W)
@@ -523,31 +529,31 @@ est2.my.ev3 <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
   ev.aux <- ev.aux.complex<-numeric(0)
   no.zero.ev.aux <- 0
   #if (dimf>=dimg){
-    if (length(cc)!=0){
-      qcc1 <- q.matrix3(exp.beta,exp.beta,exp.beta1,sig,sig,sig1,var(x1),act,act,ss)
-      qcc2 <- q.matrix3(exp.beta,exp.beta,exp.beta2,sig,sig,sig2,var(x2),act,act,ss)
-      bmat <- beta.mat(act,act,exp.beta,exp.beta,exp.beta1,sig,sig,sig1,var(x1))+beta.mat(act,act,exp.beta,exp.beta,exp.beta2,sig,sig,sig2,var(x2))
-      qcc12 <- q.matrix4(bmat,act,act,ss)
-      aux.mat <- diag(1,length(cc))-qcc1%*%solve(qcc12)-qcc2%*%solve(qcc12)
-      if(length(aa)!=0){
-        qac <- q.matrix3(exp.beta1,exp.beta,exp.beta1,sig1,sig,sig1,var(x1),act1,act,ss)
-        qaa <- q.matrix3(exp.beta1,exp.beta1,exp.beta1,sig1,sig1,sig1,var(x1),act1,act1,ss)
-        aux.mat <- aux.mat+(t(qac)%*%solve(qaa)%*%qac)%*%solve(qcc12)
-      }
-      if(length(bb)!=0){
-        qbc <- q.matrix3(exp.beta2,exp.beta,exp.beta2,sig2,sig,sig2,var(x2),act2,act,ss)
-        qbb <- q.matrix3(exp.beta2,exp.beta2,exp.beta2,sig2,sig2,sig2,var(x2),act2,act2,ss)
-        aux.mat <- aux.mat+(t(qbc)%*%solve(qbb)%*%qbc)%*%solve(qcc12)
-      }
-      ev.aux.complex <- eigen(aux.mat)$values
-      ev.aux <- as.double(ev.aux.complex)
-      zero.ev.aux <- abs(ev.aux)<10^{-10}
-      no.zero.ev.aux <- sum(zero.ev.aux)
-      ev.aux <- ev.aux[!zero.ev.aux]
-      ev.aux <-  sqrt(1-ev.aux)
+  if (length(cc)!=0){
+    qcc1 <- q.matrix3(exp.beta,exp.beta,exp.beta1,sig,sig,sig1,var(x1),act,act,ss)
+    qcc2 <- q.matrix3(exp.beta,exp.beta,exp.beta2,sig,sig,sig2,var(x2),act,act,ss)
+    bmat <- beta.mat(act,act,exp.beta,exp.beta,exp.beta1,sig,sig,sig1,var(x1))+beta.mat(act,act,exp.beta,exp.beta,exp.beta2,sig,sig,sig2,var(x2))
+    qcc12 <- q.matrix4(bmat,act,act,ss)
+    aux.mat <- diag(1,length(cc))-qcc1%*%solve(qcc12)-qcc2%*%solve(qcc12)
+    if(length(aa)!=0){
+      qac <- q.matrix3(exp.beta1,exp.beta,exp.beta1,sig1,sig,sig1,var(x1),act1,act,ss)
+      qaa <- q.matrix3(exp.beta1,exp.beta1,exp.beta1,sig1,sig1,sig1,var(x1),act1,act1,ss)
+      aux.mat <- aux.mat+(t(qac)%*%solve(qaa)%*%qac)%*%solve(qcc12)
     }
-    eval<-c(rep(1,dimf-dimg+no.zero.ev.aux),rep(-1,no.zero.ev.aux))
-    eval <- c(eval,rep(0,2*(length(ss)+1)),ev.aux,-ev.aux)
+    if(length(bb)!=0){
+      qbc <- q.matrix3(exp.beta2,exp.beta,exp.beta2,sig2,sig,sig2,var(x2),act2,act,ss)
+      qbb <- q.matrix3(exp.beta2,exp.beta2,exp.beta2,sig2,sig2,sig2,var(x2),act2,act2,ss)
+      aux.mat <- aux.mat+(t(qbc)%*%solve(qbb)%*%qbc)%*%solve(qcc12)
+    }
+    ev.aux.complex <- eigen(aux.mat)$values
+    ev.aux <- as.double(ev.aux.complex)
+    zero.ev.aux <- abs(ev.aux)<10^{-10}
+    no.zero.ev.aux <- sum(zero.ev.aux)
+    ev.aux <- ev.aux[!zero.ev.aux]
+    ev.aux <-  sqrt(1-ev.aux)
+  }
+  eval<-c(rep(1,dimf-dimg+no.zero.ev.aux),rep(-1,no.zero.ev.aux))
+  eval <- c(eval,rep(0,2*(length(ss)+1)),ev.aux,-ev.aux)
   #}# end if (dimf>=dimg){
   
   return(list(eval=eval,ev.aux.complex=ev.aux.complex))
@@ -578,7 +584,7 @@ diffregr_pval <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act,compute.eva
 }
 
 diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='lasso.cvmin',
-                                compute.evals='est2.my.ev2',
+                                compute.evals='est2.my.ev3',
                                 acc=1e-04,verbose=FALSE,...){
   
   ##Multisplit Pvalues
@@ -651,7 +657,7 @@ diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='lasso.cvm
 }
 
 diffregr_multisplit<- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,screen.meth='lasso.cvmin',
-                              gamma.min=0.05,compute.evals='est2.my.ev2',acc=1e-04,verbose=FALSE,...){
+                              gamma.min=0.05,compute.evals='est2.my.ev3',acc=1e-04,verbose=FALSE,...){
 
   n1 <- nrow(x1)
   n2 <- nrow(x2)
@@ -678,7 +684,7 @@ diffregr_multisplit<- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,screen.met
               active.last=res.multisplit[[b.splits]]$active,beta.last=res.multisplit[[b.splits]]$beta))
 }
 
-twosample_single_regr <- function(y1,y2,x1,x2,n.screen.pop1=100,n.screen.pop2=100,screen.meth=lasso.cvmin,compute.evals='est2.my.ev2'){
+twosample_single_regr <- function(y1,y2,x1,x2,n.screen.pop1=100,n.screen.pop2=100,screen.meth=lasso.cvmin,compute.evals='est2.my.ev3'){
 
   ##Single-Split Pvalues
   ##
