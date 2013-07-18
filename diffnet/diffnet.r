@@ -656,6 +656,21 @@ q.matrix3 <- function(sig,sig.a,sig.b,act.a,act.b,ss){
   }
 }
 
+q.matrix4 <- function(b.mat,act.a,act.b,ss){
+
+ ##Estimate Q
+    aa<-seq(1,length(act.a))[!(act.a%in%ss)]
+    bb<-seq(1,length(act.b))[!(act.b%in%ss)]
+    s.a<-seq(1,length(act.a))[(act.a%in%ss)]
+    s.b<-seq(1,length(act.b))[(act.b%in%ss)]
+
+    if(length(ss)==0){
+        return(b.mat[aa,bb,drop=FALSE])
+    }else{
+        return(b.mat[aa,bb,drop=FALSE]-(b.mat[aa,s.b,drop=FALSE]%*%solve(b.mat[s.a,s.b,drop=FALSE])%*%b.mat[s.a,bb,drop=FALSE]))
+    }
+}
+
 ##' Compute weights of sum-w-chi2 (1st order simplification)
 ##'
 ##' .. content for \details{} ..
@@ -725,7 +740,9 @@ est2.ww.mat2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
 
 
 ##' Compute weights of sum-w-chi2 (2nd order simplification)
-##'
+##' *expansion of W in two directions ("dimf>dimg direction" & "dimf>dimg direction") 
+##' *simplified computation of weights is obtained by assuming H0 and that X_u~X_v holds
+##' 
 ##' .. content for \details{} ..
 ##' @title Weights of sum-w-chi2
 ##' @param sig1 
@@ -821,6 +838,82 @@ est2.my.ev2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
   }
   return(list(eval=eval,ev.aux.complex=ev.aux.complex))
 }
+
+##' Compute weights of sum-w-chi2 (2nd order simplification)
+##' *expansion of W in one directions ("dimf>dimg direction") 
+##' *simplified computation of weights is obtained without further invoking H0, or assuming X_u~X_v
+##'
+##' .. content for \details{} ..
+##' @title Weights of sum-w-chi2
+##' @param sig1 
+##' @param sig2 
+##' @param sig 
+##' @param act1 
+##' @param act2 
+##' @param act 
+##' @param include.mean 
+##' @return 
+##' @author n.stadler
+est2.my.ev3 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
+
+  k <- nrow(sig1)
+
+  #######################
+  ##dimension of models##
+  #######################
+  dimf1 <- length(act1)
+  dimf2 <- length(act2)
+  dimf <- dimf1+dimf2
+  dimg <- length(act)
+  if(include.mean==TRUE){
+    dimf <- dimf+2*k
+    dimg <- dimg+k
+  }
+  ##########################
+  ##intersection of models##
+  ##########################
+  ss <- intersect(act,intersect(act1,act2))
+  
+  if(length(ss)==0){warning('no intersection between models')}
+  
+  aa <- setdiff(act1,ss)
+  bb <- setdiff(act2,ss)
+  cc <- setdiff(act,ss)
+ 
+  ev.aux <- ev.aux.complex <- numeric(0)
+  #if (dimf>=dimg){
+    if (length(cc)!=0){
+      qcc1 <- q.matrix3(sig1,sig,sig,act,act,ss)
+      qcc2 <- q.matrix3(sig2,sig,sig,act,act,ss)
+      bmat <- beta.mat(act,act,sig,sig,sig1)+beta.mat(act,act,sig,sig,sig2)
+      qcc12 <- q.matrix4(bmat,act,act,ss)
+      aux.mat <- diag(1,length(cc))-qcc1%*%solve(qcc12)-qcc2%*%solve(qcc12)
+      if(length(aa)!=0){
+        qac <- q.matrix3(sig1,sig1,sig,act1,act,ss)
+        qaa <- q.matrix3(sig1,sig1,sig1,act1,act1,ss)
+        aux.mat <- aux.mat+(t(qac)%*%solve(qaa)%*%qac)%*%solve(qcc12)
+      }
+      if(length(bb)!=0){
+        qbc <- q.matrix3(sig2,sig2,sig,act2,act,ss)
+        qbb <- q.matrix3(sig2,sig2,sig2,act2,act2,ss)
+        aux.mat <- aux.mat+(t(qbc)%*%solve(qbb)%*%qbc)%*%solve(qcc12)
+      }
+      ev.aux.complex <- eigen(aux.mat)$values
+      ev.aux <- as.double(ev.aux.complex)
+      zero.ev.aux <- abs(ev.aux)<10^{-10}
+      no.zero.ev.aux <- sum(zero.ev.aux)
+      ev.aux <- ev.aux[!zero.ev.aux]
+      ev.aux <-  sqrt(1-ev.aux)
+    }
+  eval<-c(rep(1,dimf-dimg+no.zero.ev.aux),rep(-1,no.zero.ev.aux))
+  eval <- c(eval,rep(0,2*length(ss)),ev.aux,-ev.aux)
+  #}## end if (dimf>=dimg){
+  
+  if(include.mean==TRUE){
+    eval <- c(rep(0,2*k),eval)
+  }
+  return(list(eval=eval,ev.aux.complex=ev.aux.complex))
+}
    
 ##' P-value aggregation
 ##'
@@ -892,7 +985,7 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
 ##' @return 
 ##' @author n.stadler
 diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glasso',
-                               compute.evals='est2.my.ev2',algorithm.mleggm='glasso_rho0',covMethod='standard',include.mean=FALSE,
+                               compute.evals='est2.my.ev3',algorithm.mleggm='glasso_rho0',covMethod='standard',include.mean=FALSE,
                                diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,...){
   
   n1 <- nrow(x1)
@@ -1018,7 +1111,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
 ##' @return 
 ##' @author n.stadler
 diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='screen_bic.glasso',include.mean=FALSE,
-                              gamma.min=0.05,compute.evals='est2.my.ev2',algorithm.mleggm='glasso_rho0',covMethod='standard',diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,...){
+                              gamma.min=0.05,compute.evals='est2.my.ev3',algorithm.mleggm='glasso_rho0',covMethod='standard',diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,...){
 
   ##????Important Notes: Pval can be NA, because...
   ##????
