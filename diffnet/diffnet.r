@@ -881,6 +881,7 @@ est2.my.ev3 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
   cc <- setdiff(act,ss)
  
   ev.aux <- ev.aux.complex <- numeric(0)
+  no.zero.ev.aux <- 0
   #if (dimf>=dimg){
     if (length(cc)!=0){
       qcc1 <- q.matrix3(sig1,sig,sig,act,act,ss)

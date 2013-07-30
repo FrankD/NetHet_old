@@ -54,6 +54,9 @@ lasso.cvtrunc <- function(x,y,k.trunc=5){
 lasso.cv1se <- function(x,y){
   fit.cv <- cv.glmnet(x,y)
   beta <- as.numeric(coef(fit.cv,s='lambda.1se')[-1])
+  p <- length(beta)
+  d <- min(floor(sqrt(n)),p,n)
+  beta[-order(abs(beta),decreasing=TRUE)[1:d]] <- 0
   return(which(beta!=0))
 }
 
