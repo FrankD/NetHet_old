@@ -151,4 +151,37 @@ test.sd <- function(x1,x2){
   list(teststat=teststat,pval=1-pnorm(teststat))
 }
 
+######################
+##Plotting functions##
+######################
+
+##False positive -, True positive rate, ROC curve
+my.fpr <- function(res,index=1:3,signi=0.05){
+  return(mean(res[index]<signi))
+}
+my.tpr <- function(res,index=1:3,signi=0.05){
+  return(mean(res[index]<signi))
+}
+my.fprtpr <- function(pval,labels){
+  thresh <- sort(unique(c(0,(pval),1.1)))
+  n <- ncol(pval)
+  fp <- tp <- matrix(NA,length(thresh),n)
+  for (i in 1:n){
+    for (j in 1:length(thresh)){
+      fp[j,i] <- my.fpr(pval[,i],which(labels==0),thresh[j])
+      tp[j,i] <- my.tpr(pval[,i],which(labels==1),thresh[j])
+    }
+  }
+  return(list(fpr=fp,tpr=tp))
+}
+plot.roc <- function(pval,labels,sd=FALSE,add=FALSE,...){
+  res <- my.fprtpr(pval,labels)
+
+  if(add==FALSE){
+    plot(rowMeans(res$fpr),rowMeans(res$tpr),cex=0.1,type='l',xlab='false positive rate',ylab='true positive rate',...)
+  }
+  if(add==TRUE){
+    lines(rowMeans(res$fpr),rowMeans(res$tpr),cex=0.1,type='l',xlab='false positive rate',ylab='true positive rate',...)
+  }
+}
 
