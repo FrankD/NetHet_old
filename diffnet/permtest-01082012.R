@@ -175,7 +175,7 @@ perm.regr.pval <- function(y1,y2,x1,x2,lambda.cv='lambda.min',nr.perm=100){
     y.perm <- y[perm]
     tperm.kldist[i] <- perm.regr.teststatistic(y.perm,x.perm,n1,n2,lambda.cv=lambda.cv)$kldist
   }
-  return(list(pval.kldist=mean(tperm.kldist>tobs.kldist)))
+  return(list(pval.kldist=(1+sum(tperm.kldist>=tobs.kldist))/nr.perm))
 }
               
 ##DiffNet
@@ -209,8 +209,7 @@ perm.diffnet.pval <- function(x1,x2,nr.perm=100,lambda,lambda.cv='cv.glasso'){
     tperm.edgediff[i] <-fit.tperm$edgediff
     tperm.kldist[i] <- fit.tperm$kldist
   }
-  return(list(pval.edgediff=mean(tperm.edgediff>tobs.edgediff),
-              pval.kldist=mean(tperm.kldist>tobs.kldist)))
+  return(list(pval.edgediff=(1+sum(tperm.edgediff>=tobs.edgediff))/nr.perm,
+              pval.kldist=(1+sum(tperm.kldist>=tobs.kldist))/nr.perm))
 }
               
-
