@@ -1,9 +1,11 @@
 sparse_conc <- function(p,K,s,s.common,magn.nz=0.5,scale.parcor=TRUE){
     ##Generate K different Sparse Inverse Covariance-Matrices of dimension p:
     ##
+    ##-condition number=p (necessary when comparing different performance wrt various p's; if scale.parcor=TRUE, then sparse_conc does not depend on magn.nz)
     ##-for each SigInv there are s non-zero entries
     ##-s.common locations of non-zero entries are common among all SigInv;
     ## whereas s-s.common non-zero entries are at different locations
+    
 
   if(s==0){
     SigInv <- list()
@@ -51,6 +53,7 @@ sparse_conc <- function(p,K,s,s.common,magn.nz=0.5,scale.parcor=TRUE){
 sparse_conc_v2<- function(p,K,s,s.common,magn.nz=0.5,scale.parcor=TRUE){
     ##Generate K different Sparse Inverse Covariance-Matrices of dimension p:
     ##
+    ##-
     ##-for each SigInv there are s non-zero entries
     ##-s.common locations of non-zero entries are common among all SigInv;
     ## whereas s-s.common non-zero entries are at different locations
@@ -86,8 +89,8 @@ sparse_conc_v2<- function(p,K,s,s.common,magn.nz=0.5,scale.parcor=TRUE){
     SigInv <- list()
     for (k in 1:K){
       SigInv[[k]] <- B.list[[k]]
-      ev <- eigen(SigInv[[k]])$values
-      del <- abs(min(ev))+0.01
+      ev <- eigen(SigInv[[k]])$values;print(min(ev))
+      del <- abs(min(ev))+1
       diag(SigInv[[k]]) <- del
       if(scale.parcor==TRUE){
         SigInv[[k]] <- SigInv[[k]]/del
@@ -97,6 +100,16 @@ sparse_conc_v2<- function(p,K,s,s.common,magn.nz=0.5,scale.parcor=TRUE){
     
     return(SigInv)
 }
+
+## myfun <- function(x,y=0.5,my.seed=1){
+##   set.seed(my.seed)
+##   wi <- sparse_conc_v2(25,K=1,s=10,s.common=10,magn.nz=x,scale.parcor=TRUE)[[1]]
+##   diag(wi) <- 0
+##   nz <- wi[wi!=0]
+##   nz[1]-y
+## }
+## uniroot(myfun,c(-10^11,0),y=0.65)
+## set.seed(1);head(sparse_conc(25,K=1,s=10,s.common=10,magn.nz=0.5,scale.parcor=TRUE)[[1]])
 
 
 ##' High-Dim Two-Sample Test based on multiple correction
