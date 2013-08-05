@@ -7,27 +7,30 @@
 library(mvtnorm)
 library(glasso)
 library(glmnet)
+library(parcor)
+library(GeneNet)
+library(huge)
 
-###########
-##GLasso ##
-###########
+#############################
+##-------Screening---------##
+#############################
 
 ##Lambda-grid
 lambdagrid_mult <- function(lambda.min,lambda.max,nr.gridpoints){
     mult.const <- (lambda.max/lambda.min)^(1/(nr.gridpoints-1))
     return(lambda.min*mult.const^((nr.gridpoints-1):0))
 }
-
-##Crossvalidation glasso
-plotCV <- function(lambda,cv,cv.error,se=TRUE,type='b',...){
-  if (se==TRUE){ylim <- range(cv,cv+cv.error,cv-cv.error)}
-  else {ylim <- range(cv)}
-  plot(lambda,cv,type=type,ylim=ylim,...)
-  if (se)
-    error.bars(lambda,cv+cv.error,cv-cv.error,width=1/length(lambda))
-  invisible()
+lambdagrid_lin <- function(lambda.min,lambda.max,nr.gridpoints){
+    mult.const <- (lambda.max/lambda.min)^(1/(nr.gridpoints-1))
+    return(seq(lambda.max,lambda.min,length=nr.gridpoints))
 }
 
+##Make-grid
+make_grid <- function(lambda.min,lambda.max,nr.gridpoints,method='lambdagrid_mult'){
+  eval(as.name(method))(lambda.min,lambda.max,nr.gridpoints)
+}
+
+##Crossvalidation plot
 error.bars <- function (x, upper, lower, width = 0.02, ...)
 {
     xlim <- range(x)
@@ -37,102 +40,113 @@ error.bars <- function (x, upper, lower, width = 0.02, ...)
     segments(x - barw, lower, x + barw, lower, ...)
     range(upper, lower)
 }
-
+plotCV <- function(lambda,cv,cv.error,se=TRUE,type='b',...){
+  if (se==TRUE){ylim <- range(cv,cv+cv.error,cv-cv.error)}
+  else {ylim <- range(cv)}
+  plot(lambda,cv,type=type,ylim=ylim,...)
+  if (se)
+    error.bars(lambda,cv+cv.error,cv-cv.error,width=1/length(lambda))
+  invisible()
+}
 cv.fold <- function(n,folds=10){
   split(sample(1:n),rep(1:folds,length=n))
 }
 
-cv.glasso <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se=TRUE)
-##8! lambda has to be increasing for glassopath
+##Hugepath
+hugepath <- function(s,rholist,penalize.diagonal=NULL,trace=NULL){
+  #fit.huge <- huge(s,method = "glasso",cov.output =TRUE,verbose = FALSE)
+  fit.huge <- huge(s,lambda=sort(rholist,decreasing=TRUE),method = "glasso",cov.output =TRUE,verbose = FALSE)
+  wi <- sapply(fit.huge$icov,as.matrix,simplify='array')
+  w <- sapply(fit.huge$cov,as.matrix,simplify='array')
+  #return(list(wi=wi[,,length(fit.huge$lambda):1],w=w[,,length(fit.huge$lambda):1]))
+  return(list(rholist=rholist,wi=wi[,,length(rholist):1],w=w[,,length(rholist):1]))
+}
+
+lambda.max <- function(x){
+  n <- nrow(x)
+  s.var <- var(x)
+  diag(s.var) <- 0
+  return(n*max(abs(s.var))/2)
+}
+
+mytrunc.method <- function(n,wi,method='linear.growth',trunc.k=5){
+
+  p <- ncol(wi)
+  if (method=='none'){
+    return(list(wi=wi))
+  }
+  if(method=='linear.growth'){
+    wi.trunc <- wi
+    diag(wi.trunc) <- 0
+    nonzero <- min(2*ceiling(p*ceiling(n/trunc.k)/2),sum(wi.trunc!=0))
+    wi.trunc[-order(abs(wi.trunc),decreasing=TRUE)[1:nonzero]] <- 0
+    diag(wi.trunc) <- diag(wi)
+    return(list(wi=wi.trunc))
+  }
+  if(method=='sqrt.growth'){
+    wi.trunc <- wi
+    diag(wi.trunc) <- 0
+    nonzero <- min(2*ceiling(p*sqrt(n)/2),sum(wi.trunc!=0))
+    wi.trunc[-order(abs(wi.trunc),decreasing=TRUE)[1:nonzero]] <- 0
+    diag(wi.trunc) <- diag(wi)
+    return(list(wi=wi.trunc))
+  }
+}
+
+screen_cv.glasso <- function(x,include.mean=FALSE,covMethod=NULL,
+                             folds=10,length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,
+                             trunc.method='none',trunc.k=5,plot.it=FALSE,se=FALSE,use.package='huge',verbose=TRUE)
 {
+  
+  gridmax <- lambda.max(x)
+  gridmin <- lambdamin.ratio*gridmax
+  lambda <- make_grid(gridmin,gridmax,length.lambda)[length.lambda:1]
+  
   colnames(x)<-paste('x',1:ncol(x),sep='')  
   all.folds <- cv.fold(nrow(x),folds)
   residmat <- matrix(NA,folds,length(lambda))
   for (cvfold in 1:folds){
     omit <- all.folds[[cvfold]]
-    s <- var(x[-omit,])###!!!!!!!!!!!!!
-    fit.path <- glassopath(s,rholist=2*lambda/nrow(x),penalize.diagonal=penalize.diagonal,trace=0)
-    if(length(omit)==1){
-      residmat[cvfold,] <- -2*apply(fit.path$w,3,dmvnorm,log=TRUE,mean=rep(0,ncol(x)),x=x[omit,,drop=FALSE])
+    s <- var(x[-omit,])
+    if (include.mean==TRUE){
+      mu <- colMeans(x[-omit,,drop=FALSE])
     }else{
-      residmat[cvfold,] <- apply(-2*apply(fit.path$w,3,dmvnorm,log=TRUE,mean=rep(0,ncol(x)),x=x[omit,,drop=FALSE]),2,sum)
+      mu <- rep(0,ncol(x))
+    }
+    fit.path <- eval(as.name(paste(use.package,'path',sep='')))(s,rholist=2*lambda/nrow(x),penalize.diagonal=penalize.diagonal,trace=0)
+    if(length(omit)==1){
+      residmat[cvfold,] <- -2*apply(fit.path$w,3,dmvnorm,log=TRUE,mean=mu,x=x[omit,,drop=FALSE])
+    }else{
+      residmat[cvfold,] <- apply(-2*apply(fit.path$w,3,dmvnorm,log=TRUE,mean=mu,x=x[omit,,drop=FALSE]),2,sum)
     }
   }
   cv <- apply(residmat,2,mean)
   cv.error <- sqrt(apply(residmat,2,var)/folds)
   gl.opt<-glasso(var(x),rho=2*lambda[which.min(cv)]/nrow(x),penalize.diagonal=penalize.diagonal)
-  cat('la.opt:',lambda[which.min(cv)],'\n')
+  if(verbose){
+    cat('la.min:',gridmin,'\n')
+    cat('la.max:',gridmax,'\n')
+    cat('la.opt:',lambda[which.min(cv)],'\n')
+  }
+  
+  if (include.mean==TRUE){
+    mu <- colMeans(x[,,drop=FALSE])
+  }else{
+    mu <- rep(0,ncol(x))
+  }
+    
   w<-gl.opt$w
   wi<-gl.opt$wi
   wi[abs(wi)<10^{-3}]<-0
-  colnames(w)<-rownames(w)<-colnames(wi)<-rownames(wi)<-colnames(x)  
-
-  object <- list(lambda=lambda,residmat=residmat,cv=cv,cv.error=cv.error,w=w,wi=wi,mu=colMeans(x))
+  wi <- (wi+t(wi))/2
+  colnames(w)<-rownames(w)<-colnames(wi)<-rownames(wi)<-colnames(x)
+  wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
+  
   if (plot.it){
     plotCV(lambda,cv,cv.error,se=se)
   }
-  invisible(object)
+  list(rho.opt=2*lambda[which.min(cv)]/nrow(x),mu=mu,w=w,wi=wi.trunc,wi.orig=wi)
 }
-
-cv.glasso.1se <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se=TRUE)
-##8! lambda has to be increasing for glassopath
-{
-  colnames(x)<-paste('x',1:ncol(x),sep='')  
-  all.folds <- cv.fold(nrow(x),folds)
-  residmat <- matrix(NA,folds,length(lambda))
-
-  for (cvfold in 1:folds){
-    omit <- all.folds[[cvfold]]
-    s <- var(x[-omit,])###!!!!!!!!!!!!!
-    fit.path <- glassopath(s,rholist=2*lambda/nrow(x),penalize.diagonal=penalize.diagonal,trace=0)
-    if(length(omit)==1){
-      residmat[cvfold,] <- -2*apply(fit.path$w,3,dmvnorm,log=TRUE,mean=rep(0,ncol(x)),x=x[omit,,drop=FALSE])
-    }else{
-      residmat[cvfold,] <- apply(-2*apply(fit.path$w,3,dmvnorm,log=TRUE,mean=rep(0,ncol(x)),x=x[omit,,drop=FALSE]),2,sum)
-    }
-  }
-  cv <- apply(residmat,2,mean)
-  cv.error <- sqrt(apply(residmat,2,var)/folds)
-  la.1se <- max(lambda[which(cv < min(cv)+cv.error[which.min(cv)])])
-  gl.opt<-glasso(var(x),rho=2*la.1se/nrow(x),penalize.diagonal=penalize.diagonal)
-  w<-gl.opt$w
-  wi<-gl.opt$wi
-  wi[abs(wi)<10^{-3}]<-0
-  colnames(w)<-rownames(w)<-colnames(wi)<-rownames(wi)<-colnames(x)  
-
-  object <- list(lambda=lambda,residmat=residmat,cv=cv,cv.error=cv.error,w=w,wi=wi,mu=colMeans(x),la.1se=la.1se)
-  if (plot.it){
-    plotCV(lambda,cv,cv.error,se=se)
-  }
-  invisible(object)
-}
-
-## glasso.parcor.launi <- function(x,maxiter=1000,term=10^{-3}){
-##   s <- var(x)
-##   rho.uni <- sqrt(2*log(ncol(x))/nrow(x))
-
-##   ww <- rep(1,p)#sqrt(diag(s))
-##   iter <- 0
-##   err <- Inf #convergence of parameters
-##   param <- as.vector(diag(ww))
-##   while((err>term)&(iter<maxiter)){
-##     gl <- glasso(s,rho=rho.uni*ww,penalize.diagonal=FALSE)
-##     ww <- 1/(diag(gl$wi))
-##     param.old <- param
-##     param <- as.vector(gl$w)
-##     err <- max(abs(param-param.old)/(1+abs(param)))
-##     iter <- iter+1
-##   }
-##   list(w=gl$w,wi=gl$wi,iter=iter)
-## }
-
-## glasso.launi <- function(x){
-##   s <- var(x)
-##   rho.uni <- sqrt(2*log(ncol(x))/nrow(x))
-##   gl <- glasso(s,rho=rho.uni,penalize.diagonal=FALSE)
-##   list(w=gl$w,wi=gl$wi)
-## }
-
 
 ####################
 ##Permutation-Test##
@@ -186,26 +200,26 @@ symmkldistmvn <- function(mu1,mu2,sig1,sig2){
     return(as.numeric(symmkl))
 }
 
-perm.diffnet.teststatistic <- function(x,n1,n2,folds=10,lambda,lambda.cv='cv.glasso',plot.it=TRUE,se=TRUE){
+perm.diffnet.teststatistic <- function(x,n1,n2,screen.meth='screen_cv.glasso',plot.it=TRUE,se=TRUE,include.mean=FALSE){
   
-  fit.cv.1<- eval(as.name(lambda.cv))(x[1:n1,],folds=folds,lambda=lambda,plot.it=plot.it,se=se)
-  fit.cv.2 <- eval(as.name(lambda.cv))(x[n1+(1:n2),],folds=folds,lambda=lambda,plot.it=plot.it,se=se)
+  fit.cv.1<- eval(as.name(screen.meth))(x[1:n1,],include.mean=include.mean)
+  fit.cv.2 <- eval(as.name(screen.meth))(x[n1+(1:n2),],include.mean=include.mean)
   nz1 <- fit.cv.1$wi;nz1[nz1!=0] <- 1
   nz2 <- fit.cv.2$wi;nz2[nz2!=0] <- 1
   kldist <- symmkldistmvn(mu1=fit.cv.1$mu,mu2=fit.cv.2$mu,sig1=fit.cv.1$w,sig2=fit.cv.2$w)
   return(list(edgediff=sum(nz1!=nz2)/2,kldist=kldist))
 }
 
-perm.diffnet.pval <- function(x1,x2,nr.perm=100,lambda,lambda.cv='cv.glasso'){
+perm.diffnet.pval <- function(x1,x2,nr.perm=100,screen.meth='screen_cv.glasso',include.mean=FALSE){
   n1 <- nrow(x1);n2 <- nrow(x2)
   x <- rbind(x1,x2)
-  fit.tobs <- perm.diffnet.teststatistic(x,n1,n2,lambda=lambda,lambda.cv=lambda.cv)
+  fit.tobs <- perm.diffnet.teststatistic(x,n1,n2,screen.meth=screen.meth,include.mean=include.mean)
   tobs.edgediff <- fit.tobs$edgediff
   tobs.kldist <- fit.tobs$kldist
   tperm.edgediff <- tperm.kldist<- rep(NA,nr.perm)
   for (i in 1:nr.perm){
     x.perm <- x[sample(1:(n1+n2)),]
-    fit.tperm <-  perm.diffnet.teststatistic(x.perm,n1,n2,lambda=lambda,lambda.cv=lambda.cv)
+    fit.tperm <-  perm.diffnet.teststatistic(x.perm,n1,n2,screen.meth=screen.meth,include.mean=include.mean)
     tperm.edgediff[i] <-fit.tperm$edgediff
     tperm.kldist[i] <- fit.tperm$kldist
   }
