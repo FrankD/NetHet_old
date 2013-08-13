@@ -44,11 +44,40 @@
 #####################
 library('glasso')
 library(mvtnorm)
-#library(HiddenMarkov)
-#library(abind)
 library(mclust)
 library(multicore)
 
+#' MixGLasso-package
+#'
+#' The MixGLasso-package is a powerful tool for clustering high-dimensional data with n<p.
+#' It is based on a Gaussian mixture model with k components. The inverse covariance matrices
+#' are assumed to be sparse.
+#'
+#' MixGLasso outputs an optimal number of mixture components (based on bic/mmdl); cluster assignments;
+#' Cluster-specific networks (sparse inverse covariance matrices); Cluster-specific means.
+#' 
+#' @references Städler, N. and Mukherjee, S. (2012).
+#' Penalized estimation in high-dimensional hidden Markov models with state-specific graphical models. To appear in the Annals of Applied Statistics.
+#' \url{http://arxiv.org/abs/1208.4989}.
+#' @import glasso mvtnorm mclust multicore
+#' @docType package
+#' @name MixGLasso-package
+NULL
+
+
+##' Simulate from mixture model with MVN components
+##'
+##' 
+##' @title Simulate from mixture model with MVN components
+##' @param n sample size
+##' @param nr.states number of mixture components ("states")
+##' @param mix.prob mixing probablities
+##' @param Mu matrix of component-specific mean vectors 
+##' @param Sig array of component-specific covariance matrices
+##' @return  a list consisting of
+##' \item{S}{component assignments}
+##' \item{X}{observed data matrix}
+##' @author n.stadler
 simMIX <- function(n,nr.states,mix.prob,Mu,Sig){
   # mix.prob: mixing probabilities
   # Mu: means
@@ -63,15 +92,32 @@ simMIX <- function(n,nr.states,mix.prob,Mu,Sig){
   }
   list(S=s,X=x)
 }
-###########################################
-##Sum of non-diagonal entries of a matrix##
-###########################################
+
+##' Sum of non-diag elements of a matrix
+##'
+##'
+##' @title Sum of non-diag elements of a matrix
+##' @param m 
+##' @return Sum of non-diag elements
+##' @author n.stadler
 sumoffdiag <- function(m){
   sum(m)-sum(diag(m))
 }
-##################
-##Initialization##
-##################
+
+##' Initialization of responsibilities
+##'
+##' 
+##' @title Initialization of MixGLasso 
+##' @param x Observed data
+##' @param nr.states Number of mixture components
+##' @param init Method used for initialization init={'cl.init','r.means','random','kmeans','kmeans.hc','hc'}
+##' @param my.cl Initial cluster assignments; need to be provided if init='cl.init' (otherwise this param is ignored)
+##' @param nstart.kmeans Number of random starts in kmeans; default=1
+##' @param iter.max.kmeans Maximal number of iteration in kmeans; default=10
+##' @param modelname.hc Model class used in hc; default='EII'
+##' @return  a list consisting of
+##' \item{u}{responsibilities}
+##' @author n.stadler
 func.uinit <- function(x,nr.states,init='kmeans',my.cl=NULL,nstart.kmeans=1,iter.max.kmeans=10,modelname.hc="EII"){
   ##Initializing EM (provides uinit)
   ##
@@ -144,16 +190,41 @@ func.uinit <- function(x,nr.states,init='kmeans',my.cl=NULL,nstart.kmeans=1,iter
   u.all[nonvirtual,] <- u
   return(list(u=u.all))
 }
-###############
-##KL-Distance##
-###############
+
+##' Compute trace of matrix
+##'
+##' 
+##' @title Compute trace of matrix
+##' @param m 
+##' @return trace of matrix
+##' @author n.stadler
 tr <- function(m){sum(diag(m))}
 
+##' Compute symmetric kull-back leibler distance
+##'
+##' 
+##' @title Compute symmetric kull-back leibler distance
+##' @param mu1 
+##' @param mu2 
+##' @param sig1 
+##' @param sig2 
+##' @return symmetric kull-back leibler distance
+##' @author n.stadler
 symmkldist <- function(mu1,mu2,sig1,sig2){
     symmkl <- 0.5*tr((sig1-sig2)%*%(solve(sig2)-solve(sig1)))+0.5*t(mu1-mu2)%*%(solve(sig1)+solve(sig2))%*%(mu1-mu2)
     return(symmkl)
 }
 
+##' Distance between states based on symm. kl-distance
+##'
+##' 
+##' @title Distance between states based on symm. kl-distance
+##' @param Mu 
+##' @param Sig 
+##' @return list consisting of
+##' \item{state.kldist}{}
+##' \item{min.state.kldist}{}
+##' @author n.stadler
 w.kldist <- function(Mu,Sig){
     nr.states <- ncol(Mu)
     res<- matrix(NA,nr.states,nr.states)
@@ -162,10 +233,19 @@ w.kldist <- function(Mu,Sig){
             res[k,kk] <- symmkldist(Mu[,k],Mu[,kk],Sig[,,k],Sig[,,kk])
         }
     }
-
-  list(state.kldist=res,min.state.kldist=min(res[upper.tri(res)]))
+    list(state.kldist=res,min.state.kldist=min(res[upper.tri(res)]))
 }
 
+##' Performs EStep
+##'
+##' .. content for \details{} ..
+##' @title Performs EStep 
+##' @param logphi 
+##' @param mix.prob 
+##' @return list consiting of
+##' \item{u}{responsibilities}
+##' \item{LL}{loglikelihood}
+##' @author n.stadler
 EXPStep.mix <- function(logphi,mix.prob){
     u <- logphi+matrix(log(mix.prob),nrow(logphi),ncol(logphi),byrow=TRUE)
     max.u <- apply(u,1,max)
@@ -174,10 +254,18 @@ EXPStep.mix <- function(logphi,mix.prob){
     loglik <- sum(log(rowSums(u.scale))+max.u)
     return(list(u=u,loglik=loglik))
 }
-  
-##################
-##GLasso and Co.##
-##################
+
+##' Graphical Lasso based on partial correlation penalty
+##'
+##' 
+##' @title Graphical Lasso based on partial correlation penalty
+##' @param s 
+##' @param rho 
+##' @param penalize.diagonal 
+##' @param maxiter 
+##' @param term 
+##' @return w; wi; iter
+##' @author n.stadler
 glasso.parcor <- function(s,rho,penalize.diagonal,maxiter=1000,term=10^{-3}){
     ww <- diag(s)
     iter <- 0
@@ -194,6 +282,17 @@ glasso.parcor <- function(s,rho,penalize.diagonal,maxiter=1000,term=10^{-3}){
     }
     list(w=gl$w,wi=gl$wi,iter=iter)
 }
+
+##' Graphical Lasso based on inverse covariance penalty
+##'
+##' 
+##' @title Graphical Lasso based on inverse covariance penalty
+##' @param s 
+##' @param rho 
+##' @param penalize.diagonal 
+##' @param term 
+##' @return w; wi; iter
+##' @author n.stadler
 glasso.invcor <- function(s,rho,penalize.diagonal,term=10^{-3}){
   if(penalize.diagonal==FALSE){
     ww <- diag(s)
@@ -206,13 +305,40 @@ glasso.invcor <- function(s,rho,penalize.diagonal,term=10^{-3}){
     return(list(w=gl$w,wi=gl$wi))
   }
 }
+
+##' Graphical Lasso based on inverse correlation penalty
+##'
+##' 
+##' @title Graphical Lasso based on inverse correlation penalty
+##' @param s 
+##' @param rho 
+##' @param penalize.diagonal 
+##' @param term 
+##' @return w; wi; iter
+##' @author n.stadler
 glasso.invcov <- function(s,rho,penalize.diagonal,term=10^{-3}){
   gl <- glasso(s,rho=rho,penalize.diagonal=penalize.diagonal)
   list(w=gl$w,wi=gl$wi)
 }
-##########
-##M-Step##
-##########
+
+
+##' MStep of MixGLasso
+##'
+##' 
+##' @title MStep of MixGLasso
+##' @param x 
+##' @param chromosome 
+##' @param u 
+##' @param v 
+##' @param lambda 
+##' @param gamma 
+##' @param pen 
+##' @param penalize.diagonal 
+##' @param equal.prob.trans 
+##' @param term 
+##' @param model 
+##' @return list consisting of mix.prob, Mu, Sig, SigInv
+##' @author n.stadler
 MStepGlasso <- function(x,chromosome=NULL,u,v=NULL,lambda,gamma,pen,penalize.diagonal,equal.prob.trans=NULL,term,model='hmm'){
     ##Mstep for HMMGLasso/MixGLasso (optimizes -completeloglik+lambda*pen)
     ##different chromosomes
@@ -310,6 +436,102 @@ MStepGlasso <- function(x,chromosome=NULL,u,v=NULL,lambda,gamma,pen,penalize.dia
   }
 }
 
+##' mixglasso 
+##'
+##' This function runs mixglasso
+##' @title mixglasso
+##' @param x Input data matrix
+##' @param nr.states Number of mixture components
+##' @param lambda Regularization parameter. Default=sqrt(2*n*log(p))/2
+##' @param pen Determines form of penalty: glasso.parcor (default), glasso.invcov, glasso.invcor
+##' @param init Initialization. Method used for initialization init={'cl.init','r.means','random','kmeans','kmeans.hc','hc'}. Default='kmeans'
+##' @param my.cl Initial cluster assignments; need to be provided if init='cl.init' (otherwise this param is ignored). Default=NULL
+##' @param modelname.hc Model class used in hc. Default="VVV"
+##' @param nstart.kmeans Number of random starts in kmeans; default=1
+##' @param iter.max.kmeans Maximal number of iteration in kmeans; default=10
+##' @param term Termination criterion of EM algorithm. Default=10^-3
+##' @param min.statesize Stop EM if any(statesize)<min.statesize; Default=5
+##' @param ... Other arguments. See mixglasso_init
+##' @return see return mixglasso_init. list consisting of
+##' \item{mix.prob}{}
+##' \item{Mu}{}
+##' \item{Sig}{}
+##' \item{SigInv}{}
+##' \item{iter}{}
+##' \item{loglik}{}
+##' \item{bic}{-loglik+log(n)*DF/2}
+##' \item{mmdl}{-loglik+penmmdl/2}
+##' \item{u}{responsibilities}
+##' \item{state}{component assignments}
+##' \item{statesize}{size of components}
+##' \item{pi.states}{}
+##' \item{warn}{warnings during optimization}
+##' @author n.stadler
+mixglasso <- function(x,nr.states,lambda=sqrt(2*nrow(x[apply(!is.na(x),1,all),])*log(ncol(x[apply(!is.na(x),1,all),])))/2,pen='glasso.parcor',
+                     init='kmeans.hc',my.cl=NULL,modelname.hc="VVV",nstart.kmeans=1,iter.max.kmeans=10,
+                     term=10^{-3},min.statesize=5,...){
+
+  ##MixGLasso (optimizes -loglik+lambda*pen using EM)
+  
+  ##x: nxp-data
+  ##nr.states: = no of mixture components
+  ##lambda:
+  ##init: initialization
+  ##modelname.hc:
+  ##nstart.kmeans:
+  ##pen: 'glasso.invcov','glasso.parcor','glasso.corinv'
+  ##term: see termination of EM
+  ##min.statesize: stop EM if any(statesize)<min.statesize
+  
+  nonvirtual <- apply(!is.na(x),1,all)
+  x <- x[nonvirtual,]
+  n <- nrow(x)
+  p <- ncol(x)
+  
+  u <- mix.prob <- NULL
+  if (nr.states>1){
+    fit.init.u <- func.uinit(x,nr.states,init=init,my.cl=my.cl,nstart.kmeans=nstart.kmeans,iter.max.kmeans=iter.max.kmeans,modelname.hc=modelname.hc)
+    u <- fit.init.u$u
+    mix.prob <- rep(1/nr.states,nr.states)
+  }
+  fit.mixgl <-  mixglasso_init(x=x,nr.states=nr.states,lambda=lambda,
+                               pen=pen,u.init=u,mix.prob.init=mix.prob,
+                               min.statesize=min.statesize,term=term,...)
+  return(fit.mixgl)
+}
+
+##' mixglasso_init (initialization and lambda set by user)
+##'
+##' This function runs mixglasso; requires initialization (u.init,mix.prob.init)
+##' @title mixglasso_init
+##' @param x Input data matrix
+##' @param nr.states Number of mixture components
+##' @param lambda Regularization parameter
+##' @param u.init Initial responsibilities
+##' @param mix.prob.init Initial mixing probablities
+##' @param gamma Determines form of penalty
+##' @param pen Determines form of penalty: glasso.parcor (default), glasso.invcov, glasso.invcor
+##' @param penalize.diagonal Should the diagonal of the inverse covariance matrix be penalized ? Default=FALSE (recommended)
+##' @param term Termination criterion of EM algorithm. Default=10^-3
+##' @param miniter Minimal number of EM iteration before 'stop EM if any(statesize)<min.statesize' applies. Default=5
+##' @param maxiter Maximal number of EM iteration. Default=1000
+##' @param min.statesize Stop EM if any(statesize)<min.statesize; Default=5
+##' @param show.trace Should information during execution be printed ? Default=FALSE
+##' @return list consisting of
+##' \item{mix.prob}{}
+##' \item{Mu}{}
+##' \item{Sig}{}
+##' \item{SigInv}{}
+##' \item{iter}{}
+##' \item{loglik}{}
+##' \item{bic}{-loglik+log(n)*DF/2}
+##' \item{mmdl}{-loglik+penmmdl/2}
+##' \item{u}{responsibilities}
+##' \item{state}{component assignments}
+##' \item{statesize}{size of components}
+##' \item{pi.states}{}
+##' \item{warn}{warnings during optimization}
+##' @author n.stadler
 mixglasso_init<- function(x,nr.states,lambda,
                           u.init,mix.prob.init,
                           gamma=0.5,pen='glasso.parcor',penalize.diagonal=FALSE,term=10^{-3},miniter=5,maxiter=1000,min.statesize=5,
@@ -351,8 +573,8 @@ mixglasso_init<- function(x,nr.states,lambda,
       SigInv <- solve(samplecov)
     }
     if(lambda==Inf){
-      SigInv[,,l] <- diag(1/diag(samplecov))
-      Sig[,,l] <- diag(diag(samplecov))
+      SigInv <- diag(1/diag(samplecov))
+      Sig <- diag(diag(samplecov))
     }
     loglik <- sum(dmvnorm(x,Mu,Sig,log=TRUE))
     SigInv[abs(SigInv)<10^{-3}] <- 0
@@ -462,51 +684,42 @@ mixglasso_init<- function(x,nr.states,lambda,
 }
 
 
-#######################
-##hmmglasso/mixglasso##
-#######################
 
-
-mixglasso<- function(x,nr.states,lambda=sqrt(2*nrow(x[apply(!is.na(x),1,all),])*log(ncol(x[apply(!is.na(x),1,all),])))/2,pen='glasso.parcor',
-                     init='kmeans.hc',my.cl=NULL,modelname.hc="VVV",nstart.kmeans=1,iter.max.kmeans=10,
-                     term=10^{-3},min.statesize=5,...){
-
-  ##MixGLasso (optimizes -loglik+lambda*pen using EM)
-  
-  ##x: nxp-data
-  ##nr.states: = no of mixture components
-  ##lambda:
-  ##init: initialization
-  ##modelname.hc:
-  ##nstart.kmeans:
-  ##pen: 'glasso.invcov','glasso.parcor','glasso.corinv'
-  ##term: see termination of EM
-  ##min.statesize: stop EM if any(statesize)<min.statesize
-  
-  nonvirtual <- apply(!is.na(x),1,all)
-  x <- x[nonvirtual,]
-  n <- nrow(x)
-  p <- ncol(x)
-  
-  u <- mix.prob <- NULL
-  if (nr.states>1){
-    fit.init.u <- func.uinit(x,nr.states,init=init,my.cl=my.cl,nstart.kmeans=nstart.kmeans,iter.max.kmeans=iter.max.kmeans,modelname.hc=modelname.hc)
-    u <- fit.init.u$u
-    mix.prob <- rep(1/nr.states,nr.states)
-  }
-  fit.mixgl <-  mixglasso_init(x=x,nr.states=nr.states,lambda=lambda,
-                               pen=pen,u.init=u,mix.prob.init=mix.prob,
-                               min.statesize=min.statesize,term=term,...)
-  return(fit.mixgl)
-}
-
-Mixglasso <- function(x,nr.states,
-                      lambda=sqrt(2*nrow(x)*log(ncol(x)))/2,
-                      pen='glasso.parcor',
-                      init='kmeans.hc',my.cl=NULL,modelname.hc="VVV",nstart.kmeans=1,iter.max.kmeans=10,
-                      term=10^{-3},min.statesize=5,
-                      save.allfits=TRUE,filename=NULL,
-                      mc.set.seed=FALSE, mc.preschedule = FALSE,...){
+##' mixglasso_par
+##'
+##' runs mixglasso (in parallel) with various number of mixture components 
+##' @title mixglasso_par
+##' @param x Input data matrix
+##' @param nr.states Number of mixture components
+##' @param lambda Regularization parameter. Default=sqrt(2*n*log(p))/2
+##' @param pen Determines form of penalty: glasso.parcor (default), glasso.invcov, glasso.invcor
+##' @param init Initialization. Method used for initialization init={'cl.init','r.means','random','kmeans','kmeans.hc','hc'}. Default='kmeans'
+##' @param my.cl Initial cluster assignments; need to be provided if init='cl.init' (otherwise this param is ignored). Default=NULL
+##' @param modelname.hc Model class used in hc. Default="VVV"
+##' @param nstart.kmeans Number of random starts in kmeans; default=1
+##' @param iter.max.kmeans Maximal number of iteration in kmeans; default=10
+##' @param term Termination criterion of EM algorithm. Default=10^-3
+##' @param min.statesize Stop EM if any(statesize)<min.statesize; Default=5
+##' @param save.allfits Save output of mixglasso for all k's ?
+##' @param filename Output of mixglasso with filename_fit.mixgl_k.rda
+##' @param mc.set.seed See mclapply. Default=FALSE
+##' @param mc.preschedule See mclapply. Default=FALSE
+##' @param ... Other arguments. See mixglasso_init
+##' @return list consisting of
+##' \item{bic}{Bic for all fits}
+##' \item{state}{Components assignments for all fits}
+##' \item{iter}{Number of iteration of EM for all fits}
+##' \item{warn}{Warning infos for all fits}
+##' @author n.stadler
+##' @export
+##' @example ../mixglasso_test.R
+mixglasso_par <- function(x,nr.states,
+                          lambda=sqrt(2*nrow(x)*log(ncol(x)))/2,
+                          pen='glasso.parcor',
+                          init='kmeans.hc',my.cl=NULL,modelname.hc="VVV",nstart.kmeans=1,iter.max.kmeans=10,
+                          term=10^{-3},min.statesize=5,
+                          save.allfits=TRUE,filename=NULL,
+                          mc.set.seed=FALSE, mc.preschedule = FALSE,...){
                   
   res <- mclapply(nr.states,
                   FUN=function(k){
@@ -519,16 +732,54 @@ Mixglasso <- function(x,nr.states,
                     }
                     return(list(bic=fit.mixgl$bic,state=fit.mixgl$state,iter=fit.mixgl$iter,warn=fit.mixgl$warn))},
                   mc.set.seed=mc.set.seed, mc.preschedule = mc.preschedule)
-  
+
+  res.mmdl <- sapply(res,function(x){x[['mmdl']]})
   res.bic <- sapply(res,function(x){x[['bic']]})
   res.state <- sapply(res,function(x){x[['state']]})
   res.iter <- sapply(res,function(x){x[['iter']]})
   res.warn <- sapply(res,function(x){x[['warn']]})
-  return(list(bic=res.bic,state=res.state,iter=res.iter,warn=res.warn))
+  return(list(bic=res.bic,mmdl=res.mmdl,state=res.state,iter=res.iter,warn=res.warn))
 }
 
-
-
+##' Mixglasso with backward pruning
+##'
+##' runs mixglasso with various number of mixture components: starts with too large number of components
+##' iterates towards solution with smaller number of components by initializing using previous solution
+##' @title bwprun_mixglasso
+##' @param x Input data matrix
+##' @param nr.states.min Minimum number of components
+##' @param nr.states.max Maximum number of components
+##' @param lambda Regularization parameter. Default=sqrt(2*n*log(p))/2
+##' @param pen Determines form of penalty: glasso.parcor (default), glasso.invcov, glasso.invcor
+##' @param selection.crit Selection criterion. Default='mmdl'
+##' @param term Termination criterion of EM algorithm. Default=10^-3
+##' @param min.statesize Stop EM if any(statesize)<min.statesize; Default=5
+##' @param init Initialization. Method used for initialization init={'cl.init','r.means','random','kmeans','kmeans.hc','hc'}. Default='kmeans.hc'
+##' @param my.cl Initial cluster assignments; need to be provided if init='cl.init' (otherwise this param is ignored). Default=NULL
+##' @param modelname.hc Model class used in hc. Default="VVV"
+##' @param nstart.kmeans Number of random starts in kmeans; default=1
+##' @param iter.max.kmeans Maximal number of iteration in kmeans; default=10
+##' @param reinit.out Re-initialization, if statesize<min.statesize, at the start of algorithm ?
+##' @param reinit.in Re-initialization, if statesize<min.statesize, at the bwprun-loop level of algorithm ?
+##' @param mer Merge closest states for initialization
+##' @param del Delete smallest state for initialization
+##' @param ... Other arguments. See mixglasso_init
+##' @return list consisting of
+##' \item{mix.prob}{}
+##' \item{Mu}{}
+##' \item{Sig}{}
+##' \item{SigInv}{}
+##' \item{iter}{}
+##' \item{loglik}{}
+##' \item{bic}{-loglik+log(n)*DF/2}
+##' \item{mmdl}{-loglik+penmmdl/2}
+##' \item{u}{responsibilities}
+##' \item{state}{component assignments}
+##' \item{statesize}{size of components}
+##' \item{pi.states}{}
+##' \item{warn}{warnings during optimization}
+##' @author n.stadler
+##' @export
 bwprun_mixglasso <- function(x,
                              nr.states.min=1,nr.states.max,
                              lambda=sqrt(nrow(x[apply(!is.na(x),1,all),])*log(ncol(x[apply(!is.na(x),1,all),])))/2,
@@ -667,10 +918,16 @@ bwprun_mixglasso <- function(x,
   return(list(selcrit=selcrit.mixgl,res.init=res.init,state.name=state.name,re.init.in=re_init_in,fit.mixgl.selcrit=fit.mixgl.selcrit))
 }
 
-################################
-##Log-likelihood (hmm/mixture)##
-################################
-
+##' Log-likelihood for mixture model
+##'
+##' 
+##' @title Log-likelihood for mixture model
+##' @param x 
+##' @param mix.prob 
+##' @param Mu 
+##' @param Sig 
+##' @return log-likelihood
+##' @author n.stadler
 loglik_mix<- function(x,mix.prob,Mu,Sig){
   ##computes loglikelihood of model
   nr.states <- ncol(Mu)
@@ -686,5 +943,69 @@ loglik_mix<- function(x,mix.prob,Mu,Sig){
     loglik <- EXPStep.mix(logphi,mix.prob)$loglik
     return(loglik)
   }
+}
+
+##' Generates sparse inverse covariance matrices
+##'
+##' 
+##' @title Generates sparse inverse covariance matrices
+##' @param p Dimensionality of inverse covariance matrix
+##' @param K Number of inverse covariance matrices
+##' @param s Number of non-zero entries per inverse covariance matrix
+##' @param s.common Number of non-zero entries shared across different inverse covariance matrices
+##' @param magn.nz Magnitude of non-zero elements
+##' @param scale.parcor Should SigInv be scaled to have diagonal equal one, siginv=parcor ?
+##' @return SigInv: list of inverse covariance matrices
+##' @author n.stadler
+sparse_conc <- function(p,K,s,s.common,magn.nz=0.5,scale.parcor=TRUE){
+    ##Generate K different Sparse Inverse Covariance-Matrices of dimension p:
+    ##
+    ##-condition number=p (necessary when comparing different performance wrt various p's; if scale.parcor=TRUE, then sparse_conc does not depend on magn.nz)
+    ##-for each SigInv there are s non-zero entries
+    ##-s.common locations of non-zero entries are common among all SigInv;
+    ## whereas s-s.common non-zero entries are at different locations
+    
+
+  if(s==0){
+    SigInv <- list()
+    for (k in 1:K){
+      SigInv[[k]] <- diag(1,p)
+    }
+  }else{
+    
+
+    ind.upper.tri <- which(upper.tri(matrix(NA,p,p)))
+    
+    B.list <- list()
+    B <- matrix(0,p,p)
+    comp.nonzero <- tot.nonzero <- sample(ind.upper.tri,size=s,replace=FALSE)
+    same.nonzero <- sample(comp.nonzero,size=s.common,replace=FALSE)
+    remain.zero <- setdiff(ind.upper.tri,comp.nonzero)
+    B[comp.nonzero] <- magn.nz
+    B.list[[1]] <- B+t(B)
+    if (K>1){
+      for (k in 2:K){
+        B <- matrix(0,p,p)
+        comp.nonzero <- c(same.nonzero,sample(remain.zero,size=s-s.common,replace=FALSE))
+        tot.nonzero <- union(tot.nonzero,comp.nonzero)
+        B[comp.nonzero] <- magn.nz
+        B.list[[k]] <- B+t(B)
+        remain.zero <- setdiff(ind.upper.tri,tot.nonzero)
+      }
+    }
+
+    SigInv <- list()
+    for (k in 1:K){
+      SigInv[[k]] <- B.list[[k]]
+      ev <- eigen(SigInv[[k]])$values
+      del <- (max(ev)-min(ev)*p)/(p-1)
+      diag(SigInv[[k]]) <- del
+      if(scale.parcor==TRUE){
+        SigInv[[k]] <- SigInv[[k]]/del
+      }
+    }
+  }
+    
+    return(SigInv)
 }
 
