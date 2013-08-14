@@ -129,6 +129,12 @@ fit4$pval.onesided
 ## > fit4$pval.onesided
 ## [1] 0.4390523578 1.0000000000 0.0005885578 0.2831460644 0.0719682973
 
+source('diffregr.r')
+set.seed(1)
+system.time(fit5 <- diffregr_multisplit(y1,y2,x1,x2,b.splits=5,screen.meth='lasso.cvmin',compute.evals='est2.my.ev3',n.perm=250))
+fit5$pval.onesided# 0.404 0.472 0.756 0.320 0.608
+fit5$teststat# 13.84779 83.50377 11.26196 80.92545 11.24971
+
 #####test computations weights
 source('diffregr.r')
 
