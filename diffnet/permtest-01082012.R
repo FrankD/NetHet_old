@@ -177,7 +177,7 @@ perm.regr.teststatistic <- function(y,x,n1,n2,lambda.cv){
   return(list(kldist=as.numeric(kldist)))
 }
 
-perm.regr.pval <- function(y1,y2,x1,x2,lambda.cv='lambda.min',nr.perm=100){
+perm.regr.pval <- function(y1,y2,x1,x2,lambda.cv='lambda.min',nr.perm){
   n1 <- nrow(x1);n2 <- nrow(x2)
   x <- rbind(x1,x2)
   y <- c(y1,y2)
@@ -210,7 +210,7 @@ perm.diffnet.teststatistic <- function(x,n1,n2,screen.meth='screen_cv.glasso',pl
   return(list(edgediff=sum(nz1!=nz2)/2,kldist=kldist))
 }
 
-perm.diffnet.pval <- function(x1,x2,nr.perm=100,screen.meth='screen_cv.glasso',include.mean=FALSE){
+perm.diffnet.pval <- function(x1,x2,nr.perm,screen.meth='screen_cv.glasso',include.mean=FALSE){
   n1 <- nrow(x1);n2 <- nrow(x2)
   x <- rbind(x1,x2)
   fit.tobs <- perm.diffnet.teststatistic(x,n1,n2,screen.meth=screen.meth,include.mean=include.mean)
