@@ -21,7 +21,7 @@
 ##         * -09082012: re-initialize bwprun if 'state too small'
 ##         * -14082012: cleaning-up;
 ##                      change in glasso.parcor [ww <- diag(s);param <- as.vector(diag(s))];
-##                      change in loglik_chr: Phi[which(rowSums(Phi==0)==nr.states),] <- 1, instead of Phi[which(rowSums(Phi==0)==2),] <- 1;
+##                      change in loglik_chr: Phi[which(rowSums(Phi==0)==n.comp),] <- 1, instead of Phi[which(rowSums(Phi==0)==2),] <- 1;
 ##                      reinit.in/reinit.out-option in bwprun
 ##         * -15082012: (bwprun) output which state(s) are merged/deleted; plot_bwprun function; mer/del-option
 ##         * -10102012: mstep: if \lambda=0 then use cov(x.compl) and solve(cov(x.compl)) (and do not run glasso)
@@ -49,15 +49,18 @@ library(multicore)
 
 #' MixGLasso-package
 #'
-#' The MixGLasso-package is a powerful tool for clustering high-dimensional data with n<p.
-#' It is based on a Gaussian mixture model with k components. The inverse covariance matrices
-#' are assumed to be sparse.
+#' The MixGLasso-package is a powerful tool for clustering high-dimensional data.
+#' It is based on Gaussian mixture model. Each component is characterized by a mean vector an a
+#' covariance matrix. The inverse covariance matrices are sparse and represent a
+#' Gaussian graphical models (GGM). Estimation is performed using a novel penalized EM algorithm.
+#' Several strategies to select an optimal number of mixture components are implemented.
+#' 
 #'
-#' MixGLasso outputs an optimal number of mixture components (based on bic/mmdl); cluster assignments;
+#' MixGLasso provides an optimal number of mixture components; optimal cluster assignments;
 #' Cluster-specific networks (sparse inverse covariance matrices); Cluster-specific means.
 #' 
 #' @references Städler, N. and Mukherjee, S. (2012).
-#' Penalized estimation in high-dimensional hidden Markov models with state-specific graphical models. To appear in the Annals of Applied Statistics.
+#' Penalized estimation in high-dimensional hidden Markov models with comp-specific graphical models. To appear in the Annals of Applied Statistics.
 #' \url{http://arxiv.org/abs/1208.4989}.
 #' @import glasso mvtnorm mclust multicore
 #' @docType package
@@ -70,7 +73,7 @@ NULL
 ##' 
 ##' @title Simulate from mixture model with MVN components
 ##' @param n sample size
-##' @param nr.states number of mixture components ("states")
+##' @param n.comp number of mixture components ("comps")
 ##' @param mix.prob mixing probablities
 ##' @param Mu matrix of component-specific mean vectors 
 ##' @param Sig array of component-specific covariance matrices
@@ -78,12 +81,12 @@ NULL
 ##' \item{S}{component assignments}
 ##' \item{X}{observed data matrix}
 ##' @author n.stadler
-simMIX <- function(n,nr.states,mix.prob,Mu,Sig){
+simMIX <- function(n,n.comp,mix.prob,Mu,Sig){
   # mix.prob: mixing probabilities
   # Mu: means
   # Sig: covariance matrix
   # n: nr. of observations
-  K <- nr.states
+  K <- n.comp
   p <- dim(Mu)[1]
   x <- matrix(0,nrow=n,ncol=p)
   s <- sample(1:K,n,replace=TRUE,p=mix.prob)
@@ -109,7 +112,7 @@ sumoffdiag <- function(m){
 ##' 
 ##' @title Initialization of MixGLasso 
 ##' @param x Observed data
-##' @param nr.states Number of mixture components
+##' @param n.comp Number of mixture components
 ##' @param init Method used for initialization init={'cl.init','r.means','random','kmeans','kmeans.hc','hc'}
 ##' @param my.cl Initial cluster assignments; need to be provided if init='cl.init' (otherwise this param is ignored)
 ##' @param nstart.kmeans Number of random starts in kmeans; default=1
@@ -118,11 +121,11 @@ sumoffdiag <- function(m){
 ##' @return  a list consisting of
 ##' \item{u}{responsibilities}
 ##' @author n.stadler
-func.uinit <- function(x,nr.states,init='kmeans',my.cl=NULL,nstart.kmeans=1,iter.max.kmeans=10,modelname.hc="EII"){
+func.uinit <- function(x,n.comp,init='kmeans',my.cl=NULL,nstart.kmeans=1,iter.max.kmeans=10,modelname.hc="EII"){
   ##Initializing EM (provides uinit)
   ##
   ##x: data-matrix
-  ##nr.states:
+  ##n.comp:
   ##init: method of initialization {cl.init,r.means,random,kmeans,kmeans.hc,hc}
   ##cl: initial clustering (only necessary if init='cl.init')
   ##nstart.kmeans: no random start in kmeans-initialization (see init='kmeans')
@@ -135,58 +138,58 @@ func.uinit <- function(x,nr.states,init='kmeans',my.cl=NULL,nstart.kmeans=1,iter
 
   if (init=='cl.init'){
     cl <- my.cl
-    u <- matrix(0.1,n,nr.states)
+    u <- matrix(0.1,n,n.comp)
     u[col(u)==cl] <- 0.9
     u <- u/rowSums(u)
   }
   if (init=='r.means'){
     cl <- rep(NA,n)
-    sub.sample <- sample(1:n,size=nr.states,replace=FALSE)
-    cl[sub.sample] <- 1:nr.states
+    sub.sample <- sample(1:n,size=n.comp,replace=FALSE)
+    cl[sub.sample] <- 1:n.comp
     off.sub.sample <- t(x.complete[setdiff(1:n,sub.sample),])
     init.mean <- x.complete[sub.sample,]
-    ss_score <- matrix(NA,nrow=n-nr.states,nr.states)
-    for (k in 1:nr.states){
+    ss_score <- matrix(NA,nrow=n-n.comp,n.comp)
+    for (k in 1:n.comp){
       ss_score[,k]<- colSums((off.sub.sample-init.mean[k,])^2)
     }
     off_cl<- apply(ss_score,1,which.min)
     cl[setdiff(1:n,sub.sample)] <- off_cl
-    u <- matrix(0.1,n,nr.states)
+    u <- matrix(0.1,n,n.comp)
     u[col(u)==cl] <- 0.9
     u <- u/rowSums(u)
   }
   if(init=='random'){
-    cl <- sample(1:nr.states,size=n,replace=TRUE)
-    u <- matrix(0.1,n,nr.states)
+    cl <- sample(1:n.comp,size=n,replace=TRUE)
+    u <- matrix(0.1,n,n.comp)
     u[col(u)==cl] <- 0.9
     u <- u/rowSums(u)
   }
   if (init=='kmeans'){
-    fit.kmeans <- kmeans(x.complete,nr.states,nstart=nstart.kmeans,iter.max=iter.max.kmeans)
+    fit.kmeans <- kmeans(x.complete,n.comp,nstart=nstart.kmeans,iter.max=iter.max.kmeans)
     cl <- fit.kmeans$cluster
-    u <- matrix(0.1,n,nr.states)
+    u <- matrix(0.1,n,n.comp)
     u[col(u)==cl] <- 0.9
     u <- u/rowSums(u)
   }
   if (init=='kmeans.hc'){
     fit.hc <- hc(modelName = 'EII', data = x.complete)
-    cl.hc <- as.vector(hclass(fit.hc,G=nr.states))
+    cl.hc <- as.vector(hclass(fit.hc,G=n.comp))
     init.center <- by(x.complete,cl.hc,colMeans)
     init.center <- do.call(rbind,init.center)
     fit.kmeans <- kmeans(x.complete,centers=init.center,iter.max=iter.max.kmeans)
     cl <- fit.kmeans$cluster
-    u <- matrix(0.1,n,nr.states)
+    u <- matrix(0.1,n,n.comp)
     u[col(u)==cl] <- 0.9
     u <- u/rowSums(u)
   }
   if (init=='hc'){
     fit.hc <- hc(modelName = modelname.hc, data = x.complete)
-    cl <- as.vector(hclass(fit.hc,G=nr.states))
-    u <- matrix(0.1,n,nr.states)
+    cl <- as.vector(hclass(fit.hc,G=n.comp))
+    u <- matrix(0.1,n,n.comp)
     u[col(u)==cl] <- 0.9
     u <- u/rowSums(u)
   }
-  u.all <- matrix(NA,nrow(x),nr.states)
+  u.all <- matrix(NA,nrow(x),n.comp)
   u.all[nonvirtual,] <- u
   return(list(u=u.all))
 }
@@ -215,25 +218,25 @@ symmkldist <- function(mu1,mu2,sig1,sig2){
     return(symmkl)
 }
 
-##' Distance between states based on symm. kl-distance
+##' Distance between comps based on symm. kl-distance
 ##'
 ##' 
-##' @title Distance between states based on symm. kl-distance
+##' @title Distance between comps based on symm. kl-distance
 ##' @param Mu 
 ##' @param Sig 
 ##' @return list consisting of
-##' \item{state.kldist}{}
-##' \item{min.state.kldist}{}
+##' \item{comp.kldist}{}
+##' \item{min.comp.kldist}{}
 ##' @author n.stadler
 w.kldist <- function(Mu,Sig){
-    nr.states <- ncol(Mu)
-    res<- matrix(NA,nr.states,nr.states)
-    for (k in 1:nr.states){
-        for (kk in 1:nr.states){
+    n.comp <- ncol(Mu)
+    res<- matrix(NA,n.comp,n.comp)
+    for (k in 1:n.comp){
+        for (kk in 1:n.comp){
             res[k,kk] <- symmkldist(Mu[,k],Mu[,kk],Sig[,,k],Sig[,,kk])
         }
     }
-    list(state.kldist=res,min.state.kldist=min(res[upper.tri(res)]))
+    list(comp.kldist=res,min.comp.kldist=min(res[upper.tri(res)]))
 }
 
 ##' Performs EStep
@@ -350,25 +353,25 @@ MStepGlasso <- function(x,chromosome=NULL,u,v=NULL,lambda,gamma,pen,penalize.dia
     ##model={'hmm','mixture'}
 
   if(model=='hmm'){
-    nr.states <- ncol(u)
+    n.comp <- ncol(u)
     nonvirtual <- apply(!is.na(x),1,all)
     x.compl <- x[nonvirtual,]
     n <- dim(x.compl)[1]
     p <- dim(x.compl)[2]
 
-    Mu <- matrix(NA,ncol=nr.states,nrow=p)
-    SigInv <- Sig <- array(NA,dim=c(p,p,nr.states))
-    prob.init <- matrix(NA,nr.states,length(levels(chromosome)))
-    prob.trans <- array(NA,dim=c(nr.states,nr.states,length(levels(chromosome))))
-    #exp.cloglik <- rep(NA,nr.states)
+    Mu <- matrix(NA,ncol=n.comp,nrow=p)
+    SigInv <- Sig <- array(NA,dim=c(p,p,n.comp))
+    prob.init <- matrix(NA,n.comp,length(levels(chromosome)))
+    prob.trans <- array(NA,dim=c(n.comp,n.comp,length(levels(chromosome))))
+    #exp.cloglik <- rep(NA,n.comp)
 
-    for (l in 1:nr.states){
-      pi.states <- mean(u[nonvirtual,l])
+    for (l in 1:n.comp){
+      pi.comps <- mean(u[nonvirtual,l])
       obj <- cov.wt(x.compl, wt = u[nonvirtual,l], cor = FALSE, center =TRUE, method = c("ML"))
       Mu[,l] <- obj$center
       samplecov <- obj$cov
       if ((lambda!=0)&(lambda!=Inf)){
-        fit.glasso <- eval(as.name(pen))(samplecov,rho=2*(pi.states^{gamma})*lambda/(sum(u[nonvirtual,l])),
+        fit.glasso <- eval(as.name(pen))(samplecov,rho=2*(pi.comps^{gamma})*lambda/(sum(u[nonvirtual,l])),
                                          penalize.diagonal=penalize.diagonal,term=term)
         SigInv[,,l] <- fit.glasso$wi
         Sig[,,l] <- fit.glasso$w
@@ -381,7 +384,7 @@ MStepGlasso <- function(x,chromosome=NULL,u,v=NULL,lambda,gamma,pen,penalize.dia
         SigInv[,,l] <- diag(1/diag(samplecov))
         Sig[,,l] <- diag(diag(samplecov))
       }
-      #exp.cloglik[l] <- -(sum(u[nonvirtual,l])/2)*log(det(fit.glasso$w))-0.5*sum(diag(samplecov%*%fit.glasso$wi))#-lambda*(pi.states^{gamma})*sumoffdiag(abs(fit.glasso$wi))
+      #exp.cloglik[l] <- -(sum(u[nonvirtual,l])/2)*log(det(fit.glasso$w))-0.5*sum(diag(samplecov%*%fit.glasso$wi))#-lambda*(pi.comps^{gamma})*sumoffdiag(abs(fit.glasso$wi))
     }
     if (equal.prob.trans==TRUE){
         prob.init[,1:length(levels(chromosome))] <- apply(u[!duplicated(chromosome),,drop=FALSE],2,mean)
@@ -399,26 +402,26 @@ MStepGlasso <- function(x,chromosome=NULL,u,v=NULL,lambda,gamma,pen,penalize.dia
             v.chr_sum_t <- colSums(v.chr,dims=1)
             norm.v.chr_sum_t <- 1/rowSums(v.chr_sum_t)
             prob.trans[,,chr] <- diag(norm.v.chr_sum_t)%*%v.chr_sum_t
-            prob.trans[norm.v.chr_sum_t==Inf,,chr] <- 0 #set prob.trans[k,k']=0 if number of obs. in state k is zero (otherwise we get Inf)
+            prob.trans[norm.v.chr_sum_t==Inf,,chr] <- 0 #set prob.trans[k,k']=0 if number of obs. in comp k is zero (otherwise we get Inf)
         }
     }
     return(list(prob.init=prob.init,prob.trans=prob.trans,Mu=Mu,Sig=Sig,SigInv=SigInv))#,exp.cloglik=exp.cloglik)
   }
   if(model=='mixture'){
-    nr.states <- ncol(u)
+    n.comp <- ncol(u)
     n <- dim(x)[1]
     p <- dim(x)[2]
-    Mu <- matrix(0,ncol=nr.states,nrow=p)
-    SigInv <- Sig <- array(0,dim=c(p,p,nr.states))
-    mix.prob <- rep(NA,nr.states)
-    for (l in 1:nr.states){
-      pi.states <- mean(u[,l])
-      mix.prob[l] <- pi.states
+    Mu <- matrix(0,ncol=n.comp,nrow=p)
+    SigInv <- Sig <- array(0,dim=c(p,p,n.comp))
+    mix.prob <- rep(NA,n.comp)
+    for (l in 1:n.comp){
+      pi.comps <- mean(u[,l])
+      mix.prob[l] <- pi.comps
       obj <- cov.wt(x, wt = u[,l], cor = FALSE, center =TRUE, method = c("ML"))
       Mu[,l] <- obj$center
       samplecov <- obj$cov
       if((lambda!=0)&(lambda!=Inf)){
-        fit.glasso <- eval(as.name(pen))(samplecov,rho=2*(pi.states^{gamma})*lambda/(sum(u[,l])),
+        fit.glasso <- eval(as.name(pen))(samplecov,rho=2*(pi.comps^{gamma})*lambda/(sum(u[,l])),
                                          penalize.diagonal=penalize.diagonal)
         SigInv[,,l] <- fit.glasso$wi
         Sig[,,l] <- fit.glasso$w
@@ -441,7 +444,7 @@ MStepGlasso <- function(x,chromosome=NULL,u,v=NULL,lambda,gamma,pen,penalize.dia
 ##' This function runs mixglasso
 ##' @title mixglasso
 ##' @param x Input data matrix
-##' @param nr.states Number of mixture components
+##' @param n.comp Number of mixture components
 ##' @param lambda Regularization parameter. Default=sqrt(2*n*log(p))/2
 ##' @param pen Determines form of penalty: glasso.parcor (default), glasso.invcov, glasso.invcor
 ##' @param init Initialization. Method used for initialization init={'cl.init','r.means','random','kmeans','kmeans.hc','hc'}. Default='kmeans'
@@ -450,7 +453,7 @@ MStepGlasso <- function(x,chromosome=NULL,u,v=NULL,lambda,gamma,pen,penalize.dia
 ##' @param nstart.kmeans Number of random starts in kmeans; default=1
 ##' @param iter.max.kmeans Maximal number of iteration in kmeans; default=10
 ##' @param term Termination criterion of EM algorithm. Default=10^-3
-##' @param min.statesize Stop EM if any(statesize)<min.statesize; Default=5
+##' @param min.compsize Stop EM if any(compsize)<min.compsize; Default=5
 ##' @param ... Other arguments. See mixglasso_init
 ##' @return see return mixglasso_init. list consisting of
 ##' \item{mix.prob}{}
@@ -462,26 +465,26 @@ MStepGlasso <- function(x,chromosome=NULL,u,v=NULL,lambda,gamma,pen,penalize.dia
 ##' \item{bic}{-loglik+log(n)*DF/2}
 ##' \item{mmdl}{-loglik+penmmdl/2}
 ##' \item{u}{responsibilities}
-##' \item{state}{component assignments}
-##' \item{statesize}{size of components}
-##' \item{pi.states}{}
+##' \item{comp}{component assignments}
+##' \item{compsize}{size of components}
+##' \item{pi.comps}{}
 ##' \item{warn}{warnings during optimization}
 ##' @author n.stadler
-mixglasso <- function(x,nr.states,lambda=sqrt(2*nrow(x[apply(!is.na(x),1,all),])*log(ncol(x[apply(!is.na(x),1,all),])))/2,pen='glasso.parcor',
+mixglasso <- function(x,n.comp,lambda=sqrt(2*nrow(x[apply(!is.na(x),1,all),])*log(ncol(x[apply(!is.na(x),1,all),])))/2,pen='glasso.parcor',
                      init='kmeans.hc',my.cl=NULL,modelname.hc="VVV",nstart.kmeans=1,iter.max.kmeans=10,
-                     term=10^{-3},min.statesize=5,...){
+                     term=10^{-3},min.compsize=5,...){
 
   ##MixGLasso (optimizes -loglik+lambda*pen using EM)
   
   ##x: nxp-data
-  ##nr.states: = no of mixture components
+  ##n.comp: = no of mixture components
   ##lambda:
   ##init: initialization
   ##modelname.hc:
   ##nstart.kmeans:
   ##pen: 'glasso.invcov','glasso.parcor','glasso.corinv'
   ##term: see termination of EM
-  ##min.statesize: stop EM if any(statesize)<min.statesize
+  ##min.compsize: stop EM if any(compsize)<min.compsize
   
   nonvirtual <- apply(!is.na(x),1,all)
   x <- x[nonvirtual,]
@@ -489,14 +492,14 @@ mixglasso <- function(x,nr.states,lambda=sqrt(2*nrow(x[apply(!is.na(x),1,all),])
   p <- ncol(x)
   
   u <- mix.prob <- NULL
-  if (nr.states>1){
-    fit.init.u <- func.uinit(x,nr.states,init=init,my.cl=my.cl,nstart.kmeans=nstart.kmeans,iter.max.kmeans=iter.max.kmeans,modelname.hc=modelname.hc)
+  if (n.comp>1){
+    fit.init.u <- func.uinit(x,n.comp,init=init,my.cl=my.cl,nstart.kmeans=nstart.kmeans,iter.max.kmeans=iter.max.kmeans,modelname.hc=modelname.hc)
     u <- fit.init.u$u
-    mix.prob <- rep(1/nr.states,nr.states)
+    mix.prob <- rep(1/n.comp,n.comp)
   }
-  fit.mixgl <-  mixglasso_init(x=x,nr.states=nr.states,lambda=lambda,
+  fit.mixgl <-  mixglasso_init(x=x,n.comp=n.comp,lambda=lambda,
                                pen=pen,u.init=u,mix.prob.init=mix.prob,
-                               min.statesize=min.statesize,term=term,...)
+                               min.compsize=min.compsize,term=term,...)
   return(fit.mixgl)
 }
 
@@ -505,41 +508,42 @@ mixglasso <- function(x,nr.states,lambda=sqrt(2*nrow(x[apply(!is.na(x),1,all),])
 ##' This function runs mixglasso; requires initialization (u.init,mix.prob.init)
 ##' @title mixglasso_init
 ##' @param x Input data matrix
-##' @param nr.states Number of mixture components
+##' @param n.comp Number of mixture components
 ##' @param lambda Regularization parameter
 ##' @param u.init Initial responsibilities
-##' @param mix.prob.init Initial mixing probablities
+##' @param mix.prob.init Initial component probablities
 ##' @param gamma Determines form of penalty
 ##' @param pen Determines form of penalty: glasso.parcor (default), glasso.invcov, glasso.invcor
 ##' @param penalize.diagonal Should the diagonal of the inverse covariance matrix be penalized ? Default=FALSE (recommended)
 ##' @param term Termination criterion of EM algorithm. Default=10^-3
-##' @param miniter Minimal number of EM iteration before 'stop EM if any(statesize)<min.statesize' applies. Default=5
+##' @param miniter Minimal number of EM iteration before 'stop EM if any(compsize)<min.compsize' applies. Default=5
 ##' @param maxiter Maximal number of EM iteration. Default=1000
-##' @param min.statesize Stop EM if any(statesize)<min.statesize; Default=5
+##' @param min.compsize Stop EM if any(compsize)<min.compsize; Default=5
 ##' @param show.trace Should information during execution be printed ? Default=FALSE
 ##' @return list consisting of
-##' \item{mix.prob}{}
-##' \item{Mu}{}
-##' \item{Sig}{}
-##' \item{SigInv}{}
-##' \item{iter}{}
-##' \item{loglik}{}
+##' \item{mix.prob}{Component probabilities}
+##' \item{Mu}{Component specific mean vectors}
+##' \item{Sig}{Component specific covariance matrices}
+##' \item{SigInv}{Component specific inverse covariance matrices}
+##' \item{iter}{Number of EM iterations}
+##' \item{loglik}{Log-likelihood}
 ##' \item{bic}{-loglik+log(n)*DF/2}
 ##' \item{mmdl}{-loglik+penmmdl/2}
-##' \item{u}{responsibilities}
-##' \item{state}{component assignments}
-##' \item{statesize}{size of components}
-##' \item{pi.states}{}
-##' \item{warn}{warnings during optimization}
+##' \item{u}{Component responsibilities}
+##' \item{comp}{Component assignments}
+##' \item{compsize}{Size of components}
+##' \item{pi.comps}{Component probabilities}
+##' \item{warn}{Warnings during EM algorithm}
 ##' @author n.stadler
-mixglasso_init<- function(x,nr.states,lambda,
+##' @export
+mixglasso_init<- function(x,n.comp,lambda,
                           u.init,mix.prob.init,
-                          gamma=0.5,pen='glasso.parcor',penalize.diagonal=FALSE,term=10^{-3},miniter=5,maxiter=1000,min.statesize=5,
+                          gamma=0.5,pen='glasso.parcor',penalize.diagonal=FALSE,term=10^{-3},miniter=5,maxiter=1000,min.compsize=5,
                           show.trace=FALSE){
 
   ##MixGLasso (optimizes -loglik+lambda*pen using EM); Requires u.init as initialization
   ##x: nxp-data
-  ##nr.states
+  ##n.comp
   ##lambda
   ##u.init, mix.prob.init: initialization
   ##gamma: see penalty
@@ -548,17 +552,17 @@ mixglasso_init<- function(x,nr.states,lambda,
   ##                                    more detailed: for gamma=0 use PENALIZE.DIAGONAL=FALSE (PENALIZE.DIAGONAL=TRUE does NOT work !);
   ##                                                   for gamma=1 use PENALIZE.DIAGONAL=TRUE (PENALIZE.DIAGONAL=FALSE does also work)
   ##term: see termination of EM
-  ##miniter: minimal number of EM iteration before 'stop EM if any(statesize)<min.statesize' applies
+  ##miniter: minimal number of EM iteration before 'stop EM if any(compsize)<min.compsize' applies
   ##maxiter: maximal number of EM iteration
-  ##min.statesize: stop EM if any(statesize)<min.statesize; default value: min.statesize=5; minimial statesize possible is 5
+  ##min.compsize: stop EM if any(compsize)<min.compsize; default value: min.compsize=5; minimial compsize possible is 5
 
   n <- nrow(x)
   p <- ncol(x)
-  Mu <- matrix(NA,p,nr.states)
-  Sig <- SigInv <- array(NA,dim=c(p,p,nr.states))
+  Mu <- matrix(NA,p,n.comp)
+  Sig <- SigInv <- array(NA,dim=c(p,p,n.comp))
 
-  ##If nr.states=1 do Glasso
-  if (nr.states==1){
+  ##If n.comp=1 do Glasso
+  if (n.comp==1){
     obj <- cov.wt(x, cor = FALSE, center =TRUE, method = c("ML"))
     Mu <- obj$center
     samplecov <- obj$cov
@@ -582,18 +586,18 @@ mixglasso_init<- function(x,nr.states,lambda,
     DF <- p+(p*(p+1)/2)-n.zero/2#df.mean+df.inv.covariance
     list(Mu=matrix(Mu,p,1),Sig=array(Sig,dim=c(p,p,1)),SigInv=array(SigInv,dim=c(p,p,1)),
          loglik=loglik,bic=-loglik+log(n)*DF/2,mmdl=-loglik+log(n)*DF/2,warn='NONE')
-  }#end if (nr.states==1){
+  }#end if (n.comp==1){
   else{
     ##Initialisation of parameters
-    if(any(colSums(u.init)<=min.statesize)){cat('         -mixglasso: n.init_k <= min.statesize','\n')}
+    if(any(colSums(u.init)<=min.compsize)){cat('         -mixglasso: n.init_k <= min.compsize','\n')}
     u <- u.init
-    for (l in 1:nr.states){
+    for (l in 1:n.comp){
       obj <- cov.wt(x, wt = u[,l], cor = FALSE, center =TRUE, method = c("ML"))
       Mu[,l] <- obj$center
       samplecov <- obj$cov
-      pi.states <- mean(u[,l])
+      pi.comps <- mean(u[,l])
       if((lambda!=0)&(lambda!=Inf)){
-        fit.glasso <- eval(as.name(pen))(samplecov,rho=2*(pi.states^{gamma})*lambda/(sum(u[,l])),
+        fit.glasso <- eval(as.name(pen))(samplecov,rho=2*(pi.comps^{gamma})*lambda/(sum(u[,l])),
                                          penalize.diagonal=penalize.diagonal,term=term)
         Sig[,,l] <- fit.glasso$w
         SigInv[,,l] <- fit.glasso$wi
@@ -620,33 +624,33 @@ mixglasso_init<- function(x,nr.states,lambda,
         cat('         -mixglasso: iter',iter,'\n')
       }
       ##Estep
-      logphi <- matrix(NA,n,nr.states)
-      for (l in 1:nr.states){
+      logphi <- matrix(NA,n,n.comp)
+      for (l in 1:n.comp){
         logphi[,l] <- dmvnorm(x,Mu[,l],Sig[,,l],log=TRUE)
       }
       fit.E <- EXPStep.mix(logphi,mix.prob)
       unew <- fit.E$u
       loglik <- fit.E$loglik
-      if (((any(colSums(unew)<=min.statesize))&(iter>miniter))|any(colSums(unew)<=5)){#min.statesize is a tuning-param for stoping EM; EM stops always if statesize<5
-        statesize <- colSums(u)
-        cat("         -mixglasso: state too small; min(n_k)=",min(colSums(unew)),'\n')
-        warn <- "state too small"
+      if (((any(colSums(unew)<=min.compsize))&(iter>miniter))|any(colSums(unew)<=5)){#min.compsize is a tuning-param for stoping EM; EM stops always if compsize<5
+        compsize <- colSums(u)
+        cat("         -mixglasso: comp too small; min(n_k)=",min(colSums(unew)),'\n')
+        warn <- "comp too small"
         ##compute Bic&Mmdl
         SigInv[abs(SigInv)<10^{-3}] <- 0
         n.zero <- sum(SigInv==0)
-        DF <- p*nr.states+(nr.states-1)+nr.states*(p*(p+1)/2)-n.zero/2#df.mean+df.mix.prob+df.inv.covariance
-        n.zero.perstate <- apply(SigInv==0,3,sum)
-        penmmdl <- p*sum(log(statesize))+log(n)*(nr.states-1)+sum(log(statesize)*((p*(p+1)/2)-n.zero.perstate/2))
+        DF <- p*n.comp+(n.comp-1)+n.comp*(p*(p+1)/2)-n.zero/2#df.mean+df.mix.prob+df.inv.covariance
+        n.zero.percomp <- apply(SigInv==0,3,sum)
+        penmmdl <- p*sum(log(compsize))+log(n)*(n.comp-1)+sum(log(compsize)*((p*(p+1)/2)-n.zero.percomp/2))
   
         return(list(mix.prob=mix.prob,Mu=Mu,Sig=Sig,SigInv=SigInv,iter=iter,
                     loglik=loglik,bic=-loglik+log(n)*DF/2,mmdl=-loglik+penmmdl/2,
-                    u=u,state=apply(u,1,which.max),
-                    statesize=statesize,pi.states=colMeans(u),
+                    u=u,comp=apply(u,1,which.max),
+                    compsize=compsize,pi.comps=colMeans(u),
                     warn=warn))
         break
-      }#if (((any(colSums(unew)<=min.statesize))&(iter>miniter))|any(colSums(unew)<=5)){
+      }#if (((any(colSums(unew)<=min.compsize))&(iter>miniter))|any(colSums(unew)<=5)){
       
-      u<-unew#if statesize>min.statesize then continue EM
+      u<-unew#if compsize>min.compsize then continue EM
       ##Mstep
       fit.M <- MStepGlasso(x=x,u=u,lambda=lambda,gamma=gamma,pen=pen,penalize.diagonal=penalize.diagonal,term=term,model='mixture')
       mix.prob <- fit.M$mix.prob
@@ -660,8 +664,8 @@ mixglasso_init<- function(x,nr.states,lambda,
       iter <- iter+1
     }#end while((err1>term)&(iter<maxiter)){
     if(maxiter==0){
-      logphi <- matrix(NA,n,nr.states)
-      for (l in 1:nr.states){
+      logphi <- matrix(NA,n,n.comp)
+      for (l in 1:n.comp){
         logphi[,l] <- dmvnorm(x,Mu[,l],Sig[,,l],log=TRUE)
       }
       loglik <- EXPStep.mix(logphi,mix.prob)$loglik
@@ -670,27 +674,27 @@ mixglasso_init<- function(x,nr.states,lambda,
     ##compute Bic/Mmdl
     SigInv[abs(SigInv)<10^{-3}] <- 0
     n.zero <- sum(SigInv==0)
-    statesize <- colSums(u)
-    DF <- p*nr.states+(nr.states-1)+nr.states*(p*(p+1)/2)-n.zero/2#df.mean+df.mix.prob+df.inv.covariance
-    n.zero.perstate <- apply(SigInv==0,3,sum)
-    penmmdl <- p*sum(log(statesize))+log(n)*(nr.states-1)+sum(log(statesize)*((p*(p+1)/2)-n.zero.perstate/2))
+    compsize <- colSums(u)
+    DF <- p*n.comp+(n.comp-1)+n.comp*(p*(p+1)/2)-n.zero/2#df.mean+df.mix.prob+df.inv.covariance
+    n.zero.percomp <- apply(SigInv==0,3,sum)
+    penmmdl <- p*sum(log(compsize))+log(n)*(n.comp-1)+sum(log(compsize)*((p*(p+1)/2)-n.zero.percomp/2))
     
     list(mix.prob=mix.prob,Mu=Mu,Sig=Sig,SigInv=SigInv,iter=iter,
          loglik=loglik,bic=-loglik+log(n)*DF/2,mmdl=-loglik+penmmdl/2,
-         u=u,state=apply(u,1,which.max),
-         statesize=statesize,pi.states=colMeans(u),
+         u=u,comp=apply(u,1,which.max),
+         compsize=compsize,pi.comps=colMeans(u),
          warn=warn)
-  }#end else { [(nr.states!=1)]
+  }#end else { [(n.comp!=1)]
 }
 
 
 
-##' mixglasso_par
+##' mixglasso_path
 ##'
-##' runs mixglasso (in parallel) with various number of mixture components 
-##' @title mixglasso_par
+##' Runs mixglasso (in parallel) with various number of mixture components 
+##' @title mixglasso_path
 ##' @param x Input data matrix
-##' @param nr.states Number of mixture components
+##' @param n.comp Number of mixture components
 ##' @param lambda Regularization parameter. Default=sqrt(2*n*log(p))/2
 ##' @param pen Determines form of penalty: glasso.parcor (default), glasso.invcov, glasso.invcor
 ##' @param init Initialization. Method used for initialization init={'cl.init','r.means','random','kmeans','kmeans.hc','hc'}. Default='kmeans'
@@ -699,7 +703,7 @@ mixglasso_init<- function(x,nr.states,lambda,
 ##' @param nstart.kmeans Number of random starts in kmeans; default=1
 ##' @param iter.max.kmeans Maximal number of iteration in kmeans; default=10
 ##' @param term Termination criterion of EM algorithm. Default=10^-3
-##' @param min.statesize Stop EM if any(statesize)<min.statesize; Default=5
+##' @param min.compsize Stop EM if any(compsize)<min.compsize; Default=5
 ##' @param save.allfits Save output of mixglasso for all k's ?
 ##' @param filename Output of mixglasso with filename_fit.mixgl_k.rda
 ##' @param mc.set.seed See mclapply. Default=FALSE
@@ -707,99 +711,94 @@ mixglasso_init<- function(x,nr.states,lambda,
 ##' @param ... Other arguments. See mixglasso_init
 ##' @return list consisting of
 ##' \item{bic}{Bic for all fits}
-##' \item{state}{Components assignments for all fits}
+##' \item{comp}{Components assignments for all fits}
 ##' \item{iter}{Number of iteration of EM for all fits}
 ##' \item{warn}{Warning infos for all fits}
 ##' @author n.stadler
 ##' @export
 ##' @example ../mixglasso_test.R
-mixglasso_par <- function(x,nr.states,
+mixglasso_path <- function(x,n.comp,
                           lambda=sqrt(2*nrow(x)*log(ncol(x)))/2,
                           pen='glasso.parcor',
                           init='kmeans.hc',my.cl=NULL,modelname.hc="VVV",nstart.kmeans=1,iter.max.kmeans=10,
-                          term=10^{-3},min.statesize=5,
+                          term=10^{-3},min.compsize=5,
                           save.allfits=TRUE,filename=NULL,
                           mc.set.seed=FALSE, mc.preschedule = FALSE,...){
                   
-  res <- mclapply(nr.states,
+  res <- mclapply(n.comp,
                   FUN=function(k){
                     fit.mixgl <-mixglasso(x,k,lambda=lambda,pen=pen,
                                           init=init,my.cl=my.cl,modelname.hc=modelname.hc,
                                           nstart.kmeans=nstart.kmeans,iter.max.kmeans=iter.max.kmeans,
-                                          term=term,min.statesize=min.statesize,...)
+                                          term=term,min.compsize=min.compsize,...)
                     if (save.allfits){
                       save(fit.mixgl,file=paste(filename,'_','fit.mixgl_k',k,'.rda',sep=''))
                     }
-                    return(list(bic=fit.mixgl$bic,state=fit.mixgl$state,iter=fit.mixgl$iter,warn=fit.mixgl$warn))},
+                    return(list(bic=fit.mixgl$bic,comp=fit.mixgl$comp,iter=fit.mixgl$iter,warn=fit.mixgl$warn))},
                   mc.set.seed=mc.set.seed, mc.preschedule = mc.preschedule)
 
   res.mmdl <- sapply(res,function(x){x[['mmdl']]})
   res.bic <- sapply(res,function(x){x[['bic']]})
-  res.state <- sapply(res,function(x){x[['state']]})
+  res.comp <- sapply(res,function(x){x[['comp']]})
   res.iter <- sapply(res,function(x){x[['iter']]})
   res.warn <- sapply(res,function(x){x[['warn']]})
-  return(list(bic=res.bic,mmdl=res.mmdl,state=res.state,iter=res.iter,warn=res.warn))
+  return(list(bic=res.bic,mmdl=res.mmdl,comp=res.comp,iter=res.iter,warn=res.warn))
 }
 
 ##' Mixglasso with backward pruning
 ##'
-##' runs mixglasso with various number of mixture components: starts with too large number of components
-##' iterates towards solution with smaller number of components by initializing using previous solution
+##' This function runs mixglasso with various number of mixture components:
+##' It starts with a too large number of components and iterates towards solutions
+##' with smaller number of components by initializing using previous solutions.
 ##' @title bwprun_mixglasso
 ##' @param x Input data matrix
-##' @param nr.states.min Minimum number of components
-##' @param nr.states.max Maximum number of components
+##' @param n.comp.min Minimum number of components. Take n.comp.min=1 !
+##' @param n.comp.max Maximum number of components
 ##' @param lambda Regularization parameter. Default=sqrt(2*n*log(p))/2
 ##' @param pen Determines form of penalty: glasso.parcor (default), glasso.invcov, glasso.invcor
 ##' @param selection.crit Selection criterion. Default='mmdl'
 ##' @param term Termination criterion of EM algorithm. Default=10^-3
-##' @param min.statesize Stop EM if any(statesize)<min.statesize; Default=5
-##' @param init Initialization. Method used for initialization init={'cl.init','r.means','random','kmeans','kmeans.hc','hc'}. Default='kmeans.hc'
+##' @param min.compsize Stop EM if any(compsize)<min.compsize; Default=5
+##' @param init Initialization. Method used for initialization init={'cl.init','r.means','random','kmeans','kmeans.hc','hc'}.
+##' Default='kmeans.hc'
 ##' @param my.cl Initial cluster assignments; need to be provided if init='cl.init' (otherwise this param is ignored). Default=NULL
 ##' @param modelname.hc Model class used in hc. Default="VVV"
 ##' @param nstart.kmeans Number of random starts in kmeans; default=1
 ##' @param iter.max.kmeans Maximal number of iteration in kmeans; default=10
-##' @param reinit.out Re-initialization, if statesize<min.statesize, at the start of algorithm ?
-##' @param reinit.in Re-initialization, if statesize<min.statesize, at the bwprun-loop level of algorithm ?
-##' @param mer Merge closest states for initialization
-##' @param del Delete smallest state for initialization
+##' @param reinit.out Re-initialization if compsize<min.compsize (at the start of algorithm) ?
+##' @param reinit.in Re-initialization if compsize<min.compsize (at the bwprun-loop level of algorithm) ?
+##' @param mer Merge closest comps for initialization
+##' @param del Delete smallest comp for initialization
 ##' @param ... Other arguments. See mixglasso_init
 ##' @return list consisting of
-##' \item{mix.prob}{}
-##' \item{Mu}{}
-##' \item{Sig}{}
-##' \item{SigInv}{}
-##' \item{iter}{}
-##' \item{loglik}{}
-##' \item{bic}{-loglik+log(n)*DF/2}
-##' \item{mmdl}{-loglik+penmmdl/2}
-##' \item{u}{responsibilities}
-##' \item{state}{component assignments}
-##' \item{statesize}{size of components}
-##' \item{pi.states}{}
-##' \item{warn}{warnings during optimization}
+##' \item{selcrit}{Selcrit for all models with number of components between n.comp.min and n.comp.max}
+##' \item{res.init}{Initialization for all components}
+##' \item{comp.name}{List of names of components. Indicates which states where merged/deleted during backward pruning}
+##' \item{re.init.in}{Logical vector indicating whether re-initialization was performed or not}
+##' \item{fit.mixgl.selcrit}{Results for model with optimal number of components. List see mixglasso_init}
 ##' @author n.stadler
 ##' @export
+##' @example ../mixglasso_test.R
 bwprun_mixglasso <- function(x,
-                             nr.states.min=1,nr.states.max,
+                             n.comp.min=1,n.comp.max,
                              lambda=sqrt(nrow(x[apply(!is.na(x),1,all),])*log(ncol(x[apply(!is.na(x),1,all),])))/2,
                              pen='glasso.parcor',selection.crit='mmdl',
-                             term=10^{-3},min.statesize=5,
+                             term=10^{-3},min.compsize=5,
                              init='kmeans.hc',my.cl=NULL,modelname.hc="VVV",nstart.kmeans=1,iter.max.kmeans=10,
                              reinit.out=FALSE,reinit.in=FALSE,mer=TRUE,del=TRUE,...){
   ##Backward Pruning MixGLasso 8!!!!! so far only working for equal.prob.trans=TRUE
   ##
   ##x: nxp-data
-  ##nr.states.min:  should be smaller than the optimal number of states, e.g. nr.states.min=1
-  ##nr.states.max:  should be considerably larger than the optimal number of states
+  ##n.comp.min:  should be smaller than the optimal number of comps, e.g. n.comp.min=1
+  ##n.comp.max:  should be considerably larger than the optimal number of comps
   ##lambda:
   ##pen: default 'glasso.parcor'
   ##selection.crit: 'mmdl'/'bic'
   ##term: termination of algorithm
-  ##min.statesize: default =5
+  ##min.compsize: default =5
   ##init: initialisation at Kmax
-  ##reinit.out: do re-initialization, if statesize<min.statesize, at the start of algorithm ?
-  ##reinit.in: do re-initialization, if statesize<min.statesize, at the bwprun-loop level of algorithm ?
+  ##reinit.out: do re-initialization, if compsize<min.compsize, at the start of algorithm ?
+  ##reinit.in: do re-initialization, if compsize<min.compsize, at the bwprun-loop level of algorithm ?
   ##mer:
   ##del:
 
@@ -808,114 +807,114 @@ bwprun_mixglasso <- function(x,
   x <- x[nonvirtual,]
   n <- nrow(x)
   p <- ncol(x)
-  fit.init.u <- func.uinit(x,nr.states.max,init=init,my.cl=my.cl,nstart.kmeans=nstart.kmeans,iter.max.kmeans=iter.max.kmeans,modelname.hc=modelname.hc)
+  fit.init.u <- func.uinit(x,n.comp.max,init=init,my.cl=my.cl,nstart.kmeans=nstart.kmeans,iter.max.kmeans=iter.max.kmeans,modelname.hc=modelname.hc)
   u <- fit.init.u$u
-  mix.prob <- rep(1/nr.states.max,nr.states.max)
-  fit.mixgl <-  mixglasso_init(x=x,nr.states=nr.states.max,lambda=lambda,
+  mix.prob <- rep(1/n.comp.max,n.comp.max)
+  fit.mixgl <-  mixglasso_init(x=x,n.comp=n.comp.max,lambda=lambda,
                                gamma=0.5,pen=pen,
                                u.init=u,mix.prob.init=mix.prob,
-                               min.statesize=min.statesize,term=term,...)
+                               min.compsize=min.compsize,term=term,...)
 
   if(reinit.out==TRUE){
-    while(fit.mixgl$warn=='state too small'){#if 'statesize<min.statesize' then set Kmax<-Kmax-1 and re-initialize with 'init'
-      cat('bwprun at Kmax: state too small, re-initialize & Kmax<-Kmax-1','\n')
-      nr.states.max <- nr.states.max-1
-      fit.init.u <- func.uinit(x,nr.states.max,init=init,my.cl=my.cl,nstart.kmeans=nstart.kmeans,iter.max.kmeans=iter.max.kmeans,modelname.hc=modelname.hc)
+    while(fit.mixgl$warn=='comp too small'){#if 'compsize<min.compsize' then set Kmax<-Kmax-1 and re-initialize with 'init'
+      cat('bwprun at Kmax: comp too small, re-initialize & Kmax<-Kmax-1','\n')
+      n.comp.max <- n.comp.max-1
+      fit.init.u <- func.uinit(x,n.comp.max,init=init,my.cl=my.cl,nstart.kmeans=nstart.kmeans,iter.max.kmeans=iter.max.kmeans,modelname.hc=modelname.hc)
       u <- fit.init.u$u
-      mix.prob <- rep(1/nr.states.max,nr.states.max)
-      fit.mixgl <-  mixglasso_init(x=x,nr.states=nr.states.max,lambda=lambda,
+      mix.prob <- rep(1/n.comp.max,n.comp.max)
+      fit.mixgl <-  mixglasso_init(x=x,n.comp=n.comp.max,lambda=lambda,
                                    gamma=0.5,pen=pen,
                                    u.init=u,mix.prob.init=mix.prob,
-                                   min.statesize=min.statesize,term=term,...)
+                                   min.compsize=min.compsize,term=term,...)
     }
   }
-  cat('Kmax=',nr.states.max,'\n')
+  cat('Kmax=',n.comp.max,'\n')
 
   ##Start with Bwprun
-  ##save initialization,state.name,selcrit.mixgl,re_init_in for k=1,...,K_max
+  ##save initialization,comp.name,selcrit.mixgl,re_init_in for k=1,...,K_max
   res.init<-list()
-  state.name <- list()
-  state.name[[paste('K=',nr.states.max,sep='')]] <- as.character(1:nr.states.max)
-  selcrit.mixgl <- rep(NA,nr.states.max)
-  re_init_in <- rep(FALSE,nr.states.max)
+  comp.name <- list()
+  comp.name[[paste('K=',n.comp.max,sep='')]] <- as.character(1:n.comp.max)
+  selcrit.mixgl <- rep(NA,n.comp.max)
+  re_init_in <- rep(FALSE,n.comp.max)
   
   fit.mixgl.del <- fit.mixgl.mer <- list()
   fit.mixgl.del$warn <- fit.mixgl.mer$warn <- FALSE
   selcrit.del <- selcrit.mer <- Inf
 
-  k <- nr.states.max
-  while (k>=nr.states.min){
-    cat('bwprun: nr states',k,'\n')
+  k <- n.comp.max
+  while (k>=n.comp.min){
+    cat('bwprun: nr comps',k,'\n')
     u <- fit.mixgl$u
     mix.prob <- fit.mixgl$mix.prob
-    statesize <- fit.mixgl$statesize
-    pi.states <- fit.mixgl$pi.states
+    compsize <- fit.mixgl$compsize
+    pi.comps <- fit.mixgl$pi.comps
     selcrit.mixgl[k] <- fit.mixgl[[selection.crit]]
     res.init[[paste('K=',k,sep='')]]<-list(u=u,mix.prob=fit.mixgl$mix.prob)
     
-    if(k!=nr.states.min){
+    if(k!=n.comp.min){
 
       if(del==TRUE){
-        ##delete smallest state
-        sm.state <- which.min(statesize)
-        u.del <- u[,-sm.state,drop=FALSE]
+        ##delete smallest comp
+        sm.comp <- which.min(compsize)
+        u.del <- u[,-sm.comp,drop=FALSE]
         u.del[which(rowSums(u.del)==0),]<-1/(k-1)
         u.del <- u.del/rowSums(u.del)
-        mix.prob.del <- mix.prob[-sm.state]
+        mix.prob.del <- mix.prob[-sm.comp]
         mix.prob.del[sum(mix.prob.del)==0]<-1/(k-1)
-        fit.mixgl.del <-  mixglasso_init(x,nr.states=k-1,lambda=lambda,
+        fit.mixgl.del <-  mixglasso_init(x,n.comp=k-1,lambda=lambda,
                                          gamma=0.5,pen=pen,
                                          u.init=u.del,mix.prob.init=mix.prob.del,
-                                         min.statesize=min.statesize,term=term,...)
+                                         min.compsize=min.compsize,term=term,...)
         selcrit.del<-fit.mixgl.del[[selection.crit]]
       }
       if(mer==TRUE){
-        ##merge closest states
-        bwstate.kldist <- w.kldist(fit.mixgl$Mu,fit.mixgl$Sig)
-        sel.k <- which(bwstate.kldist$state.kldist==bwstate.kldist$min.state.kldist,arr.ind=TRUE)[1,]#row(matrix(,k,k))[bwstate.kldist$state.kldist==bwstate.kldist$min.state.kldist]
+        ##merge closest comps
+        bwcomp.kldist <- w.kldist(fit.mixgl$Mu,fit.mixgl$Sig)
+        sel.k <- which(bwcomp.kldist$comp.kldist==bwcomp.kldist$min.comp.kldist,arr.ind=TRUE)[1,]#row(matrix(,k,k))[bwcomp.kldist$comp.kldist==bwcomp.kldist$min.comp.kldist]
         u.mer <- cbind(u[,-sel.k],rowSums(u[,sel.k]))
         mix.prob.mer <- c(mix.prob[-sel.k],sum(mix.prob[sel.k]))
-        fit.mixgl.mer <-  mixglasso_init(x=x,nr.states=k-1,lambda=lambda,
+        fit.mixgl.mer <-  mixglasso_init(x=x,n.comp=k-1,lambda=lambda,
                                          gamma=0.5,pen=pen,
                                          u.init=u.mer,mix.prob.init=mix.prob.mer,
-                                         min.statesize=min.statesize,term=term,...)
+                                         min.compsize=min.compsize,term=term,...)
         selcrit.mer<-fit.mixgl.mer[[selection.crit]]
       }
       
-      if((reinit.in)&((fit.mixgl.del$warn=="state too small")|(fit.mixgl.mer$warn=="state too small"))){#if 'statesize<min.statesize' then set K<-K-1 and re-initialize with 'init'
-        cat('        state too small, re-initialize at K-1:','\n')
+      if((reinit.in)&((fit.mixgl.del$warn=="comp too small")|(fit.mixgl.mer$warn=="comp too small"))){#if 'compsize<min.compsize' then set K<-K-1 and re-initialize with 'init'
+        cat('        comp too small, re-initialize at K-1:','\n')
         cat('        warn(mixglasso.del) ',fit.mixgl.del$warn,'\n')
         cat('        warn(mixglasso.mer) ',fit.mixgl.mer$warn,'\n')
         re_init_in[k-1] <- TRUE
-        state.name[[paste('K=',k-1,sep='')]] <- as.character(1:(k-1))
+        comp.name[[paste('K=',k-1,sep='')]] <- as.character(1:(k-1))
         fit.init.u <- func.uinit(x,k-1,init=init,my.cl=my.cl,nstart.kmeans=nstart.kmeans,iter.max.kmeans=iter.max.kmeans,modelname.hc=modelname.hc)
-        fit.mixgl <-  mixglasso_init(x=x,nr.states=k-1,lambda=lambda,
+        fit.mixgl <-  mixglasso_init(x=x,n.comp=k-1,lambda=lambda,
                                      gamma=0.5,pen=pen,
                                      u.init=fit.init.u$u,
                                      mix.prob.init=rep(1/(k-1),(k-1)),
-                                     min.statesize=min.statesize,term=term,...)
+                                     min.compsize=min.compsize,term=term,...)
       }else{#if 'no re-initialization'
         if (selcrit.del<selcrit.mer){
-          cat('        merge or delete?','delete state ',state.name[[paste('K=',k,sep='')]][sm.state],'\n\n')
+          cat('        merge or delete?','delete comp ',comp.name[[paste('K=',k,sep='')]][sm.comp],'\n\n')
           fit.mixgl<-fit.mixgl.del
-          state.name[[paste('K=',k-1,sep='')]] <- state.name[[paste('K=',k,sep='')]][-sm.state]
+          comp.name[[paste('K=',k-1,sep='')]] <- comp.name[[paste('K=',k,sep='')]][-sm.comp]
         }else{
-          cat('        merge or delete?','merge states ',state.name[[paste('K=',k,sep='')]][sel.k],'\n\n')
+          cat('        merge or delete?','merge comps ',comp.name[[paste('K=',k,sep='')]][sel.k],'\n\n')
           fit.mixgl<-fit.mixgl.mer
-          state.name[[paste('K=',k-1,sep='')]] <- c(state.name[[paste('K=',k,sep='')]][-sel.k],paste(state.name[[paste('K=',k,sep='')]][sel.k],collapse='+'))
+          comp.name[[paste('K=',k-1,sep='')]] <- c(comp.name[[paste('K=',k,sep='')]][-sel.k],paste(comp.name[[paste('K=',k,sep='')]][sel.k],collapse='+'))
         }
       }
-    }#end if(k!=nr.states.min){
+    }#end if(k!=n.comp.min){
     k <- k-1
   }
   #optimal selcrit-solution
-  fit.mixgl.selcrit <-  mixglasso_init(x,nr.states=which.min(selcrit.mixgl),lambda=lambda,
+  fit.mixgl.selcrit <-  mixglasso_init(x,n.comp=which.min(selcrit.mixgl),lambda=lambda,
                                        gamma=0.5,pen=pen,
                                        u.init=res.init[[paste('K=',which.min(selcrit.mixgl),sep='')]]$u,
                                        mix.prob.init=res.init[[paste('K=',which.min(selcrit.mixgl),sep='')]]$mix.prob,
-                                       min.statesize=min.statesize,term=term,...)
+                                       min.compsize=min.compsize,term=term,...)
   
-  return(list(selcrit=selcrit.mixgl,res.init=res.init,state.name=state.name,re.init.in=re_init_in,fit.mixgl.selcrit=fit.mixgl.selcrit))
+  return(list(selcrit=selcrit.mixgl,res.init=res.init,comp.name=comp.name,re.init.in=re_init_in,fit.mixgl.selcrit=fit.mixgl.selcrit))
 }
 
 ##' Log-likelihood for mixture model
@@ -930,14 +929,14 @@ bwprun_mixglasso <- function(x,
 ##' @author n.stadler
 loglik_mix<- function(x,mix.prob,Mu,Sig){
   ##computes loglikelihood of model
-  nr.states <- ncol(Mu)
+  n.comp <- ncol(Mu)
   n <- nrow(x)
-  if(nr.states==1){
+  if(n.comp==1){
     return(sum(dmvnorm(x,Mu[,1],Sig[,,1],log=TRUE)))
   }
   else{
-    logphi <- matrix(NA,n,nr.states)
-    for (l in 1:nr.states){
+    logphi <- matrix(NA,n,n.comp)
+    for (l in 1:n.comp){
       logphi[,l] <- dmvnorm(x,Mu[,l],Sig[,,l],log=TRUE)
     }
     loglik <- EXPStep.mix(logphi,mix.prob)$loglik
