@@ -4,9 +4,6 @@
 
 rm(list=ls())
 
-##source functions
-source('hmmgl_mixgl-22102012-backup-mixglasso-only.r')
-
 ##generate data
 set.seed(1)
 n <- 1000
@@ -27,13 +24,13 @@ dat <- simMIX(n,K,mix.prob,Mu,Sig)
 
 ##run mixglasso
 set.seed(1)
-fit1 <-  mixglasso_par(dat$X,nr.states=1:6,save.allfits=FALSE,show.trace=TRUE)
+fit1 <-  mixglasso_path(dat$X,n.comp=1:6,save.allfits=FALSE,show.trace=TRUE)
 set.seed(1)
-fit2 <-  mixglasso_par(dat$X,nr.states=1:6,lambda=0,save.allfits=FALSE,show.trace=TRUE)
+fit2 <-  mixglasso_path(dat$X,n.comp=1:6,lambda=0,save.allfits=FALSE,show.trace=TRUE)
 set.seed(1)
-fit3 <-  mixglasso_par(dat$X,nr.states=1:6,lambda=Inf,save.allfits=FALSE,show.trace=TRUE)
+fit3 <-  mixglasso_path(dat$X,n.comp=1:6,lambda=Inf,save.allfits=FALSE,show.trace=TRUE)
 set.seed(1)
-fit4 <-  bwprun_mixglasso(dat$X,nr.states.min=1,nr.states.max=6,selection.crit='bic')
+fit4 <-  bwprun_mixglasso(dat$X,n.comp=1,n.comp.max=6,selection.crit='bic')
 
 ##compare bic
 plot(fit1$bic,type='l',lty=1,ylim=range(c(fit1$bic,fit2$bic,fit3$bic,fit4$selcrit)),ylab='bic',xlab='no components')
