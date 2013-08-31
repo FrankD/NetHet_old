@@ -1,6 +1,7 @@
-################################################################
-################################################################
-##This File is for testing mixglasso
+
+###########################################
+##This an example of how to use MixGLasso##
+###########################################
 
 rm(list=ls())
 
@@ -25,15 +26,20 @@ dat <- simMIX(n,K,mix.prob,Mu,Sig)
 ##run mixglasso
 set.seed(1)
 fit1 <-  mixglasso_path(dat$X,n.comp=1:6,save.allfits=FALSE,show.trace=TRUE)
+fit1$bic#17096.54 16823.18 16529.86 16585.69 16634.75 16698.64
 set.seed(1)
-fit2 <-  mixglasso_path(dat$X,n.comp=1:6,lambda=0,save.allfits=FALSE,show.trace=TRUE)
+fit2 <-  mixglasso_path(dat$X,n.comp=6,save.allfits=TRUE,show.trace=TRUE)
+fit2$bic#16698.64
 set.seed(1)
-fit3 <-  mixglasso_path(dat$X,n.comp=1:6,lambda=Inf,save.allfits=FALSE,show.trace=TRUE)
+fit3 <-  mixglasso_path(dat$X,n.comp=1:6,lambda=0,save.allfits=FALSE,show.trace=TRUE)
 set.seed(1)
-fit4 <-  bwprun_mixglasso(dat$X,n.comp=1,n.comp.max=6,selection.crit='bic')
+fit4 <-  mixglasso_path(dat$X,n.comp=1:6,lambda=Inf,save.allfits=FALSE,show.trace=TRUE)
+set.seed(1)
+fit5 <-  bwprun_mixglasso(dat$X,n.comp=1,n.comp.max=6,selection.crit='bic')
 
 ##compare bic
-plot(fit1$bic,type='l',lty=1,ylim=range(c(fit1$bic,fit2$bic,fit3$bic,fit4$selcrit)),ylab='bic',xlab='no components')
+plot(fit1$bic,type='l',lty=1,ylim=range(c(fit1$bic,fit2$bic,fit3$bic,fit4$selcrit)),
+     ylab='bic',xlab='no components')
 lines(fit2$bic,lty=2)
 lines(fit3$bic,lty=3)
 lines(fit4$selcrit,lty=4)
