@@ -50,7 +50,7 @@ library(multicore)
 #' MixGLasso-package
 #'
 #' The MixGLasso-package is a powerful tool for clustering high-dimensional data.
-#' It is based on Gaussian mixture model. Each component is characterized by a mean vector an a
+#' It is based on a Gaussian mixture model. Each component is characterized by a mean vector an a
 #' covariance matrix. The inverse covariance matrices are sparse and represent a
 #' Gaussian graphical models (GGM). Estimation is performed using a novel penalized EM algorithm.
 #' Several strategies to select an optimal number of mixture components are implemented.
@@ -59,9 +59,9 @@ library(multicore)
 #' MixGLasso provides an optimal number of mixture components; optimal cluster assignments;
 #' Cluster-specific networks (sparse inverse covariance matrices); Cluster-specific means.
 #' 
-#' @references Städler, N. and Mukherjee, S. (2012).
-#' Penalized estimation in high-dimensional hidden Markov models with comp-specific graphical models. To appear in the Annals of Applied Statistics.
-#' \url{http://arxiv.org/abs/1208.4989}.
+#' @references St\"adler, N. and Mukherjee, S. (2012).
+#' Penalized estimation in high-dimensional hidden Markov models with comp-specific graphical models.
+#' To appear in the Annals of Applied Statistics. \url{http://arxiv.org/abs/1208.4989}.
 #' @import glasso mvtnorm mclust multicore
 #' @docType package
 #' @name MixGLasso-package
@@ -81,6 +81,7 @@ NULL
 ##' \item{S}{component assignments}
 ##' \item{X}{observed data matrix}
 ##' @author n.stadler
+##' @export
 simMIX <- function(n,n.comp,mix.prob,Mu,Sig){
   # mix.prob: mixing probabilities
   # Mu: means
@@ -89,7 +90,7 @@ simMIX <- function(n,n.comp,mix.prob,Mu,Sig){
   K <- n.comp
   p <- dim(Mu)[1]
   x <- matrix(0,nrow=n,ncol=p)
-  s <- sample(1:K,n,replace=TRUE,p=mix.prob)
+  s <- sample(1:K,n,replace=TRUE,prob=mix.prob)
   for (i in 1:n){
     x[i,] <- rmvnorm(1,mean=Mu[,s[i]],sigma=Sig[,,s[i]])
   }
@@ -100,7 +101,7 @@ simMIX <- function(n,n.comp,mix.prob,Mu,Sig){
 ##'
 ##'
 ##' @title Sum of non-diag elements of a matrix
-##' @param m 
+##' @param m no descr
 ##' @return Sum of non-diag elements
 ##' @author n.stadler
 sumoffdiag <- function(m){
@@ -113,8 +114,10 @@ sumoffdiag <- function(m){
 ##' @title Initialization of MixGLasso 
 ##' @param x Observed data
 ##' @param n.comp Number of mixture components
-##' @param init Method used for initialization init={'cl.init','r.means','random','kmeans','kmeans.hc','hc'}
-##' @param my.cl Initial cluster assignments; need to be provided if init='cl.init' (otherwise this param is ignored)
+##' @param init Method used for initialization
+##' init={'cl.init','r.means','random','kmeans','kmeans.hc','hc'}
+##' @param my.cl Initial cluster assignments;
+##' need to be provided if init='cl.init' (otherwise this param is ignored)
 ##' @param nstart.kmeans Number of random starts in kmeans; default=1
 ##' @param iter.max.kmeans Maximal number of iteration in kmeans; default=10
 ##' @param modelname.hc Model class used in hc; default='EII'
@@ -198,7 +201,7 @@ func.uinit <- function(x,n.comp,init='kmeans',my.cl=NULL,nstart.kmeans=1,iter.ma
 ##'
 ##' 
 ##' @title Compute trace of matrix
-##' @param m 
+##' @param m no descr
 ##' @return trace of matrix
 ##' @author n.stadler
 tr <- function(m){sum(diag(m))}
@@ -207,10 +210,10 @@ tr <- function(m){sum(diag(m))}
 ##'
 ##' 
 ##' @title Compute symmetric kull-back leibler distance
-##' @param mu1 
-##' @param mu2 
-##' @param sig1 
-##' @param sig2 
+##' @param mu1 no descr
+##' @param mu2 no descr
+##' @param sig1 no descr
+##' @param sig2 no descr
 ##' @return symmetric kull-back leibler distance
 ##' @author n.stadler
 symmkldist <- function(mu1,mu2,sig1,sig2){
@@ -222,8 +225,8 @@ symmkldist <- function(mu1,mu2,sig1,sig2){
 ##'
 ##' 
 ##' @title Distance between comps based on symm. kl-distance
-##' @param Mu 
-##' @param Sig 
+##' @param Mu no descr
+##' @param Sig no descr
 ##' @return list consisting of
 ##' \item{comp.kldist}{}
 ##' \item{min.comp.kldist}{}
@@ -241,10 +244,10 @@ w.kldist <- function(Mu,Sig){
 
 ##' Performs EStep
 ##'
-##' .. content for \details{} ..
+##' 
 ##' @title Performs EStep 
-##' @param logphi 
-##' @param mix.prob 
+##' @param logphi no descr
+##' @param mix.prob no descr
 ##' @return list consiting of
 ##' \item{u}{responsibilities}
 ##' \item{LL}{loglikelihood}
@@ -262,11 +265,11 @@ EXPStep.mix <- function(logphi,mix.prob){
 ##'
 ##' 
 ##' @title Graphical Lasso based on partial correlation penalty
-##' @param s 
-##' @param rho 
-##' @param penalize.diagonal 
-##' @param maxiter 
-##' @param term 
+##' @param s no descr
+##' @param rho no descr
+##' @param penalize.diagonal no descr
+##' @param maxiter no descr
+##' @param term no descr
 ##' @return w; wi; iter
 ##' @author n.stadler
 glasso.parcor <- function(s,rho,penalize.diagonal,maxiter=1000,term=10^{-3}){
@@ -290,10 +293,10 @@ glasso.parcor <- function(s,rho,penalize.diagonal,maxiter=1000,term=10^{-3}){
 ##'
 ##' 
 ##' @title Graphical Lasso based on inverse covariance penalty
-##' @param s 
-##' @param rho 
-##' @param penalize.diagonal 
-##' @param term 
+##' @param s no descr
+##' @param rho no descr
+##' @param penalize.diagonal no descr
+##' @param term no descr
 ##' @return w; wi; iter
 ##' @author n.stadler
 glasso.invcor <- function(s,rho,penalize.diagonal,term=10^{-3}){
@@ -313,10 +316,10 @@ glasso.invcor <- function(s,rho,penalize.diagonal,term=10^{-3}){
 ##'
 ##' 
 ##' @title Graphical Lasso based on inverse correlation penalty
-##' @param s 
-##' @param rho 
-##' @param penalize.diagonal 
-##' @param term 
+##' @param s no descr
+##' @param rho no descr
+##' @param penalize.diagonal no descr
+##' @param term no descr
 ##' @return w; wi; iter
 ##' @author n.stadler
 glasso.invcov <- function(s,rho,penalize.diagonal,term=10^{-3}){
@@ -329,17 +332,17 @@ glasso.invcov <- function(s,rho,penalize.diagonal,term=10^{-3}){
 ##'
 ##' 
 ##' @title MStep of MixGLasso
-##' @param x 
-##' @param chromosome 
-##' @param u 
-##' @param v 
-##' @param lambda 
-##' @param gamma 
-##' @param pen 
-##' @param penalize.diagonal 
-##' @param equal.prob.trans 
-##' @param term 
-##' @param model 
+##' @param x no descr
+##' @param chromosome no descr
+##' @param u no descr
+##' @param v no descr
+##' @param lambda no descr
+##' @param gamma no descr
+##' @param pen no descr
+##' @param penalize.diagonal no descr
+##' @param equal.prob.trans no descr
+##' @param term no descr
+##' @param model no descr
 ##' @return list consisting of mix.prob, Mu, Sig, SigInv
 ##' @author n.stadler
 MStepGlasso <- function(x,chromosome=NULL,u,v=NULL,lambda,gamma,pen,penalize.diagonal,equal.prob.trans=NULL,term,model='hmm'){
@@ -447,8 +450,10 @@ MStepGlasso <- function(x,chromosome=NULL,u,v=NULL,lambda,gamma,pen,penalize.dia
 ##' @param n.comp Number of mixture components
 ##' @param lambda Regularization parameter. Default=sqrt(2*n*log(p))/2
 ##' @param pen Determines form of penalty: glasso.parcor (default), glasso.invcov, glasso.invcor
-##' @param init Initialization. Method used for initialization init={'cl.init','r.means','random','kmeans','kmeans.hc','hc'}. Default='kmeans'
-##' @param my.cl Initial cluster assignments; need to be provided if init='cl.init' (otherwise this param is ignored). Default=NULL
+##' @param init Initialization. Method used for initialization
+##' init={'cl.init','r.means','random','kmeans','kmeans.hc','hc'}. Default='kmeans'
+##' @param my.cl Initial cluster assignments;
+##' need to be provided if init='cl.init' (otherwise this param is ignored). Default=NULL
 ##' @param modelname.hc Model class used in hc. Default="VVV"
 ##' @param nstart.kmeans Number of random starts in kmeans; default=1
 ##' @param iter.max.kmeans Maximal number of iteration in kmeans; default=10
@@ -470,9 +475,10 @@ MStepGlasso <- function(x,chromosome=NULL,u,v=NULL,lambda,gamma,pen,penalize.dia
 ##' \item{pi.comps}{}
 ##' \item{warn}{warnings during optimization}
 ##' @author n.stadler
-mixglasso <- function(x,n.comp,lambda=sqrt(2*nrow(x[apply(!is.na(x),1,all),])*log(ncol(x[apply(!is.na(x),1,all),])))/2,pen='glasso.parcor',
-                     init='kmeans.hc',my.cl=NULL,modelname.hc="VVV",nstart.kmeans=1,iter.max.kmeans=10,
-                     term=10^{-3},min.compsize=5,...){
+mixglasso <- function(x,n.comp,
+                      lambda=sqrt(2*nrow(x)*log(ncol(x)))/2,
+                      pen='glasso.parcor',init='kmeans.hc',my.cl=NULL,modelname.hc="VVV",nstart.kmeans=1,iter.max.kmeans=10,
+                      term=10^{-3},min.compsize=5,...){
 
   ##MixGLasso (optimizes -loglik+lambda*pen using EM)
   
@@ -538,7 +544,8 @@ mixglasso <- function(x,n.comp,lambda=sqrt(2*nrow(x[apply(!is.na(x),1,all),])*lo
 ##' @export
 mixglasso_init<- function(x,n.comp,lambda,
                           u.init,mix.prob.init,
-                          gamma=0.5,pen='glasso.parcor',penalize.diagonal=FALSE,term=10^{-3},miniter=5,maxiter=1000,min.compsize=5,
+                          gamma=0.5,pen='glasso.parcor',penalize.diagonal=FALSE,
+                          term=10^{-3},miniter=5,maxiter=1000,min.compsize=5,
                           show.trace=FALSE){
 
   ##MixGLasso (optimizes -loglik+lambda*pen using EM); Requires u.init as initialization
@@ -697,8 +704,10 @@ mixglasso_init<- function(x,n.comp,lambda,
 ##' @param n.comp Number of mixture components
 ##' @param lambda Regularization parameter. Default=sqrt(2*n*log(p))/2
 ##' @param pen Determines form of penalty: glasso.parcor (default), glasso.invcov, glasso.invcor
-##' @param init Initialization. Method used for initialization init={'cl.init','r.means','random','kmeans','kmeans.hc','hc'}. Default='kmeans'
-##' @param my.cl Initial cluster assignments; need to be provided if init='cl.init' (otherwise this param is ignored). Default=NULL
+##' @param init Initialization. Method used for initialization
+##' init={'cl.init','r.means','random','kmeans','kmeans.hc','hc'}. Default='kmeans'
+##' @param my.cl Initial cluster assignments;
+##' need to be provided if init='cl.init' (otherwise this param is ignored). Default=NULL
 ##' @param modelname.hc Model class used in hc. Default="VVV"
 ##' @param nstart.kmeans Number of random starts in kmeans; default=1
 ##' @param iter.max.kmeans Maximal number of iteration in kmeans; default=10
@@ -725,16 +734,16 @@ mixglasso_path <- function(x,n.comp,
                           save.allfits=TRUE,filename=NULL,
                           mc.set.seed=FALSE, mc.preschedule = FALSE,...){
                   
-  res <- mclapply(n.comp,
+  res <- mclapply(1:length(n.comp),
                   FUN=function(k){
-                    fit.mixgl <-mixglasso(x,k,lambda=lambda,pen=pen,
+                    fit.mixgl <-mixglasso(x,n.comp[k],lambda=lambda,pen=pen,
                                           init=init,my.cl=my.cl,modelname.hc=modelname.hc,
                                           nstart.kmeans=nstart.kmeans,iter.max.kmeans=iter.max.kmeans,
                                           term=term,min.compsize=min.compsize,...)
                     if (save.allfits){
-                      save(fit.mixgl,file=paste(filename,'_','fit.mixgl_k',k,'.rda',sep=''))
+                      save(fit.mixgl,file=paste(filename,'_','fit.mixgl_k',n.comp[k],'.rda',sep=''))
                     }
-                    return(list(bic=fit.mixgl$bic,comp=fit.mixgl$comp,iter=fit.mixgl$iter,warn=fit.mixgl$warn))},
+                    return(list(mmdl=fit.mixgl$mmdl,bic=fit.mixgl$bic,comp=fit.mixgl$comp,iter=fit.mixgl$iter,warn=fit.mixgl$warn))},
                   mc.set.seed=mc.set.seed, mc.preschedule = mc.preschedule)
 
   res.mmdl <- sapply(res,function(x){x[['mmdl']]})
@@ -759,8 +768,8 @@ mixglasso_path <- function(x,n.comp,
 ##' @param selection.crit Selection criterion. Default='mmdl'
 ##' @param term Termination criterion of EM algorithm. Default=10^-3
 ##' @param min.compsize Stop EM if any(compsize)<min.compsize; Default=5
-##' @param init Initialization. Method used for initialization init={'cl.init','r.means','random','kmeans','kmeans.hc','hc'}.
-##' Default='kmeans.hc'
+##' @param init Initialization. Method used for initialization
+##' init={'cl.init','r.means','random','kmeans','kmeans.hc','hc'}. Default='kmeans.hc'
 ##' @param my.cl Initial cluster assignments; need to be provided if init='cl.init' (otherwise this param is ignored). Default=NULL
 ##' @param modelname.hc Model class used in hc. Default="VVV"
 ##' @param nstart.kmeans Number of random starts in kmeans; default=1
@@ -781,7 +790,7 @@ mixglasso_path <- function(x,n.comp,
 ##' @example ../mixglasso_test.R
 bwprun_mixglasso <- function(x,
                              n.comp.min=1,n.comp.max,
-                             lambda=sqrt(nrow(x[apply(!is.na(x),1,all),])*log(ncol(x[apply(!is.na(x),1,all),])))/2,
+                             lambda=sqrt(2*nrow(x)*log(ncol(x)))/2,
                              pen='glasso.parcor',selection.crit='mmdl',
                              term=10^{-3},min.compsize=5,
                              init='kmeans.hc',my.cl=NULL,modelname.hc="VVV",nstart.kmeans=1,iter.max.kmeans=10,
@@ -921,10 +930,10 @@ bwprun_mixglasso <- function(x,
 ##'
 ##' 
 ##' @title Log-likelihood for mixture model
-##' @param x 
-##' @param mix.prob 
-##' @param Mu 
-##' @param Sig 
+##' @param x no descr
+##' @param mix.prob no descr
+##' @param Mu no descr
+##' @param Sig no descr
 ##' @return log-likelihood
 ##' @author n.stadler
 loglik_mix<- function(x,mix.prob,Mu,Sig){
@@ -956,6 +965,7 @@ loglik_mix<- function(x,mix.prob,Mu,Sig){
 ##' @param scale.parcor Should SigInv be scaled to have diagonal equal one, siginv=parcor ?
 ##' @return SigInv: list of inverse covariance matrices
 ##' @author n.stadler
+##' @export
 sparse_conc <- function(p,K,s,s.common,magn.nz=0.5,scale.parcor=TRUE){
     ##Generate K different Sparse Inverse Covariance-Matrices of dimension p:
     ##
