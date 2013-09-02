@@ -170,12 +170,14 @@ dyn.load("../code/betamat_diffnet.so")
 fit.pval3 <- diffnet_multisplit(xx1,xx2,b.splits=5,include.mean=TRUE,screen.meth='cv.glasso',algorithm.mleggm='glasso_rho0',lambda=la,compute.evals='est2.my.ev2')
 fit.pval3$pval.onesided# 0.41430313 0.03970084 0.04280262 0.24598699 0.08501593
 fit.pval3$teststat# 38.72533 68.02944 56.17720 51.79453 57.12753
+str(fit.pval3)
 
 set.seed(1)
 source('diffnet.r')
 dyn.load("../code/betamat_diffnet.so")
-fit.pval4 <- diffnet_multisplit(xx1,xx2,b.splits=5,include.mean=TRUE,screen.meth='cv.glasso',algorithm.mleggm='glasso_rho0',lambda=la,compute.evals='est2.my.ev3')
+fit.pval4 <- diffnet_multisplit(xx1,xx2,b.splits=5,include.mean=TRUE,screen.meth='cv.glasso',algorithm.mleggm='glasso_rho0',lambda=la,compute.evals='est2.my.ev3',save.mle=TRUE)
 fit.pval4$pval.onesided# 0.41396187 0.03941045 0.04237682 0.24559838 0.08484810
 fit.pval4$teststat#  38.72533 68.02944 56.17720 51.79453 57.12753
+str(fit.pval4)
 
 
