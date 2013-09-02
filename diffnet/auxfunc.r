@@ -197,10 +197,10 @@ plot.roc <- function(pval,labels,sd=FALSE,add=FALSE,...){
   res <- my.fprtpr(pval,labels)
 
   if(add==FALSE){
-    plot(rowMeans(res$fpr),rowMeans(res$tpr),cex=0.1,type='l',xlab='false positive rate',ylab='true positive rate',...)
+    plot(rowMeans(res$fpr),rowMeans(res$tpr),cex=0.1,type='l',xlab='false positive rate',ylab='true positive rate',ylim=c(0,1),xlim=c(0,1),...)
   }
   if(add==TRUE){
-    lines(rowMeans(res$fpr),rowMeans(res$tpr),cex=0.1,type='l',xlab='false positive rate',ylab='true positive rate',...)
+    lines(rowMeans(res$fpr),rowMeans(res$tpr),cex=0.1,type='l',xlab='false positive rate',ylab='true positive rate',ylim=c(0,1),xlim=c(0,1),...)
   }
 }
 
