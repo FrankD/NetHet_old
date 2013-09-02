@@ -993,7 +993,7 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
 ##' @author n.stadler
 diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glasso',
                                compute.evals='est2.my.ev3',algorithm.mleggm='glasso_rho0',covMethod='standard',include.mean=FALSE,
-                               diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,...){
+                               diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,save.mle=FALSE,...){
   
   n1 <- nrow(x1)
   n2 <- nrow(x2)
@@ -1094,7 +1094,9 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
                            active[['modIpop1']],active[['modIpop2']],active[['modJ']],
                            compute.evals,include.mean,acc,show.trace)
   
-
+  if(save.mle==FALSE){
+    est.sig <- est.wi <- est.mu <- NULL
+  }
   return(list(pval.onesided=res.pval$pval.onesided,pval.twosided=res.pval$pval.twosided,
               teststat=res.pval$teststat,weights.nulldistr=res.pval$weights.nulldistr,
               active=active,sig=est.sig,wi=est.wi,mu=est.mu))
@@ -1118,7 +1120,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
 ##' @return 
 ##' @author n.stadler
 diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='screen_bic.glasso',include.mean=FALSE,
-                              gamma.min=0.05,compute.evals='est2.my.ev3',algorithm.mleggm='glasso_rho0',covMethod='standard',diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,...){
+                              gamma.min=0.05,compute.evals='est2.my.ev3',algorithm.mleggm='glasso_rho0',covMethod='standard',diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,save.mle=FALSE,...){
 
   ##????Important Notes: Pval can be NA, because...
   ##????
@@ -1132,7 +1134,7 @@ diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='scre
                             split1 <- sample(1:n1,round(n1*frac.split),replace=FALSE)
                             split2 <- sample(1:n2,round(n2*frac.split),replace=FALSE)
                             res.singlesplit <- diffnet_singlesplit(x1,x2,split1,split2,screen.meth,
-                                                                   compute.evals,algorithm.mleggm,covMethod,include.mean,diag.invcov,acc,show.trace,...)
+                                                                   compute.evals,algorithm.mleggm,covMethod,include.mean,diag.invcov,acc,show.trace,save.mle,...)
                             
                           })
   pval.onesided <- sapply(res.multisplit,function(x){x[['pval.onesided']]},simplify='array')
@@ -1142,9 +1144,13 @@ diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='scre
   aggpval.onesided <- min(1,(1-log(gamma.min))*optimize(f=agg.pval,interval=c(gamma.min,1),maximum=FALSE,pval=pval.onesided[!is.na(pval.onesided)])$objective)
   aggpval.twosided <- min(1,(1-log(gamma.min))*optimize(f=agg.pval,interval=c(gamma.min,1),maximum=FALSE,pval=pval.twosided[!is.na(pval.twosided)])$objective)
   k <- ncol(x1)
-  medwi <- list(modJ=matrix(apply(sapply(res.multisplit,function(x){x[['wi']][['modJ']]}),1,median),k,k),
-                modIpop1=matrix(apply(sapply(res.multisplit,function(x){x[['wi']][['modIpop1']]}),1,median),k,k),
-                modIpop2=matrix(apply(sapply(res.multisplit,function(x){x[['wi']][['modIpop2']]}),1,median),k,k))
+  if(save.mle==TRUE){
+    medwi <- list(modJ=matrix(apply(sapply(res.multisplit,function(x){x[['wi']][['modJ']]}),1,median),k,k),
+                  modIpop1=matrix(apply(sapply(res.multisplit,function(x){x[['wi']][['modIpop1']]}),1,median),k,k),
+                  modIpop2=matrix(apply(sapply(res.multisplit,function(x){x[['wi']][['modIpop2']]}),1,median),k,k))
+  }else{
+    medwi <- NULL
+  }
   
     
   return(list(pval.onesided=pval.onesided,pval.twosided=pval.twosided,
