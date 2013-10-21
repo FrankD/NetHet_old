@@ -1,3 +1,6 @@
+#################################################################################################
+#################################################################################################
+#################################################################################################
 ###High-Dimensional Two-Sample Testing for Gaussian Graphical Model
 ###Date: 27/11/2012
 ###
@@ -12,7 +15,9 @@
 ###         - 20072012: cleaning up and get rid of old functions; single-split method added on 13082012
 ###         - 27112012: diffnet.r originates from twosample_diffnet-20072012.R
 
-##Packages
+#####################
+##Required Packages##
+#####################
 library(mvtnorm)
 library(glasso)
 library(parcor)
@@ -25,26 +30,77 @@ library(robust)
 ##load C-code
 #dyn.load("../code/betamat_diffnet.so")
 
+#' DiffNet-package
+#'
+#' Differential network (DiffNet) performs formal two-sample testing between high-dimensional
+#' Gaussian graphical models (GGMs).
+#' 
+#'
+#' DiffNet provides test-statistic, p-value and networks. 
+#' 
+#' 
+#' @references St\"adler, N. and Mukherjee, S. (2013). Two-Sample Testing in High-Dimensional Models.
+#' Preprint \url{http://arxiv.org/abs/1210.4584}.
+#' @import glasso mvtnorm parcor GeneNet huge CompQuadForm ggm robustbase robust
+#' @docType package
+#' @name DiffNet-package
+#' @useDynLib DiffNet
+NULL
+
 #############################
 ##-------Screening---------##
 #############################
 
-##Lambda-grid
+##' Lambda-grid 
+##'
+##' 
+##' @title Lambda-grid
+##' @param lambda.min no descr
+##' @param lambda.max no descr
+##' @param nr.gridpoints no descr
+##' @return no descr
+##' @author n.stadler
 lambdagrid_mult <- function(lambda.min,lambda.max,nr.gridpoints){
     mult.const <- (lambda.max/lambda.min)^(1/(nr.gridpoints-1))
     return(lambda.min*mult.const^((nr.gridpoints-1):0))
 }
+##' Lambda-grid
+##'
+##' 
+##' @title Lambda-grid
+##' @param lambda.min no descr
+##' @param lambda.max no descr
+##' @param nr.gridpoints no descr
+##' @return no descr
+##' @author n.stadler
 lambdagrid_lin <- function(lambda.min,lambda.max,nr.gridpoints){
     mult.const <- (lambda.max/lambda.min)^(1/(nr.gridpoints-1))
     return(seq(lambda.max,lambda.min,length=nr.gridpoints))
 }
-
-##Make-grid
+##' Make grid
+##'
+##' 
+##' @title Make grid
+##' @param lambda.min no descr
+##' @param lambda.max no descr
+##' @param nr.gridpoints no descr
+##' @param method no descr
+##' @return no descr
+##' @author n.stadler
 make_grid <- function(lambda.min,lambda.max,nr.gridpoints,method='lambdagrid_mult'){
   eval(as.name(method))(lambda.min,lambda.max,nr.gridpoints)
 }
-
-##Crossvalidation plot
+##' Error bars for plotCV
+##'
+##' 
+##' @title Error bars for plotCV
+##' @param x no descr
+##' @param upper no descr
+##' @param lower no descr
+##' @param width no descr
+##' @param ... no descr
+##' @return no descr
+##' @author n.stadler
 error.bars <- function (x, upper, lower, width = 0.02, ...)
 {
     xlim <- range(x)
@@ -54,6 +110,18 @@ error.bars <- function (x, upper, lower, width = 0.02, ...)
     segments(x - barw, lower, x + barw, lower, ...)
     range(upper, lower)
 }
+##' plotCV
+##'
+##' 
+##' @title plotCV
+##' @param lambda no descr
+##' @param cv no descr
+##' @param cv.error no descr
+##' @param se no descr
+##' @param type no descr
+##' @param ... no descr
+##' @return no descr
+##' @author n.stadler
 plotCV <- function(lambda,cv,cv.error,se=TRUE,type='b',...){
   if (se==TRUE){ylim <- range(cv,cv+cv.error,cv-cv.error)}
   else {ylim <- range(cv)}
@@ -62,11 +130,27 @@ plotCV <- function(lambda,cv,cv.error,se=TRUE,type='b',...){
     error.bars(lambda,cv+cv.error,cv-cv.error,width=1/length(lambda))
   invisible()
 }
+##' Make folds
+##'
+##' 
+##' @title Make folds
+##' @param n no descr
+##' @param folds no descr
+##' @return no descr
+##' @author n.stadler
 cv.fold <- function(n,folds=10){
   split(sample(1:n),rep(1:folds,length=n))
 }
-
-##Hugepath
+##' Graphical Lasso path with huge package
+##'
+##' 
+##' @title Graphical Lasso path with huge package
+##' @param s no descr
+##' @param rholist no descr
+##' @param penalize.diagonal no descr
+##' @param trace no descr
+##' @return no descr
+##' @author n.stadler
 hugepath <- function(s,rholist,penalize.diagonal=NULL,trace=NULL){
   #fit.huge <- huge(s,method = "glasso",cov.output =TRUE,verbose = FALSE)
   fit.huge <- huge(s,lambda=sort(rholist,decreasing=TRUE),method = "glasso",cov.output =TRUE,verbose = FALSE)
@@ -75,19 +159,19 @@ hugepath <- function(s,rholist,penalize.diagonal=NULL,trace=NULL){
   #return(list(wi=wi[,,length(fit.huge$lambda):1],w=w[,,length(fit.huge$lambda):1]))
   return(list(rholist=rholist,wi=wi[,,length(rholist):1],w=w[,,length(rholist):1]))
 }
-
 ##' Crossvalidation for GLasso 
 ##'
 ##' 8! lambda-grid has to be increasing (see glassopath)
 ##' @title Crossvalidation for GLasso
-##' @param x 
-##' @param folds 
+##' @param x no descr
+##' @param folds no descr
 ##' @param lambda lambda-grid (increasing!)
-##' @param penalize.diagonal 
-##' @param plot.it 
-##' @param se 
-##' @param include.mean 
-##' @return 
+##' @param penalize.diagonal no descr
+##' @param plot.it no descr
+##' @param se no descr
+##' @param include.mean no descr
+##' @param covMethod no descr
+##' @return no descr
 ##' @author n.stadler
 cv.glasso <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se=TRUE,include.mean=FALSE,covMethod=NULL)
 {
@@ -124,16 +208,30 @@ cv.glasso <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se
   }
   invisible(object)
 }
-
+##' Lambdamax
+##'
+##' 
+##' @title Lambdamax
+##' @param x no descr
+##' @return no descr
+##' @author n.stadler
 lambda.max <- function(x){
   n <- nrow(x)
   s.var <- var(x)
   diag(s.var) <- 0
   return(n*max(abs(s.var))/2)
 }
-
+##' Additional thresholding
+##'
+##' 
+##' @title Additional thresholding
+##' @param n no descr
+##' @param wi no descr
+##' @param method no descr
+##' @param trunc.k no descr
+##' @return no descr
+##' @author n.stadler
 mytrunc.method <- function(n,wi,method='linear.growth',trunc.k=5){
-
   p <- ncol(wi)
   if (method=='none'){
     return(list(wi=wi))
@@ -155,12 +253,29 @@ mytrunc.method <- function(n,wi,method='linear.growth',trunc.k=5){
     return(list(wi=wi.trunc))
   }
 }
-
+##' Screen_cv.glasso
+##'
+##' 
+##' @title Screen_cv.glasso
+##' @param x no descr
+##' @param include.mean no descr
+##' @param covMethod no descr
+##' @param folds no descr
+##' @param length.lambda no descr
+##' @param lambdamin.ratio no descr
+##' @param penalize.diagonal no descr
+##' @param trunc.method no descr
+##' @param trunc.k no descr
+##' @param plot.it no descr
+##' @param se no descr
+##' @param use.package no descr
+##' @param verbose no descr
+##' @return no descr
+##' @author n.stadler
 screen_cv.glasso <- function(x,include.mean=FALSE,covMethod=NULL,
                              folds=10,length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,
                              trunc.method='linear.growth',trunc.k=5,plot.it=FALSE,se=FALSE,use.package='huge',verbose=TRUE)
-{
-  
+{ 
   gridmax <- lambda.max(x)
   gridmin <- lambdamin.ratio*gridmax
   lambda <- make_grid(gridmin,gridmax,length.lambda)[length.lambda:1]
@@ -203,7 +318,17 @@ screen_cv.glasso <- function(x,include.mean=FALSE,covMethod=NULL,
   }
   list(rho.opt=2*lambda[which.min(cv)]/nrow(x),wi=wi.trunc,wi.orig=wi)
 }
-
+##' BIC.glasso
+##'
+##' 
+##' @title BIC.glasso
+##' @param x no descr
+##' @param lambda no descr
+##' @param penalize.diagonal no descr
+##' @param plot.it no descr
+##' @param use.package no descr
+##' @return no descr
+##' @author n.stadler
 bic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package='huge')
 {
   ##glasso; lambda.opt with bic
@@ -250,7 +375,17 @@ bic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package
   
   list(rho.opt=2*lambda[which.min(myscore)]/nrow(x),lambda=lambda,la.opt=lambda[index.opt],bic.score=myscore,Mu=Mu,wi=wi,w=w)
 }
-
+##' AIC.glasso
+##'
+##' 
+##' @title AIC.glasso
+##' @param x no descr
+##' @param lambda no descr
+##' @param penalize.diagonal no descr
+##' @param plot.it no descr
+##' @param use.package no descr
+##' @return no descr
+##' @author n.stadler
 aic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package='huge')
 {
   ##glasso; lambda.opt with aicc
@@ -297,7 +432,23 @@ aic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package
   
   list(rho.opt=2*lambda[which.min(myscore)]/nrow(x),lambda=lambda,la.opt=lambda[index.opt],bic.score=myscore,Mu=Mu,wi=wi,w=w)
 }
-
+##' Screen_bic.glasso
+##'
+##' 
+##' @title Screen_bic.glasso
+##' @param x no descr
+##' @param include.mean no descr
+##' @param covMethod no descr
+##' @param length.lambda no descr
+##' @param lambdamin.ratio no descr
+##' @param penalize.diagonal no descr
+##' @param plot.it no descr
+##' @param trunc.method no descr
+##' @param trunc.k no descr
+##' @param use.package no descr
+##' @param verbose no descr
+##' @return no descr
+##' @author n.stadler
 screen_bic.glasso <- function(x,include.mean=TRUE,covMethod=NULL,
                               length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,plot.it=FALSE,
                               trunc.method='linear.growth',trunc.k=5,use.package='huge',verbose=TRUE){
@@ -316,7 +467,23 @@ screen_bic.glasso <- function(x,include.mean=TRUE,covMethod=NULL,
   wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
   list(rho.opt=fit.bicgl$rho.opt,wi=wi.trunc,wi.orig=wi) 
 }
-
+##' Screen_aic.glasso
+##'
+##' 
+##' @title Screen_aic.glasso
+##' @param x no descr
+##' @param include.mean no descr
+##' @param covMethod no descr
+##' @param length.lambda no descr
+##' @param lambdamin.ratio no descr
+##' @param penalize.diagonal no descr
+##' @param plot.it no descr
+##' @param trunc.method no descr
+##' @param trunc.k no descr
+##' @param use.package no descr
+##' @param verbose no descr
+##' @return no descr
+##' @author n.stadler
 screen_aic.glasso <- function(x,include.mean=TRUE,covMethod=NULL,
                               length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,plot.it=FALSE,
                               trunc.method='linear.growth',trunc.k=5,use.package='huge',verbose=TRUE){
@@ -335,7 +502,17 @@ screen_aic.glasso <- function(x,include.mean=TRUE,covMethod=NULL,
   wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
   list(rho.opt=fit.aicgl$rho.opt,wi=wi.trunc,wi.orig=wi) 
 }
-
+##' Screen_lasso
+##'
+##' 
+##' @title Screen_lasso
+##' @param x no descr
+##' @param include.mean no descr
+##' @param covMethod no descr
+##' @param trunc.method no descr
+##' @param trunc.k no descr
+##' @return no descr
+##' @author n.stadler
 screen_lasso <- function(x,include.mean=NULL,covMethod=NULL,
                          trunc.method='linear.growth',trunc.k=5){
   
@@ -343,7 +520,17 @@ screen_lasso <- function(x,include.mean=NULL,covMethod=NULL,
   wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
   list(rho.opt=NULL,wi=wi.trunc,wi.orig=wi)
 }
-
+##' Screen_shrink
+##'
+##' 
+##' @title Screen_shrink
+##' @param x no descr
+##' @param include.mean no descr
+##' @param covMethod no descr
+##' @param trunc.method no descr
+##' @param trunc.k no descr
+##' @return no descr
+##' @author n.stadler
 screen_shrink <- function(x,include.mean=NULL,covMethod=NULL,
                           trunc.method='linear.growth',trunc.k=5){
   wi <- ggm.estimate.pcor(x)
@@ -352,7 +539,24 @@ screen_shrink <- function(x,include.mean=NULL,covMethod=NULL,
   wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
   list(rho.opt=NULL,wi=wi.trunc,wi.orig=wi)
 }
-
+##' Screen_mb
+##'
+##' 
+##' @title Screen_mb
+##' @param x no descr
+##' @param include.mean no descr
+##' @param covMethod no descr
+##' @param folds no descr
+##' @param length.lambda no descr
+##' @param lambdamin.ratio no descr
+##' @param penalize.diagonal no descr
+##' @param trunc.method no descr
+##' @param trunc.k no descr
+##' @param plot.it no descr
+##' @param se no descr
+##' @param verbose no descr
+##' @return no descr
+##' @author n.stadler
 screen_mb <- function(x,include.mean=NULL,covMethod=NULL,
                       folds=10,length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,
                       trunc.method='linear.growth',trunc.k=5,plot.it=FALSE,se=FALSE,verbose=TRUE)
@@ -393,7 +597,20 @@ screen_mb <- function(x,include.mean=NULL,covMethod=NULL,
   
   list(rho.opt=2*lambda[which.min(cv)]/nrow(x),wi=wi)
 }
-
+##' Screen_mb2
+##'
+##' 
+##' @title Screen_mb2
+##' @param x no descr
+##' @param include.mean no descr
+##' @param covMethod no descr
+##' @param length.lambda no descr
+##' @param trunc.method no descr
+##' @param trunc.k no descr
+##' @param plot.it no descr
+##' @param verbose no descr
+##' @return no descr
+##' @author n.stadler
 screen_mb2 <- function(x,include.mean=NULL,covMethod=NULL,
                        length.lambda=20,
                        trunc.method='linear.growth',trunc.k=5,plot.it=FALSE,verbose=FALSE)
@@ -422,7 +639,18 @@ screen_mb2 <- function(x,include.mean=NULL,covMethod=NULL,
   
   list(rho.opt=NULL,wi=wi)
 }
-
+##' Screen_full
+##'
+##' 
+##' @title Screen_full
+##' @param x no descr
+##' @param include.mean no descr
+##' @param covMethod no descr
+##' @param length.lambda no descr
+##' @param trunc.method no descr
+##' @param trunc.k no descr
+##' @return no descr
+##' @author n.stadler
 screen_full <- function(x,include.mean=NULL,covMethod=NULL,length.lambda=NULL,trunc.method=NULL,trunc.k=NULL){
  wi <- diag(1,ncol(x))
  list(rho.opt=NULL,wi=wi)
@@ -432,6 +660,15 @@ screen_full <- function(x,include.mean=NULL,covMethod=NULL,length.lambda=NULL,tr
 ##########################
 ##-------covMethod------##
 ##########################
+
+##' Compute covariance matrix
+##'
+##' 
+##' @title Compute covariance matrix
+##' @param x no descr
+##' @param covMethod no descr
+##' @return no descr
+##' @author n.stadler
 mcov <- function(x,covMethod='standard'){
   if (covMethod=='standard'){
     return(var(x))
@@ -441,10 +678,21 @@ mcov <- function(x,covMethod='standard'){
   }
 }
   
-
 ##############################
 ##--------P-VALUES----------##
 ##############################
+
+##' MLE in GGM
+##'
+##' 
+##' @title MLE in GGM
+##' @param x no descr
+##' @param wi no descr
+##' @param algorithm no descr
+##' @param rho no descr
+##' @param covMethod no descr
+##' @return no descr
+##' @author n.stadler
 mle.ggm <- function(x,wi,algorithm='glasso_rho0',rho=NULL,covMethod){
   if(is.null(rho)){
     algorithm <- 'glasso_rho0'
@@ -452,11 +700,11 @@ mle.ggm <- function(x,wi,algorithm='glasso_rho0',rho=NULL,covMethod){
   }
     
   if (algorithm=='glasso'){
-    fit.mle <- glasso(mcov(x,covMethod=covMethod),rho=rho,zero=which(wi==0,arr.in=TRUE))
+    fit.mle <- glasso(mcov(x,covMethod=covMethod),rho=rho,zero=which(wi==0,arr.ind=TRUE))
     return(list(w=fit.mle$w,wi=fit.mle$wi))
   }
   if (algorithm=='glasso_rho0'){
-    fit.mle <- glasso(mcov(x,covMethod=covMethod),rho=10^{-10},zero=which(wi==0,arr.in=TRUE))
+    fit.mle <- glasso(mcov(x,covMethod=covMethod),rho=10^{-10},zero=which(wi==0,arr.ind=TRUE))
     return(list(w=fit.mle$w,wi=fit.mle$wi))
   }
   if (algorithm=='fitcongraph'){
@@ -470,35 +718,32 @@ mle.ggm <- function(x,wi,algorithm='glasso_rho0',rho=NULL,covMethod){
     return(list(w=fit.mle$Shat,wi=wi))
   }
 }
-  
-
 ##' LogLikelihood-Ratio 
 ##'
-##' .. content for \details{} ..
+##' 
 ##' @title LogLikelihood-Ratio
-##' @param x1 
-##' @param x2 
-##' @param x 
-##' @param sig1 
-##' @param sig2 
-##' @param sig 
-##' @param mu1 
-##' @param mu2 
-##' @param mu 
-##' @return 
+##' @param x1 no descr
+##' @param x2 no descr
+##' @param x no descr
+##' @param sig1 no descr
+##' @param sig2 no descr
+##' @param sig no descr
+##' @param mu1 no descr
+##' @param mu2 no descr
+##' @param mu no descr
+##' @return no descr
 ##' @author n.stadler
 logratio <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu){
   twiceLR <- 2*(sum(dmvnorm(x1,mean=mu1,sigma=sig1,log=TRUE))+sum(dmvnorm(x2,mean=mu2,sigma=sig2,log=TRUE))-sum(dmvnorm(x,mean=mu,sigma=sig,log=TRUE)))
   list(twiceLR=twiceLR,sig1=sig1,sig2=sig2,sig=sig)
 }
-
 ##' Compute Information Matrix of Gaussian Graphical Model
 ##'
 ##' computes E_0[s(Y;Omega)s(Y;Omega)'] where s(Y;Omega)=(d/dOmega) LogLik
 ##' @title Information Matrix of Gaussian Graphical Model
 ##' @param Sig Sig=solve(SigInv) true covariance matrix under H0
-##' @param include.mean 
-##' @return 
+##' @param include.mean no descr
+##' @return no descr
 ##' @author n.stadler
 inf.mat<-function(Sig,include.mean=FALSE){
   k <- ncol(Sig)
@@ -533,16 +778,15 @@ inf.mat<-function(Sig,include.mean=FALSE){
   }
   return(infmat)
 }
-
 ##' Calculates weight-matrix and eigenvalues
 ##'
 ##' calculation based on true information matrix
 ##' @title Weight-matrix and eigenvalues
-##' @param imat 
+##' @param imat no descr
 ##' @param act I_uv
 ##' @param act1 I_u
 ##' @param act2 I_v
-##' @return 
+##' @return no descr
 ##' @author n.stadler
 ww.mat <- function(imat,act,act1,act2){
  
@@ -557,16 +801,15 @@ ww.mat <- function(imat,act,act1,act2){
   
   return(list(ww.mat=mat,eval=eval))
 }
-
 ##' Calculates eigenvalues of weight-matrix (using 1st order simplification)
 ##'
 ##' calculation based on true information matrix
-##' @title 
-##' @param imat 
+##' @title Calculates eigenvalues of weight-matrix (using 1st order simplification)
+##' @param imat no descr
 ##' @param act I_uv
 ##' @param act1 I_u
 ##' @param act2 I_v
-##' @return 
+##' @return no descr
 ##' @author n.stadler
 ww.mat2 <- function(imat,act,act1,act2){
 
@@ -594,17 +837,16 @@ ww.mat2 <- function(imat,act,act1,act2){
   eval <- c(eval,sqrt(eval2),-sqrt(eval2))
   return(list(ww.mat=mat,eval=eval))
 }
-
 ##' Compute beta-matrix 
 ##'
 ##' beta-matrix=E[s_ind1(Y;sig1) s_ind2(Y;sig2)'|sig]
 ##' @title Compute beta-matrix 
-##' @param ind1 
-##' @param ind2 
-##' @param sig1 
-##' @param sig2 
-##' @param sig 
-##' @return 
+##' @param ind1 no descr
+##' @param ind2 no descr
+##' @param sig1 no descr
+##' @param sig2 no descr
+##' @param sig no descr
+##' @return no descr
 ##' @author n.stadler
 beta.mat<-function(ind1,ind2,sig1,sig2,sig){
   uptri.rownr <- row(sig)[upper.tri(sig,diag=TRUE)]
@@ -638,15 +880,15 @@ beta.mat<-function(ind1,ind2,sig1,sig2,sig){
 
 ##' Compute Q-matrix 
 ##'
-##' .. content for \details{} ..
+##' 
 ##' @title Compute Q-matrix 
-##' @param sig 
-##' @param sig.a 
-##' @param sig.b 
-##' @param act.a 
-##' @param act.b 
-##' @param ss 
-##' @return 
+##' @param sig no descr
+##' @param sig.a no descr
+##' @param sig.b no descr
+##' @param act.a no descr
+##' @param act.b no descr
+##' @param ss no descr
+##' @return no descr
 ##' @author n.stadler
 q.matrix3 <- function(sig,sig.a,sig.b,act.a,act.b,ss){
   b.ab<-beta.mat(act.a,act.b,sig.a,sig.b,sig)
@@ -661,9 +903,17 @@ q.matrix3 <- function(sig,sig.a,sig.b,act.a,act.b,ss){
     return(b.ab[aa,bb,drop=FALSE]-(b.ab[aa,s.b,drop=FALSE]%*%solve(b.ab[s.a,s.b,drop=FALSE])%*%b.ab[s.a,bb,drop=FALSE]))
   }
 }
-
+##' q.matrix4
+##'
+##' 
+##' @title q.matrix4
+##' @param b.mat no descr
+##' @param act.a no descr
+##' @param act.b no descr
+##' @param ss no descr
+##' @return no descr
+##' @author n.stadler
 q.matrix4 <- function(b.mat,act.a,act.b,ss){
-
  ##Estimate Q
     aa<-seq(1,length(act.a))[!(act.a%in%ss)]
     bb<-seq(1,length(act.b))[!(act.b%in%ss)]
@@ -676,19 +926,18 @@ q.matrix4 <- function(b.mat,act.a,act.b,ss){
         return(b.mat[aa,bb,drop=FALSE]-(b.mat[aa,s.b,drop=FALSE]%*%solve(b.mat[s.a,s.b,drop=FALSE])%*%b.mat[s.a,bb,drop=FALSE]))
     }
 }
-
 ##' Compute weights of sum-w-chi2 (1st order simplification)
 ##'
-##' .. content for \details{} ..
+##' 
 ##' @title Weights of sum-w-chi2
-##' @param sig1 
-##' @param sig2 
-##' @param sig 
-##' @param act1 
-##' @param act2 
-##' @param act 
-##' @param include.mean 
-##' @return 
+##' @param sig1 no descr
+##' @param sig2 no descr
+##' @param sig no descr
+##' @param act1 no descr
+##' @param act2 no descr
+##' @param act no descr
+##' @param include.mean no descr
+##' @return no descr
 ##' @author n.stadler
 est2.ww.mat2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
 
@@ -743,22 +992,19 @@ est2.ww.mat2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
   }
   return(list(ww.mat=mat,eval=eval,eval.mu.complex=eval.mu.complex))
 }
-
-
 ##' Compute weights of sum-w-chi2 (2nd order simplification)
+##' 
 ##' *expansion of W in two directions ("dimf>dimg direction" & "dimf>dimg direction") 
 ##' *simplified computation of weights is obtained by assuming H0 and that X_u~X_v holds
-##' 
-##' .. content for \details{} ..
 ##' @title Weights of sum-w-chi2
-##' @param sig1 
-##' @param sig2 
-##' @param sig 
-##' @param act1 
-##' @param act2 
-##' @param act 
-##' @param include.mean 
-##' @return 
+##' @param sig1 no descr
+##' @param sig2 no descr
+##' @param sig no descr
+##' @param act1 no descr
+##' @param act2 no descr
+##' @param act no descr
+##' @param include.mean no descr
+##' @return no descr
 ##' @author n.stadler
 est2.my.ev2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
 
@@ -846,19 +1092,18 @@ est2.my.ev2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
 }
 
 ##' Compute weights of sum-w-chi2 (2nd order simplification)
+##' 
 ##' *expansion of W in one directions ("dimf>dimg direction") 
 ##' *simplified computation of weights is obtained without further invoking H0, or assuming X_u~X_v
-##'
-##' .. content for \details{} ..
 ##' @title Weights of sum-w-chi2
-##' @param sig1 
-##' @param sig2 
-##' @param sig 
-##' @param act1 
-##' @param act2 
-##' @param act 
-##' @param include.mean 
-##' @return 
+##' @param sig1 no descr
+##' @param sig2 no descr
+##' @param sig no descr
+##' @param act1 no descr
+##' @param act2 no descr
+##' @param act no descr
+##' @param include.mean no descr
+##' @return no descr
 ##' @author n.stadler
 est2.my.ev3 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
 
@@ -921,39 +1166,38 @@ est2.my.ev3 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
   }
   return(list(eval=eval,ev.aux.complex=ev.aux.complex))
 }
-   
 ##' P-value aggregation
 ##'
-##' .. content for \details{} ..
+##' 
 ##' @title P-value aggregation
-##' @param gamma 
-##' @param pval 
-##' @return 
+##' @param gamma no descr
+##' @param pval no descr
+##' @return no descr
 ##' @author n.stadler
 agg.pval <- function(gamma,pval){
     min(quantile(pval/gamma,probs=gamma),1)
 }
-
 ##' P-value calculation
 ##'
-##' .. content for \details{} ..
+##' 
 ##' @title P-value calculation
-##' @param x1 
-##' @param x2 
-##' @param x 
-##' @param sig1 
-##' @param sig2 
-##' @param sig 
-##' @param mu1 
-##' @param mu2 
-##' @param mu 
-##' @param act1 
-##' @param act2 
-##' @param act 
-##' @param compute.evals 
-##' @param include.mean 
-##' @param acc 
-##' @return 
+##' @param x1 no descr
+##' @param x2 no descr
+##' @param x no descr
+##' @param sig1 no descr
+##' @param sig2 no descr
+##' @param sig no descr
+##' @param mu1 no descr
+##' @param mu2 no descr
+##' @param mu no descr
+##' @param act1 no descr
+##' @param act2 no descr
+##' @param act no descr
+##' @param compute.evals no descr
+##' @param include.mean no descr
+##' @param acc no descr
+##' @param show.trace no descr
+##' @return no descr
 ##' @author n.stadler
 diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.evals,include.mean,acc,show.trace){
   ##########################
@@ -974,22 +1218,25 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
   }
   return(list(pval.onesided=pval.onesided,pval.twosided=pval.twosided,weights.nulldistr=weights.nulldistr,teststat=teststat))
 }
-
 ##' Differential network for given split
 ##'
 ##' if include.mean=FALSE then x1 and x2 have to be scaled to var=1 & mean=0
 ##' @title DiffNet for given split
-##' @param x1 
-##' @param x2 
-##' @param split1 
-##' @param split2 
-##' @param screen.meth 
-##' @param compute.evals 
-##' @param include.mean 
-##' @param diag.invcov 
-##' @param acc 
-##' @param ... 
-##' @return 
+##' @param x1 no descr
+##' @param x2 no descr
+##' @param split1 no descr
+##' @param split2 no descr
+##' @param screen.meth no descr
+##' @param compute.evals no descr
+##' @param algorithm.mleggm no descr
+##' @param covMethod no descr
+##' @param include.mean no descr
+##' @param diag.invcov no descr
+##' @param acc no descr
+##' @param show.trace no descr
+##' @param save.mle no descr
+##' @param ... no descr
+##' @return no descr
 ##' @author n.stadler
 diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glasso',
                                compute.evals='est2.my.ev3',algorithm.mleggm='glasso_rho0',covMethod='standard',include.mean=FALSE,
@@ -1101,24 +1348,46 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
               teststat=res.pval$teststat,weights.nulldistr=res.pval$weights.nulldistr,
               active=active,sig=est.sig,wi=est.wi,mu=est.mu))
 }
-
 ##' Differential Network (mulitsplit)
 ##'
-##' if include.mean=FALSE then x1 and x2 have to be scaled to var=1 & mean=0
+##' If include.mean=FALSE then x1 and x2 have to be scaled to var=1 & mean=0.
+##' We recommend to set include.mean=FALSE and to center and scale x1 and x2.
 ##' @title DiffNet
-##' @param x1 if include.mean=FALSE: scale data (var=1,mean=0) !
-##' @param x2 if include.mean=FALSE: scale data (var=1,mean=0) !
+##' @param x1 if include.mean=FALSE: scale data (var=1,mean=0).
+##' @param x2 if include.mean=FALSE: scale data (var=1,mean=0).
 ##' @param b.splits number of splits
-##' @param frac.split  fraction train-data (screening) / test-data (cleaning)
-##' @param screen.meth 
-##' @param include.mean 
-##' @param gamma.min see p-value aggregation (Meinshausen&Meier&Buehlmann)
-##' @param compute.evals 'est2.my.ev2'/'est2.ww.mat2 '
-##' @param diag.invcov  TRUE (parameter of interest is invcov; diag(invcov) also considered) / FALSE (param of interest is par.cor; no diagonal)
-##' @param acc 
+##' @param frac.split fraction train-data (screening) / test-data (cleaning)
+##' @param screen.meth screening procedure. default 'screen_bic.glasso'.
+##' @param include.mean should the mean be included. we recommend to use include.mean=FALSE.
+##' @param gamma.min tuning parameter in p-value aggregation of Meinshausen,Meier,Buehlmann 2009.
+##' @param compute.evals method to compute weights in w-chi2 distribution.
+##' default 'est2.my.ev3' ('est2.my.ev2'/'est2.ww.mat2 ').
+##' @param algorithm.mleggm algorithm to compute MLE of GGM. default 'glasso_rho'.
+##' @param covMethod default 'standard'.
+##' @param diag.invcov we recommend to use diag.invcov=TRUE.
+##' TRUE (parameter of interest is invcov; diag(invcov) also considered) / FALSE (param of interest is par.cor; no diagonal)
+##' @param acc accuracy of p-value. see ?davies.
+##' @param show.trace should warnings be showed ?
+##' @param save.mle should MLEs be saved for output ?
 ##' @param ... additional arguments for screen.meth
-##' @return 
+##' @return list consisting of
+##' \item{pval.onesided}{p-values for all b.splits}
+##' \item{pval.twosided}{ignore this output}
+##' \item{sspval.onesided}{single split p-value}
+##' \item{sspval.twosided}{ignore this output}
+##' \item{medpval.onesided}{median aggregated p-value}
+##' \item{medpval.twosided}{ignore this output}
+##' \item{aggpval.onesided}{aggregated p-value (meinshausen, meier, buehlmann 2009)}
+##' \item{aggpval.twosided}{ignore this output}
+##' \item{teststat}{test statistics for b.splits}
+##' \item{weights.nulldistr}{ignore this output}
+##' \item{active.last}{ignore this output}
+##' \item{medwi}{median MLEs over b.splits}
+##' \item{sig.last}{ignore this output}
+##' \item{wi.last}{ignore this output}
 ##' @author n.stadler
+##' @export
+##' @example ../diffnet-pkg_test.r
 diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='screen_bic.glasso',include.mean=FALSE,
                               gamma.min=0.05,compute.evals='est2.my.ev3',algorithm.mleggm='glasso_rho0',covMethod='standard',diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,save.mle=FALSE,...){
 
