@@ -272,6 +272,7 @@ mytrunc.method <- function(n,wi,method='linear.growth',trunc.k=5){
 ##' @param verbose no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @export
 screen_cv.glasso <- function(x,include.mean=FALSE,covMethod=NULL,
                              folds=10,length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,
                              trunc.method='linear.growth',trunc.k=5,plot.it=FALSE,se=FALSE,use.package='huge',verbose=TRUE)
@@ -449,6 +450,7 @@ aic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package
 ##' @param verbose no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @export
 screen_bic.glasso <- function(x,include.mean=TRUE,covMethod=NULL,
                               length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,plot.it=FALSE,
                               trunc.method='linear.growth',trunc.k=5,use.package='huge',verbose=TRUE){
@@ -484,6 +486,7 @@ screen_bic.glasso <- function(x,include.mean=TRUE,covMethod=NULL,
 ##' @param verbose no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @export
 screen_aic.glasso <- function(x,include.mean=TRUE,covMethod=NULL,
                               length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,plot.it=FALSE,
                               trunc.method='linear.growth',trunc.k=5,use.package='huge',verbose=TRUE){
@@ -531,6 +534,7 @@ screen_lasso <- function(x,include.mean=NULL,covMethod=NULL,
 ##' @param trunc.k no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @export
 screen_shrink <- function(x,include.mean=NULL,covMethod=NULL,
                           trunc.method='linear.growth',trunc.k=5){
   wi <- ggm.estimate.pcor(x)
@@ -557,6 +561,7 @@ screen_shrink <- function(x,include.mean=NULL,covMethod=NULL,
 ##' @param verbose no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @export
 screen_mb <- function(x,include.mean=NULL,covMethod=NULL,
                       folds=10,length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,
                       trunc.method='linear.growth',trunc.k=5,plot.it=FALSE,se=FALSE,verbose=TRUE)
@@ -611,6 +616,7 @@ screen_mb <- function(x,include.mean=NULL,covMethod=NULL,
 ##' @param verbose no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @export
 screen_mb2 <- function(x,include.mean=NULL,covMethod=NULL,
                        length.lambda=20,
                        trunc.method='linear.growth',trunc.k=5,plot.it=FALSE,verbose=FALSE)
@@ -733,6 +739,7 @@ mle.ggm <- function(x,wi,algorithm='glasso_rho0',rho=NULL,covMethod){
 ##' @param mu no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @export
 logratio <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu){
   twiceLR <- 2*(sum(dmvnorm(x1,mean=mu1,sigma=sig1,log=TRUE))+sum(dmvnorm(x2,mean=mu2,sigma=sig2,log=TRUE))-sum(dmvnorm(x,mean=mu,sigma=sig,log=TRUE)))
   list(twiceLR=twiceLR,sig1=sig1,sig2=sig2,sig=sig)
@@ -1218,26 +1225,39 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
   }
   return(list(pval.onesided=pval.onesided,pval.twosided=pval.twosided,weights.nulldistr=weights.nulldistr,teststat=teststat))
 }
-##' Differential network for given split
+##' Differential Network for user specified data split
 ##'
-##' if include.mean=FALSE then x1 and x2 have to be scaled to var=1 & mean=0
-##' @title DiffNet for given split
-##' @param x1 no descr
-##' @param x2 no descr
-##' @param split1 no descr
-##' @param split2 no descr
-##' @param screen.meth no descr
-##' @param compute.evals no descr
-##' @param algorithm.mleggm no descr
-##' @param covMethod no descr
-##' @param include.mean no descr
-##' @param diag.invcov no descr
-##' @param acc no descr
-##' @param show.trace no descr
-##' @param save.mle no descr
-##' @param ... no descr
-##' @return no descr
+##' If include.mean=FALSE then x1 and x2 have to be scaled to var=1 & mean=0.
+##' We recommend to set include.mean=FALSE and to center and scale x1 and x2.
+##' @title DiffNet for user specified data split
+##' @param x1 if include.mean=FALSE: scale data (var=1,mean=0).
+##' @param x2 if include.mean=FALSE: scale data (var=1,mean=0).
+##' @param split1 samples from condition 1 used in screening step. 
+##' @param split2 samples from condition 2 used in screening step. 
+##' @param screen.meth screening procedure. default 'screen_bic.glasso'.
+##' @param compute.evals  method to compute weights in w-chi2 distribution.
+##' default 'est2.my.ev3' ('est2.my.ev2'/'est2.ww.mat2 ').
+##' @param algorithm.mleggm algorithm to compute MLE of GGM. default 'glasso_rho'.
+##' @param covMethod default 'standard'.
+##' @param include.mean should the mean be included. we recommend to use include.mean=FALSE.
+##' @param diag.invcov we recommend to use diag.invcov=TRUE.
+##' TRUE (parameter of interest is invcov; diag(invcov) also considered) / FALSE (param of interest is par.cor; no diagonal)
+##' @param acc accuracy of p-value. see ?davies. default 1e-04
+##' @param show.trace should warnings be showed ? default: FALSE
+##' @param save.mle should MLEs be saved for output ? default: FALSE
+##' @param ... additional arguments for screen.meth
+##' @return list consisting of
+##' \item{pval.onesided}{p-value}
+##' \item{pval.twosided}{ignore this output}
+##' \item{teststat}{test statistic}
+##' \item{weights.nulldistr}{ignore this output}
+##' \item{active}{active-sets}
+##' \item{sig}{Sigma (MLE on 2nd half of data)}
+##' \item{wi}{SigmaInverse (MLE on 2nd half of data)}
+##' \item{mu}{Mean (MLE on 2nd half of data)}
 ##' @author n.stadler
+##' @export
+##' @example ../diffnet-pkg_test.r
 diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glasso',
                                compute.evals='est2.my.ev3',algorithm.mleggm='glasso_rho0',covMethod='standard',include.mean=FALSE,
                                diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,save.mle=FALSE,...){
@@ -1366,9 +1386,9 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
 ##' @param covMethod default 'standard'.
 ##' @param diag.invcov we recommend to use diag.invcov=TRUE.
 ##' TRUE (parameter of interest is invcov; diag(invcov) also considered) / FALSE (param of interest is par.cor; no diagonal)
-##' @param acc accuracy of p-value. see ?davies.
-##' @param show.trace should warnings be showed ?
-##' @param save.mle should MLEs be saved for output ?
+##' @param acc accuracy of p-value. see ?davies. default 1e-04
+##' @param show.trace should warnings be showed ? default: FALSE
+##' @param save.mle should MLEs be saved for output ? default: FALSE
 ##' @param ... additional arguments for screen.meth
 ##' @return list consisting of
 ##' \item{pval.onesided}{p-values for all b.splits}
