@@ -1,21 +1,46 @@
-############
-##Requires##
-############
-##source('../../GeneSet/code_gs/gs_func.R')
-##dyn.load('../../TwoSample/code/betamat_diffnet.so')
-##source('../../TwoSample/code/diffnet.r')
-##source('../../GeneSet/code_gs/screen_methods.R')
 
-#################
-##Load Packages##
-#################
+#' DiffNetGroup-package
+#'
+#' Performs Differential network (DiffNet) analyses for groups...
+#' 
+#'
+#' DiffNet provides ....
+#' 
+#' 
+#' @references St\"adler, N. and Mukherjee, S. (2013). Two-Sample Testing in High-Dimensional Models.
+#' Preprint \url{http://arxiv.org/abs/1210.4584}.
+#' @import multicore DiffNet
+#' @docType package
+#' @name DiffNetGroup-package
+#' @useDynLib DiffNetGroup
+NULL
+
+#####################
+##Required Packages##
+#####################
 library(multicore)
+library(DiffNet)
 
-##p-value adjustment
-my.p.adjust <- function(p,method="bonferroni"){
-  return(p.adjust(p,method=method))
+######################
+##P-value adjustment##
+######################
+my.p.adjust <- function(p,method='fdr'){
+  if(method=='fdr'){
+    return(p.adjust(p,method='fdr'))
+  }
+  if(method=='none'){
+    return(p.adjust(p,method='none'))
+  }
+   if(method=='bonferroni'){
+    return(p.adjust(p,method='bonferroni'))
+  }
+  if(method=='qvalue'){
+    return(qvalue(p)$qvalues)
+  }
 }
-##p-value aggregation
+#######################
+##p-value aggregation##
+#######################
 aggpval <- function(pval,gamma.min=0.05){
   
   min(1,(1-log(gamma.min))*optimize(
@@ -24,7 +49,9 @@ aggpval <- function(pval,gamma.min=0.05){
                                     }
                                     ,interval=c(gamma.min,1),maximum=FALSE)$objective)
 }
-##single-split
+################
+##single-split##
+################
 diffnet_groups_singlesplit<- function(x,groups,method.p.adjust="bonferroni",...){
   p <- ncol(x)
   nr.groups <- length(levels(groups))
@@ -60,13 +87,15 @@ diffnet_groups_singlesplit<- function(x,groups,method.p.adjust="bonferroni",...)
   cat('pvals: ',pvals.corrected,'\n')
   return(list(pvals=pvals.corrected,teststat=res['teststat',],teststat.aic=res['teststat.aic',],teststat.aic.sc=res['teststat.aic.sc',],rel.edgeinter=res['rel.edgeinter',],dfu=res['dfu',],dfv=res['dfv',],dfuv=res['dfuv',]))
 }
-
-par.diffnet_groups_multisplit<- function(x,groups,no.splits=50,method.p.adjust='bonferroni',...){
+###############
+##multi-split##
+###############
+par.diffnet_groups_multisplit<- function(x,groups,no.splits=50,method.p.adjust='bonferroni',order.adj.agg='adj-agg',...){
 
   res <- mclapply(seq(no.splits),
                   function(i){
                     cat('split:',i,'\n')
-                    res <- diffnet_groups_singlesplit(x,groups,method.p.adjust,...)
+                    res <- diffnet_groups_singlesplit(x,groups,method.p.adjust='none',...)
                     mat <- cbind(res$pvals,res$teststat,res$teststat.aic,res$teststat.aic.sc,res$rel.edgeinter,res$dfu,res$dfv,res$dfuv)
                     colnames(mat) <- c('pvals','teststat','teststat.aic','teststat.aic.sc','rel.edgeinter','dfu','dfv','dfuv')
                     return(mat)
@@ -80,8 +109,17 @@ par.diffnet_groups_multisplit<- function(x,groups,no.splits=50,method.p.adjust='
   res.dfv <- sapply(seq(no.splits),function(i){res[[i]][,'dfv']})
   res.dfuv <- sapply(seq(no.splits),function(i){res[[i]][,'dfuv']})
 
-  return(list(pvalmed=apply(res.pval,1,median,na.rm=TRUE),
-              pvalagg=apply(res.pval,1,aggpval),
+  if(order.adj.agg=='agg-adj'){
+    pvalagg <- my.p.adjust(apply(res.pval,1,aggpval),method=method.p.adjust)
+    pvalmed <- my.p.adjust(apply(res.pval,1,median,na.rm=TRUE),method=method.p.adjust)
+  }
+  if(order.adj.agg=='adj-agg'){
+    pvalagg <- apply(apply(res.pval,2,my.p.adjust,method=method.p.adjust),1,aggpval)
+    pvalmed <- apply(apply(res.pval,2,my.p.adjust,method=method.p.adjust),1,median)
+  }
+
+  return(list(pvalmed=pvalmed,
+              pvalagg=pvalagg,
               pval=res.pval,
               teststatmed=apply(res.teststat,1,median,na.rm=TRUE),
               teststatmed.aic=apply(res.teststat.aic,1,median,na.rm=TRUE),
