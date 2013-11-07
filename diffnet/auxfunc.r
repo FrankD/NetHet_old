@@ -1,7 +1,7 @@
-sparse_conc <- function(p,K,s,s.common,magn.nz=0.5,scale.parcor=TRUE){
+sparse_conc <- function(p,K,s,s.common,magn.nz=0.5,scale.parcor=TRUE,condnum=p){
     ##Generate K different Sparse Inverse Covariance-Matrices of dimension p:
     ##
-    ##-condition number=p (necessary when comparing different performance wrt various p's; if scale.parcor=TRUE, then sparse_conc does not depend on magn.nz)
+    ##-condition number=condnum (necessary when comparing different performance wrt various p's; if scale.parcor=TRUE, then sparse_conc does not depend on magn.nz)
     ##-for each SigInv there are s non-zero entries
     ##-s.common locations of non-zero entries are common among all SigInv;
     ## whereas s-s.common non-zero entries are at different locations
@@ -39,7 +39,7 @@ sparse_conc <- function(p,K,s,s.common,magn.nz=0.5,scale.parcor=TRUE){
     for (k in 1:K){
       SigInv[[k]] <- B.list[[k]]
       ev <- eigen(SigInv[[k]])$values
-      del <- (max(ev)-min(ev)*p)/(p-1)
+      del <- (max(ev)-min(ev)*condnum)/(condnum-1)
       diag(SigInv[[k]]) <- del
       if(scale.parcor==TRUE){
         SigInv[[k]] <- SigInv[[k]]/del
