@@ -905,7 +905,7 @@ q.matrix3 <- function(sig,sig.a,sig.b,act.a,act.b,ss){
   s.b<-seq(1,length(act.b))[(act.b%in%ss)]
   
   if(length(ss)==0){
-    return(b.ab[aa,bb])
+    return(b.ab[aa,bb,drop=FALSE])
   }else{
     return(b.ab[aa,bb,drop=FALSE]-(b.ab[aa,s.b,drop=FALSE]%*%solve(b.ab[s.a,s.b,drop=FALSE])%*%b.ab[s.a,bb,drop=FALSE]))
   }
@@ -1202,11 +1202,14 @@ agg.pval <- function(gamma,pval){
 ##' @param act no descr
 ##' @param compute.evals no descr
 ##' @param include.mean no descr
+##' @param method.compquadform no descr
 ##' @param acc no descr
+##' @param epsabs no descr
+##' @param epsrel no descr
 ##' @param show.trace no descr
 ##' @return no descr
 ##' @author n.stadler
-diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.evals,include.mean,acc,show.trace){
+diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.evals,include.mean,method.compquadform,acc,epsabs,epsrel,show.trace){
   ##########################
   ##compute test-statistic##
   ##########################
@@ -1220,7 +1223,22 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
     cat('warning: weight with value NA; pval=NA','\n')
     pval.onesided <- pval.twosided <- NA
   }else{
-    pval.onesided <- davies(teststat,lambda=weights.nulldistr,acc=acc)$Qq;if(show.trace){cat('ifault(davies):',davies(teststat,lambda=weights.nulldistr,acc=acc)$ifault,'\n')}
+    if(method.compquadform=='davies'){
+      if(length(weights.nulldistr)==0){
+        if(show.trace){cat('weights=numeric(0)','\n')}
+        pval.onesided <- 1
+      }else{
+        pval.onesided <- davies(teststat,lambda=weights.nulldistr,acc=acc)$Qq;if(show.trace){cat('ifault(davies):',davies(teststat,lambda=weights.nulldistr,acc=acc)$ifault,'\n')}
+      }
+    }
+    if(method.compquadform=='imhof'){
+      if(length(weights.nulldistr)==0){
+        if(show.trace){cat('weights=numeric(0)','\n')}
+        pval.onesided <- 1
+      }else{
+        pval.onesided <-imhof(teststat, lambda=weights.nulldistr,epsabs = epsabs, epsrel = epsrel, limit = 10000)$Qq
+      }
+    }
     pval.twosided <- 2*min(pval.onesided,1-pval.onesided)
   }
   return(list(pval.onesided=pval.onesided,pval.twosided=pval.twosided,weights.nulldistr=weights.nulldistr,teststat=teststat))
@@ -1260,7 +1278,12 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
 ##' @example ../diffnet-pkg_test.r
 diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glasso',
                                compute.evals='est2.my.ev3',algorithm.mleggm='glasso_rho0',covMethod='standard',include.mean=FALSE,
-                               diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,save.mle=FALSE,...){
+                               include.diagcov=FALSE,diag.invcov=TRUE,
+                               method.compquadform='imhof',acc=1e-04,epsabs=1e-10,epsrel=1e-10,
+                               show.trace=FALSE,save.mle=FALSE,...){
+
+  if((include.diagcov==FALSE)&(include.mean==TRUE)){
+    stop('option *include.diagcov=FALSE; include.mean=TRUE* is not supported')}
   
   n1 <- nrow(x1)
   n2 <- nrow(x2)
@@ -1268,6 +1291,8 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
 
   if(diag.invcov){df.param <- k*(k+1)/2}
   if(!diag.invcov){df.param <- k*(k-1)/2}
+  if(include.diagcov){df.param <- k*(k+1)/2}
+  if(!include.diagcov){df.param <- k*(k-1)/2}
 
   est.mu <- est.sig <- est.wi <- active <- list()#save est.mu;est.sig;est.wi;active
   
@@ -1282,6 +1307,10 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
     ind.diag <- which(diag(1,k)[upper.tri(diag(1,k),diag=TRUE)]!=0)
     act <- setdiff(act,ind.diag)
   }
+  if(!include.diagcov){
+    ind.diag <- which(diag(1,k)[upper.tri(diag(1,k),diag=TRUE)]!=0)
+    act <- setdiff(act,ind.diag)
+  }
   active[['modJ']] <- act
   if(include.mean==TRUE){
     est.mu[['modJ']] <- colMeans(xx.valid)
@@ -1293,11 +1322,19 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
     if(!diag.invcov){
       w <-w*sqrt(tcrossprod(diag(solve(w))))
     }
+    if(!include.diagcov){
+       w <- mcov(scale(xx.valid),covMethod=covMethod)
+     }
     est.sig[['modJ']] <- w
     est.wi[['modJ']] <- solve(w)
   }
   if (length(active[['modJ']])!=df.param){
-    fit.mle <- mle.ggm(xx.valid,fit.screen$wi,algorithm=algorithm.mleggm,rho=fit.screen$rho.opt,covMethod=covMethod)
+    if(include.diagcov){
+      fit.mle <- mle.ggm(xx.valid,fit.screen$wi,algorithm=algorithm.mleggm,rho=fit.screen$rho.opt,covMethod=covMethod)
+    }
+    if(!include.diagcov){
+      fit.mle <- mle.ggm(scale(xx.valid),fit.screen$wi,algorithm=algorithm.mleggm,rho=fit.screen$rho.opt,covMethod=covMethod)
+    }
     w <- fit.mle$w
     if(!diag.invcov){
       w <-w*sqrt(tcrossprod(diag(solve(fit.mle$w))))
@@ -1318,6 +1355,10 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
       ind.diag <- which(diag(1,k)[upper.tri(diag(1,k),diag=TRUE)]!=0)
       act <- setdiff(act,ind.diag)
     }
+    if(!include.diagcov){
+      ind.diag <- which(diag(1,k)[upper.tri(diag(1,k),diag=TRUE)]!=0)
+      act <- setdiff(act,ind.diag)
+    }
     active[[paste('modIpop',j,sep='')]] <- act
     if(include.mean==TRUE){
       est.mu[[paste('modIpop',j,sep='')]] <- colMeans(xx.valid)
@@ -1329,11 +1370,19 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
       if(!diag.invcov){
         w <-w*sqrt(tcrossprod(diag(solve(w))))
       }
+      if(!include.diagcov){
+        w <- mcov(scale(xx.valid),covMethod=covMethod)
+      }
       est.sig[[paste('modIpop',j,sep='')]] <- w
       est.wi[[paste('modIpop',j,sep='')]] <- solve(w)
     }
     if (length(active[[paste('modIpop',j,sep='')]])!=df.param){
-      fit.mle <- mle.ggm(xx.valid,fit.screen$wi,algorithm=algorithm.mleggm,rho=fit.screen$rho.opt,covMethod=covMethod)
+      if(include.diagcov){
+        fit.mle <- mle.ggm(xx.valid,fit.screen$wi,algorithm=algorithm.mleggm,rho=fit.screen$rho.opt,covMethod=covMethod)
+      }
+      if(!include.diagcov){
+        fit.mle <- mle.ggm(scale(xx.valid),fit.screen$wi,algorithm=algorithm.mleggm,rho=fit.screen$rho.opt,covMethod=covMethod)
+      }
       w <- fit.mle$w
       if(!diag.invcov){
         w <-w*sqrt(tcrossprod(diag(solve(fit.mle$w))))
@@ -1359,7 +1408,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
                            sig1=est.sig[['modIpop1']],sig2=est.sig[['modIpop2']],sig=est.sig[['modJ']],
                            mu1=est.mu[['modIpop1']],mu2=est.mu[['modIpop2']],mu=est.mu[['modJ']],
                            active[['modIpop1']],active[['modIpop2']],active[['modJ']],
-                           compute.evals,include.mean,acc,show.trace)
+                           compute.evals,include.mean,method.compquadform,acc,epsabs,epsrel,show.trace)
   
   if(save.mle==FALSE){
     est.sig <- est.wi <- est.mu <- NULL
@@ -1408,8 +1457,9 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
 ##' @author n.stadler
 ##' @export
 ##' @example ../diffnet-pkg_test.r
-diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='screen_bic.glasso',include.mean=FALSE,
-                              gamma.min=0.05,compute.evals='est2.my.ev3',algorithm.mleggm='glasso_rho0',covMethod='standard',diag.invcov=TRUE,acc=1e-04,show.trace=FALSE,save.mle=FALSE,...){
+diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='screen_bic.glasso',include.mean=FALSE,include.diagcov=TRUE,
+                              gamma.min=0.05,compute.evals='est2.my.ev3',algorithm.mleggm='glasso_rho0',covMethod='standard',diag.invcov=TRUE,
+                              method.compquadform='imhof',acc=1e-04,epsabs=1e-10,epsrel=1e-10,show.trace=FALSE,save.mle=FALSE,...){
 
   ##????Important Notes: Pval can be NA, because...
   ##????
@@ -1423,7 +1473,8 @@ diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='scre
                             split1 <- sample(1:n1,round(n1*frac.split),replace=FALSE)
                             split2 <- sample(1:n2,round(n2*frac.split),replace=FALSE)
                             res.singlesplit <- diffnet_singlesplit(x1,x2,split1,split2,screen.meth,
-                                                                   compute.evals,algorithm.mleggm,covMethod,include.mean,diag.invcov,acc,show.trace,save.mle,...)
+                                                                   compute.evals,algorithm.mleggm,covMethod,include.mean,include.diagcov,diag.invcov,
+                                                                   method.compquadform,acc,epsabs,epsrel,show.trace,save.mle,...)
                             
                           })
   pval.onesided <- sapply(res.multisplit,function(x){x[['pval.onesided']]},simplify='array')
