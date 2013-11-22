@@ -1243,20 +1243,10 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
     pval.onesided <- pval.twosided <- NA
   }else{
     if(method.compquadform=='davies'){
-      if(length(weights.nulldistr)==0){
-        if(show.trace){cat('weights=numeric(0)','\n')}
-        pval.onesided <- 1
-      }else{
-        pval.onesided <- davies(teststat,lambda=weights.nulldistr,acc=acc)$Qq;if(show.trace){cat('ifault(davies):',davies(teststat,lambda=weights.nulldistr,acc=acc)$ifault,'\n')}
-      }
+      pval.onesided <- davies(teststat,lambda=weights.nulldistr,acc=acc)$Qq;if(show.trace){cat('ifault(davies):',davies(teststat,lambda=weights.nulldistr,acc=acc)$ifault,'\n')}
     }
     if(method.compquadform=='imhof'){
-      if(length(weights.nulldistr)==0){
-        if(show.trace){cat('weights=numeric(0)','\n')}
-        pval.onesided <- 1
-      }else{
-        pval.onesided <-imhof(teststat, lambda=weights.nulldistr,epsabs = epsabs, epsrel = epsrel, limit = 10000)$Qq
-      }
+      pval.onesided <-imhof(teststat, lambda=weights.nulldistr,epsabs = epsabs, epsrel = epsrel, limit = 10000)$Qq
     }
     pval.twosided <- 2*min(pval.onesided,1-pval.onesided)
   }

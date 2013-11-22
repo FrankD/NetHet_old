@@ -1,6 +1,6 @@
 ##Test diffnet.r (computation weights of w-chi2; diffnet_multisplit)
-##Gaussian Graphical Model
 ##
+##22.11.2013: diffnet.r has some changes. mcov: old results are obtained with covMethod='var'. bic.glasso, aic.glasso: different degree of freedom for include.mean=TRUE/FALSE (in this file)  
 
 rm(list=ls())
 source('twosample_diffnet-20072012.R')

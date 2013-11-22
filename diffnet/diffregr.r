@@ -566,7 +566,7 @@ agg.pval <- function(gamma,pval){
     min(quantile(pval/gamma,probs=gamma),1)
 }
 
-diffregr_pval <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act,compute.evals,acc,verbose,n.perm){
+diffregr_pval <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act,compute.evals,method.compquadform,acc,epsabs,epsrel,verbose,n.perm){
 
   if(is.null(n.perm)){
     ##########################
@@ -582,7 +582,12 @@ diffregr_pval <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act,compute.eva
       cat('warning: weight with value NA; pval=NA','\n')
       pval.onesided <- pval.twosided <- NA
     }else{
-      pval.onesided <- davies(teststat,lambda=weights.nulldistr,acc=acc)$Qq;if(verbose){cat('ifault(davies):',davies(teststat,lambda=weights.nulldistr,acc=acc)$ifault,'\n')}
+      if(method.compquadform=='davies'){
+        pval.onesided <- davies(teststat,lambda=weights.nulldistr,acc=acc)$Qq;if(verbose){cat('ifault(davies):',davies(teststat,lambda=weights.nulldistr,acc=acc)$ifault,'\n')}
+      }
+      if(method.compquadform=='imhof'){
+        pval.onesided <-imhof(teststat, lambda=weights.nulldistr,epsabs = epsabs, epsrel = epsrel, limit = 10000)$Qq
+      }
       pval.twosided <- 2*min(pval.onesided,1-pval.onesided)
     }
     return(list(pval.onesided=pval.onesided,pval.twosided=pval.twosided,weights.nulldistr=weights.nulldistr,teststat=teststat))
@@ -641,8 +646,9 @@ perm.diffregr_pval <- function(y1,y2,x1,x2,act1,act2,act,n.perm){
               
 
 diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='lasso.cvmin',
-                                compute.evals='est2.my.ev3',
-                                acc=1e-04,verbose=FALSE,n.perm=NULL,...){
+                                compute.evals='est2.my.ev3',method.compquadform='imhof',acc=1e-04,
+                                epsabs=1e-10,epsrel=1e-10,
+                                verbose=FALSE,n.perm=NULL,...){
   
   ##Multisplit Pvalues
   ##
@@ -702,7 +708,7 @@ diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='lasso.cvm
                               x1=x1[-split1,,drop=FALSE],x2=x2[-split2,,drop=FALSE],
                               beta1=est.beta[['modIpop1']],beta2=est.beta[['modIpop2']],beta=est.beta[['modJ']],
                               active[['modIpop1']],active[['modIpop2']],active[['modJ']],
-                              compute.evals,acc,verbose,n.perm)
+                              compute.evals,method.compquadform,acc,epsabs,epsrel,verbose,n.perm)
   }else{
     cat('warning: dim(model) > n: pval=NA','\n')
     res.pval <- list(pval.onesided=NA,pval.twosided=NA,weights.nulldistr=NA,teststat=NA)
@@ -714,7 +720,9 @@ diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='lasso.cvm
 }
 
 diffregr_multisplit<- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,screen.meth='lasso.cvmin',
-                              gamma.min=0.05,compute.evals='est2.my.ev3',acc=1e-04,verbose=FALSE,n.perm=NULL,...){
+                              gamma.min=0.05,compute.evals='est2.my.ev3',
+                               method.compquadform='imhof',acc=1e-04,epsabs=1e-10,epsrel=1e-10,
+                               verbose=FALSE,n.perm=NULL,...){
 
   n1 <- nrow(x1)
   n2 <- nrow(x2)
@@ -724,7 +732,8 @@ diffregr_multisplit<- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,screen.met
                             split1 <- sample(1:n1,floor((n1-1)*frac.split),replace=FALSE)
                             split2 <- sample(1:n2,floor((n2-1)*frac.split),replace=FALSE)
                             res.singlesplit <- diffregr_singlesplit(y1,y2,x1,x2,split1,split2,screen.meth,
-                                                                    compute.evals,acc,verbose,n.perm,...)                      
+                                                                    compute.evals,method.compquadform,
+                                                                    acc,epsabs,epsrel,verbose,n.perm,...)                      
                           })
   pval.onesided <- sapply(res.multisplit,function(x){x[['pval.onesided']]},simplify='array')
   pval.twosided <- sapply(res.multisplit,function(x){x[['pval.twosided']]},simplify='array')

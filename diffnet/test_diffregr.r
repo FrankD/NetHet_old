@@ -55,7 +55,7 @@ fit1$sspval.onesided
 
 source('diffregr.r')
 set.seed(1)
-system.time(fit2 <- diffregr_multisplit(y1,y2,x1,x2,b.splits=5,screen.meth='lasso.cvmin',compute.evals='est2.my.ev2'))
+system.time(fit2 <- diffregr_multisplit(y1,y2,x1,x2,b.splits=5,screen.meth='lasso.cvmin',compute.evals='est2.my.ev2',method.compquadform='davies'))
 str(fit2)
 fit2$sspval.onesided
 ## > str(fit2)
@@ -87,7 +87,7 @@ fit2$sspval.onesided
 ## [1] 0.4450814
 
 set.seed(1)
-system.time(fit3 <- diffregr_multisplit(y1,y2,x1,x2,b.splits=5,screen.meth='lasso.cvtrunc',k.trunc=5,compute.evals='est2.my.ev2'))
+system.time(fit3 <- diffregr_multisplit(y1,y2,x1,x2,b.splits=5,screen.meth='lasso.cvtrunc',k.trunc=5,compute.evals='est2.my.ev2',method.compquadform='davies'))
 str(fit3)
 fit3$sspval.onesided
 ## > str(fit3)
@@ -115,7 +115,7 @@ fit3$sspval.onesided
 
 source('diffregr.r')
 set.seed(1)
-system.time(fit4 <- diffregr_multisplit(y1,y2,x1,x2,b.splits=5,screen.meth='lasso.cvmin',compute.evals='est2.my.ev3'))
+system.time(fit4 <- diffregr_multisplit(y1,y2,x1,x2,b.splits=5,screen.meth='lasso.cvmin',compute.evals='est2.my.ev3',method.compquadform='davies'))
 fit2$sspval.onesided
 fit4$sspval.onesided
 fit2$pval.onesided
@@ -131,7 +131,7 @@ fit4$pval.onesided
 
 source('diffregr.r')
 set.seed(1)
-system.time(fit5 <- diffregr_multisplit(y1,y2,x1,x2,b.splits=5,screen.meth='lasso.cvmin',compute.evals='est2.my.ev3',n.perm=250))
+system.time(fit5 <- diffregr_multisplit(y1,y2,x1,x2,b.splits=5,screen.meth='lasso.cvmin',compute.evals='est2.my.ev3',n.perm=250,method.compquadform='davies'))
 fit5$pval.onesided# 0.404 0.472 0.756 0.320 0.608
 fit5$teststat# 13.84779 83.50377 11.26196 80.92545 11.24971
 
