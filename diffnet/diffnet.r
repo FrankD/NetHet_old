@@ -451,7 +451,7 @@ aic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package
 ##' @return no descr
 ##' @author n.stadler
 ##' @export
-screen_bic.glasso <- function(x,include.mean=TRUE,covMethod=NULL,
+screen_bic.glasso <- function(x,include.mean=TRUE,
                               length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,plot.it=FALSE,
                               trunc.method='linear.growth',trunc.k=5,use.package='huge',verbose=TRUE){
 
@@ -675,12 +675,12 @@ screen_full <- function(x,include.mean=NULL,covMethod=NULL,length.lambda=NULL,tr
 ##' @param covMethod no descr
 ##' @return no descr
 ##' @author n.stadler
-mcov <- function(x,covMethod='standard'){
-  if (covMethod=='standard'){
-    return(var(x))
+mcov <- function(x,include.mean,include.diagcov){
+  if (include.diagcov==TRUE){
+    return(cov.wt(x,method='ML',center=include.mean)$cov)
   }
-  if (covMethod=='robust'){
-    return(covRob(x)$cov)
+  if(include.diagcov==FALSE){
+    return(cov.wt(x,method='ML',center=include.mean,cor=TRUE)$cor)
   }
 }
   
@@ -699,22 +699,22 @@ mcov <- function(x,covMethod='standard'){
 ##' @param covMethod no descr
 ##' @return no descr
 ##' @author n.stadler
-mle.ggm <- function(x,wi,algorithm='glasso_rho0',rho=NULL,covMethod){
+mle.ggm <- function(x,wi,algorithm='glasso_rho0',rho=NULL,include.mean,include.diagcov){
   if(is.null(rho)){
     algorithm <- 'glasso_rho0'
     cat('screening method with rho.opt=NULL; set algorithm="glasso_rho0" in mle.ggm')
   }
     
   if (algorithm=='glasso'){
-    fit.mle <- glasso(mcov(x,covMethod=covMethod),rho=rho,zero=which(wi==0,arr.ind=TRUE))
+    fit.mle <- glasso(mcov(x,include.mean=include.mean,include.diagcov=include.diagcov),rho=rho,zero=which(wi==0,arr.ind=TRUE))
     return(list(w=fit.mle$w,wi=fit.mle$wi))
   }
   if (algorithm=='glasso_rho0'){
-    fit.mle <- glasso(mcov(x,covMethod=covMethod),rho=10^{-10},zero=which(wi==0,arr.ind=TRUE))
+    fit.mle <- glasso(mcov(x,include.mean=include.mean,include.diagcov=include.diagcov),rho=10^{-10},zero=which(wi==0,arr.ind=TRUE))
     return(list(w=fit.mle$w,wi=fit.mle$wi))
   }
   if (algorithm=='fitcongraph'){
-    s <- mcov(x,covMethod=covMethod)
+    s <- mcov(x,include.mean=include.mean,include.diagcov=include.diagcov)
     adj <- wi!=0
     colnames(s) <- rownames(s) <- colnames(adj) <- rownames(adj) <- 1:ncol(x)
     fit.mle <- fitConGraph(adj,s,nrow(x))
@@ -1253,14 +1253,19 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
 ##' @param split1 samples from condition 1 used in screening step. 
 ##' @param split2 samples from condition 2 used in screening step. 
 ##' @param screen.meth screening procedure. default 'screen_bic.glasso'.
-##' @param compute.evals  method to compute weights in w-chi2 distribution.
+##' @param compute.evals method to compute weights in w-chi2 distribution.
 ##' default 'est2.my.ev3' ('est2.my.ev2'/'est2.ww.mat2 ').
 ##' @param algorithm.mleggm algorithm to compute MLE of GGM. default 'glasso_rho'.
 ##' @param covMethod default 'standard'.
-##' @param include.mean should the mean be included. we recommend to use include.mean=FALSE.
+##' @param include.mean should the mean be included. include.mean=FALSE assumes that we know mu1=mu2=0.
+##' include.mean=FALSE recommended.
+##' @param include.diagcov include.diagcov=FALSE assumes that diag(cov1)=diag(cov2)=1.
 ##' @param diag.invcov we recommend to use diag.invcov=TRUE.
 ##' TRUE (parameter of interest is invcov; diag(invcov) also considered) / FALSE (param of interest is par.cor; no diagonal)
+##' @param method.compquadform method to compute distribution function of w-sum-of-chi2. default='imhof'.
 ##' @param acc accuracy of p-value. see ?davies. default 1e-04
+##' @param epsabs see ?imhof.
+##' @param epsrel see ?imhof.
 ##' @param show.trace should warnings be showed ? default: FALSE
 ##' @param save.mle should MLEs be saved for output ? default: FALSE
 ##' @param ... additional arguments for screen.meth
@@ -1277,23 +1282,22 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
 ##' @export
 ##' @example ../diffnet-pkg_test.r
 diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glasso',
-                               compute.evals='est2.my.ev3',algorithm.mleggm='glasso_rho0',covMethod='standard',include.mean=FALSE,
+                               compute.evals='est2.my.ev3',algorithm.mleggm='glasso_rho0',include.mean=FALSE,
                                include.diagcov=FALSE,diag.invcov=TRUE,
                                method.compquadform='imhof',acc=1e-04,epsabs=1e-10,epsrel=1e-10,
                                show.trace=FALSE,save.mle=FALSE,...){
 
-  if((include.diagcov==FALSE)&(include.mean==TRUE)){
-    stop('option *include.diagcov=FALSE; include.mean=TRUE* is not supported')}
+  if((include.diagcov==FALSE)&(diag.invcov==FALSE)){
+    stop('option *include.diagcov=FALSE; diag.invcov==FALSE* is not supported')
+  }
   
   n1 <- nrow(x1)
   n2 <- nrow(x2)
   k <- ncol(x1)
 
-  if(diag.invcov){df.param <- k*(k+1)/2}
-  if(!diag.invcov){df.param <- k*(k-1)/2}
-  if(include.diagcov){df.param <- k*(k+1)/2}
-  if(!include.diagcov){df.param <- k*(k-1)/2}
-
+  df.param <- k*(k+1)/2
+  if(!diag.invcov|!include.diagcov){df.param <- k*(k-1)/2}
+  
   est.mu <- est.sig <- est.wi <- active <- list()#save est.mu;est.sig;est.wi;active
   
   ###############
@@ -1301,13 +1305,9 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
   ###############
   xx.train <- rbind(x1[split1,],x2[split2,])
   xx.valid <- rbind(x1[-split1,],x2[-split2,])
-  fit.screen <- eval(as.name(screen.meth))(xx.train,include.mean=include.mean,covMethod=covMethod,...)
+  fit.screen <- eval(as.name(screen.meth))(xx.train,include.mean=include.mean,...)
   act <- which(fit.screen$wi[upper.tri(diag(1,k),diag=TRUE)]!=0)
-  if(!diag.invcov){
-    ind.diag <- which(diag(1,k)[upper.tri(diag(1,k),diag=TRUE)]!=0)
-    act <- setdiff(act,ind.diag)
-  }
-  if(!include.diagcov){
+  if(!diag.invcov|!include.diagcov){
     ind.diag <- which(diag(1,k)[upper.tri(diag(1,k),diag=TRUE)]!=0)
     act <- setdiff(act,ind.diag)
   }
@@ -1318,22 +1318,22 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
     est.mu[['modJ']] <- rep(0,k)
   }
   if (length(active[['modJ']])==df.param){
-    w <- mcov(xx.valid,covMethod=covMethod)
+    w <- mcov(xx.valid,include.mean=include.mean,include.diagcov=include.diagcov)
     if(!diag.invcov){
       w <-w*sqrt(tcrossprod(diag(solve(w))))
     }
     if(!include.diagcov){
-       w <- mcov(scale(xx.valid),covMethod=covMethod)
+       w <- mcov(xx.valid,include.mean=include.mean,include.diagcov=include.diagcov)
      }
     est.sig[['modJ']] <- w
     est.wi[['modJ']] <- solve(w)
   }
   if (length(active[['modJ']])!=df.param){
     if(include.diagcov){
-      fit.mle <- mle.ggm(xx.valid,fit.screen$wi,algorithm=algorithm.mleggm,rho=fit.screen$rho.opt,covMethod=covMethod)
+      fit.mle <- mle.ggm(xx.valid,fit.screen$wi,algorithm=algorithm.mleggm,rho=fit.screen$rho.opt,include.mean=include.mean,include.diagcov=include.diagcov)
     }
     if(!include.diagcov){
-      fit.mle <- mle.ggm(scale(xx.valid),fit.screen$wi,algorithm=algorithm.mleggm,rho=fit.screen$rho.opt,covMethod=covMethod)
+      fit.mle <- mle.ggm(xx.valid,fit.screen$wi,algorithm=algorithm.mleggm,rho=fit.screen$rho.opt,include.mean=include.mean,include.diagcov=include.diagcov)
     }
     w <- fit.mle$w
     if(!diag.invcov){
@@ -1349,13 +1349,9 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
     split.train <- eval(as.name(paste('split',j,sep='')))
     xx.train <- eval(as.name(paste('x',j,sep='')))[split.train,]
     xx.valid <- eval(as.name(paste('x',j,sep='')))[-split.train,]
-    fit.screen <- eval(as.name(screen.meth))(xx.train,include.mean=include.mean,covMethod=covMethod,...)
+    fit.screen <- eval(as.name(screen.meth))(xx.train,include.mean=include.mean,...)
     act <- which(fit.screen$wi[upper.tri(diag(1,k),diag=TRUE)]!=0)
-    if(!diag.invcov){
-      ind.diag <- which(diag(1,k)[upper.tri(diag(1,k),diag=TRUE)]!=0)
-      act <- setdiff(act,ind.diag)
-    }
-    if(!include.diagcov){
+    if(!diag.invcov|!include.diagcov){
       ind.diag <- which(diag(1,k)[upper.tri(diag(1,k),diag=TRUE)]!=0)
       act <- setdiff(act,ind.diag)
     }
@@ -1366,22 +1362,22 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
       est.mu[[paste('modIpop',j,sep='')]] <- rep(0,k)
     }
     if (length(active[[paste('modIpop',j,sep='')]])==df.param){
-      w <- mcov(xx.valid,covMethod=covMethod)
+      w <- mcov(xx.valid,include.mean=include.mean,include.diagcov=include.diagcov)
       if(!diag.invcov){
         w <-w*sqrt(tcrossprod(diag(solve(w))))
       }
       if(!include.diagcov){
-        w <- mcov(scale(xx.valid),covMethod=covMethod)
+        w <- mcov(xx.valid,include.mean=include.mean,include.diagcov=include.diagcov)
       }
       est.sig[[paste('modIpop',j,sep='')]] <- w
       est.wi[[paste('modIpop',j,sep='')]] <- solve(w)
     }
     if (length(active[[paste('modIpop',j,sep='')]])!=df.param){
       if(include.diagcov){
-        fit.mle <- mle.ggm(xx.valid,fit.screen$wi,algorithm=algorithm.mleggm,rho=fit.screen$rho.opt,covMethod=covMethod)
+        fit.mle <- mle.ggm(xx.valid,fit.screen$wi,algorithm=algorithm.mleggm,rho=fit.screen$rho.opt,include.mean=include.mean,include.diagcov=include.diagcov)
       }
       if(!include.diagcov){
-        fit.mle <- mle.ggm(scale(xx.valid),fit.screen$wi,algorithm=algorithm.mleggm,rho=fit.screen$rho.opt,covMethod=covMethod)
+        fit.mle <- mle.ggm(xx.valid,fit.screen$wi,algorithm=algorithm.mleggm,rho=fit.screen$rho.opt,include.mean=include.mean,include.diagcov=include.diagcov)
       }
       w <- fit.mle$w
       if(!diag.invcov){
@@ -1427,7 +1423,8 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
 ##' @param b.splits number of splits
 ##' @param frac.split fraction train-data (screening) / test-data (cleaning)
 ##' @param screen.meth screening procedure. default 'screen_bic.glasso'.
-##' @param include.mean should the mean be included. we recommend to use include.mean=FALSE.
+##' @param include.mean should the mean be included. include.mean=FALSE assumes that we know mu1=mu2=0.
+##' @param include.diagcov include.diagcov=FALSE assumes that diag(cov1)=diag(cov2)=1.
 ##' @param gamma.min tuning parameter in p-value aggregation of Meinshausen,Meier,Buehlmann 2009.
 ##' @param compute.evals method to compute weights in w-chi2 distribution.
 ##' default 'est2.my.ev3' ('est2.my.ev2'/'est2.ww.mat2 ').
@@ -1435,7 +1432,10 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
 ##' @param covMethod default 'standard'.
 ##' @param diag.invcov we recommend to use diag.invcov=TRUE.
 ##' TRUE (parameter of interest is invcov; diag(invcov) also considered) / FALSE (param of interest is par.cor; no diagonal)
+##' @param method.compquadform method to compute distribution function of w-sum-of-chi2. default='imhof'.
 ##' @param acc accuracy of p-value. see ?davies. default 1e-04
+##' @param epsabs see ?imhof.
+##' @param epsrel see ?imhof.
 ##' @param show.trace should warnings be showed ? default: FALSE
 ##' @param save.mle should MLEs be saved for output ? default: FALSE
 ##' @param ... additional arguments for screen.meth
@@ -1458,7 +1458,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
 ##' @export
 ##' @example ../diffnet-pkg_test.r
 diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='screen_bic.glasso',include.mean=FALSE,include.diagcov=TRUE,
-                              gamma.min=0.05,compute.evals='est2.my.ev3',algorithm.mleggm='glasso_rho0',covMethod='standard',diag.invcov=TRUE,
+                              gamma.min=0.05,compute.evals='est2.my.ev3',algorithm.mleggm='glasso_rho0',diag.invcov=TRUE,
                               method.compquadform='imhof',acc=1e-04,epsabs=1e-10,epsrel=1e-10,show.trace=FALSE,save.mle=FALSE,...){
 
   ##????Important Notes: Pval can be NA, because...
@@ -1473,7 +1473,7 @@ diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='scre
                             split1 <- sample(1:n1,round(n1*frac.split),replace=FALSE)
                             split2 <- sample(1:n2,round(n2*frac.split),replace=FALSE)
                             res.singlesplit <- diffnet_singlesplit(x1,x2,split1,split2,screen.meth,
-                                                                   compute.evals,algorithm.mleggm,covMethod,include.mean,include.diagcov,diag.invcov,
+                                                                   compute.evals,algorithm.mleggm,include.mean,include.diagcov,diag.invcov,
                                                                    method.compquadform,acc,epsabs,epsrel,show.trace,save.mle,...)
                             
                           })
