@@ -587,6 +587,8 @@ diffregr_pval <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act,compute.eva
       }
       if(method.compquadform=='imhof'){
         pval.onesided <-imhof(teststat, lambda=weights.nulldistr,epsabs = epsabs, epsrel = epsrel, limit = 10000)$Qq
+        if(pval.onesided<0){pval.onesided <- 0}
+        if(pval.onesided>1){pval.onesided <- 1}
       }
       pval.twosided <- 2*min(pval.onesided,1-pval.onesided)
     }
