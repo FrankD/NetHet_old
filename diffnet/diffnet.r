@@ -25,8 +25,6 @@ library(GeneNet)
 library(huge)
 library(CompQuadForm)
 library(ggm)
-library(robustbase)
-library(robust)
 ##load C-code
 #dyn.load("../code/betamat_diffnet.so")
 
@@ -41,7 +39,7 @@ library(robust)
 #' 
 #' @references St\"adler, N. and Mukherjee, S. (2013). Two-Sample Testing in High-Dimensional Models.
 #' Preprint \url{http://arxiv.org/abs/1210.4584}.
-#' @import glasso mvtnorm parcor GeneNet huge CompQuadForm ggm robustbase robust
+#' @import glasso mvtnorm parcor GeneNet huge CompQuadForm ggm 
 #' @docType package
 #' @name DiffNet-package
 #' @useDynLib DiffNet
@@ -51,7 +49,20 @@ NULL
 ##-------Screening---------##
 #############################
 
-##' Lambda-grid 
+##' Lambdamax
+##'
+##' 
+##' @title Lambdamax
+##' @param x no descr
+##' @return no descr
+##' @author n.stadler
+lambda.max <- function(x){
+  n <- nrow(x)
+  s.var <- var(x)
+  diag(s.var) <- 0
+  return(n*max(abs(s.var))/2)
+}
+##' Lambda-grid (log scale)
 ##'
 ##' 
 ##' @title Lambda-grid
@@ -64,7 +75,7 @@ lambdagrid_mult <- function(lambda.min,lambda.max,nr.gridpoints){
     mult.const <- (lambda.max/lambda.min)^(1/(nr.gridpoints-1))
     return(lambda.min*mult.const^((nr.gridpoints-1):0))
 }
-##' Lambda-grid
+##' Lambda-grid (linear scale)
 ##'
 ##' 
 ##' @title Lambda-grid
@@ -74,7 +85,6 @@ lambdagrid_mult <- function(lambda.min,lambda.max,nr.gridpoints){
 ##' @return no descr
 ##' @author n.stadler
 lambdagrid_lin <- function(lambda.min,lambda.max,nr.gridpoints){
-    mult.const <- (lambda.max/lambda.min)^(1/(nr.gridpoints-1))
     return(seq(lambda.max,lambda.min,length=nr.gridpoints))
 }
 ##' Make grid
@@ -159,6 +169,38 @@ hugepath <- function(s,rholist,penalize.diagonal=NULL,trace=NULL){
   #return(list(wi=wi[,,length(fit.huge$lambda):1],w=w[,,length(fit.huge$lambda):1]))
   return(list(rholist=rholist,wi=wi[,,length(rholist):1],w=w[,,length(rholist):1]))
 }
+##' Additional thresholding
+##'
+##' 
+##' @title Additional thresholding
+##' @param n no descr
+##' @param wi no descr
+##' @param method no descr
+##' @param trunc.k no descr
+##' @return no descr
+##' @author n.stadler
+mytrunc.method <- function(n,wi,method='linear.growth',trunc.k=5){
+  p <- ncol(wi)
+  if (method=='none'){
+    return(list(wi=wi))
+  }
+  if(method=='linear.growth'){
+    wi.trunc <- wi
+    diag(wi.trunc) <- 0
+    nonzero <- min(2*ceiling(p*ceiling(n/trunc.k)/2),sum(wi.trunc!=0))
+    wi.trunc[-order(abs(wi.trunc),decreasing=TRUE)[1:nonzero]] <- 0
+    diag(wi.trunc) <- diag(wi)
+    return(list(wi=wi.trunc))
+  }
+  if(method=='sqrt.growth'){
+    wi.trunc <- wi
+    diag(wi.trunc) <- 0
+    nonzero <- min(2*ceiling(p*sqrt(n)/2),sum(wi.trunc!=0))
+    wi.trunc[-order(abs(wi.trunc),decreasing=TRUE)[1:nonzero]] <- 0
+    diag(wi.trunc) <- diag(wi)
+    return(list(wi=wi.trunc))
+  }
+}
 ##' Crossvalidation for GLasso 
 ##'
 ##' 8! lambda-grid has to be increasing (see glassopath)
@@ -206,51 +248,6 @@ cv.glasso <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se
     plotCV(lambda,cv,cv.error,se=se)
   }
   invisible(object)
-}
-##' Lambdamax
-##'
-##' 
-##' @title Lambdamax
-##' @param x no descr
-##' @return no descr
-##' @author n.stadler
-lambda.max <- function(x){
-  n <- nrow(x)
-  s.var <- var(x)
-  diag(s.var) <- 0
-  return(n*max(abs(s.var))/2)
-}
-##' Additional thresholding
-##'
-##' 
-##' @title Additional thresholding
-##' @param n no descr
-##' @param wi no descr
-##' @param method no descr
-##' @param trunc.k no descr
-##' @return no descr
-##' @author n.stadler
-mytrunc.method <- function(n,wi,method='linear.growth',trunc.k=5){
-  p <- ncol(wi)
-  if (method=='none'){
-    return(list(wi=wi))
-  }
-  if(method=='linear.growth'){
-    wi.trunc <- wi
-    diag(wi.trunc) <- 0
-    nonzero <- min(2*ceiling(p*ceiling(n/trunc.k)/2),sum(wi.trunc!=0))
-    wi.trunc[-order(abs(wi.trunc),decreasing=TRUE)[1:nonzero]] <- 0
-    diag(wi.trunc) <- diag(wi)
-    return(list(wi=wi.trunc))
-  }
-  if(method=='sqrt.growth'){
-    wi.trunc <- wi
-    diag(wi.trunc) <- 0
-    nonzero <- min(2*ceiling(p*sqrt(n)/2),sum(wi.trunc!=0))
-    wi.trunc[-order(abs(wi.trunc),decreasing=TRUE)[1:nonzero]] <- 0
-    diag(wi.trunc) <- diag(wi)
-    return(list(wi=wi.trunc))
-  }
 }
 ##' Screen_cv.glasso
 ##'
@@ -338,7 +335,6 @@ bic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package
   if(include.mean==FALSE){
     Mu <-  rep(0,ncol(x))
   }
-  
   samplecov <- var(x)
 
   if(is.null(lambda)){
@@ -535,12 +531,11 @@ screen_aic.glasso <- function(x,include.mean=TRUE,length.lambda=20,lambdamin.rat
 ##' @title Screen_lasso
 ##' @param x no descr
 ##' @param include.mean no descr
-##' @param covMethod no descr
 ##' @param trunc.method no descr
 ##' @param trunc.k no descr
 ##' @return no descr
 ##' @author n.stadler
-screen_lasso <- function(x,include.mean=NULL,covMethod=NULL,
+screen_lasso <- function(x,include.mean=NULL,
                          trunc.method='linear.growth',trunc.k=5){
   
   wi <- adalasso.net(x, k = 10,use.Gram=FALSE,both=FALSE,verbose=FALSE)$pcor.lasso
@@ -677,7 +672,7 @@ screen_mb2 <- function(x,include.mean=NULL,length.lambda=20,
 ##' @param trunc.k no descr
 ##' @return no descr
 ##' @author n.stadler
-screen_full <- function(x,include.mean=NULL,covMethod=NULL,length.lambda=NULL,trunc.method=NULL,trunc.k=NULL){
+screen_full <- function(x,include.mean=NULL,length.lambda=NULL,trunc.method=NULL,trunc.k=NULL){
  wi <- diag(1,ncol(x))
  list(rho.opt=NULL,wi=wi)
 }

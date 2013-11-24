@@ -1,6 +1,6 @@
 ##Test diffnet.r (computation weights of w-chi2; diffnet_multisplit)
 ##
-##22.11.2013: diffnet.r has some changes. mcov: old results are obtained with covMethod='var'. bic.glasso, aic.glasso: different degree of freedom for include.mean=TRUE/FALSE (in this file)  
+##22.11.2013: changes in diffnet.r. mcov: old results are obtained with covMethod='var'. bic.glasso, aic.glasso: different degree of freedom for include.mean=TRUE/FALSE (this has no consequence for the results in this file)  
 
 rm(list=ls())
 source('twosample_diffnet-20072012.R')
@@ -21,9 +21,9 @@ sessionInfo()
 ## loaded via a namespace (and not attached):
 ## [1] tools_2.15.2
 
-#################
-##Generate Data##
-#################
+##################
+###Generate data##
+##################
 
 ##Model
 k <- 10
@@ -52,7 +52,11 @@ act1 <- which(fit.cv1$wi[upper.tri(Sig,diag=TRUE)]!=0)
 act2 <- which(fit.cv2$wi[upper.tri(Sig,diag=TRUE)]!=0)
 act <- which(fit.cv$wi[upper.tri(Sig,diag=TRUE)]!=0)
 
-##Compute weights (old function)
+#####################
+###Compute weights###
+#####################
+
+##Old function
 source('twosample_diffnet-20072012.R')
 p <- (k+1)*k/2
 imat <- inf.mat(Sig,1:p)
@@ -74,7 +78,7 @@ e1 <- ww.mat(imat,act,act1,act2);round(sort(e1$eval),6)
 ## [85]  1.000000  1.000000  1.000000  1.000000  1.000000  1.000000  1.000000
 ## [92]  1.000000  1.000000  1.000000
 
-##Compute weights (new function)
+##New function
 source('diffnet.r')
 dyn.load("../code/betamat_diffnet.so")
 p <- k+(k+1)*k/2
@@ -147,7 +151,12 @@ est2.my.ev3(Sig,Sig,Sig,act1=c(1:2,11:13),act2=1:4,act=1:15,include.mean=FALSE)$
 
 e5 <- est2.ww.mat2(Sig,Sig,Sig,act1,act2,act,include.mean=TRUE);round(sort(e5$eval),6)
 
-##Test Pval-Aggregation (old function)
+
+##################
+###Test DiffNet###
+##################
+
+##Old function
 set.seed(1)
 source('twosample_diffnet-20072012.R')
 fit.pval1 <- twosample_diffnet2(xx1,xx2,b.splits=5,frac.split=1/2,screen.lambda='lambda.cv',gamma.min=0.05,compute.evals='est2.my.ev2',diag.invcov=TRUE,lambda=la,folds=10)
@@ -155,29 +164,28 @@ fit.pval1$pval.onesided# 0.37426285 0.06497231 0.07142485 0.20118175 0.15120453
 fit.pval1$aggpval.onesided# 1
 fit.pval1$LR.last# 42.14646
 
-##Test Pval-Aggregation (new function)
+##New function; results from old function are obtained with covMethod='var'
 set.seed(1)
 source('diffnet.r')
 dyn.load("../code/betamat_diffnet.so")
 fit.pval2 <- diffnet_multisplit(xx1,xx2,b.splits=5,include.mean=FALSE,screen.meth='cv.glasso',algorithm.mleggm='glasso_rho0',lambda=la,compute.evals='est2.my.ev2',method.compquadform='davies')
-fit.pval2$pval.onesided# 0.37426285 0.06497231 0.07142485 0.20118175 0.15120453
+fit.pval2$pval.onesided# 0.35874044 0.05675338 0.06276373 0.19252919 0.14238794
 fit.pval2$aggpval.onesided# 1
-fit.pval2$teststat#31.54678 53.48060 41.56653 42.62735 42.14646
+fit.pval2$teststat# 31.93810 54.26551 42.30442 42.94893 42.53156
 
+##include.mean=TRUE
 set.seed(1)
 source('diffnet.r')
-dyn.load("../code/betamat_diffnet.so")
 fit.pval3 <- diffnet_multisplit(xx1,xx2,b.splits=5,include.mean=TRUE,screen.meth='cv.glasso',algorithm.mleggm='glasso_rho0',lambda=la,compute.evals='est2.my.ev2',method.compquadform='davies')
-fit.pval3$pval.onesided# 0.41430313 0.03970084 0.04280262 0.24598699 0.08501593
-fit.pval3$teststat# 38.72533 68.02944 56.17720 51.79453 57.12753
-str(fit.pval3)
+fit.pval3$pval.onesided# 0.41142976 0.03920198 0.04224728 0.24383502 0.08400404
+fit.pval3$teststat# 38.80127 68.10481 56.25340 51.87066 57.20336
 
+##compute.evals='est2.my.ev3'
 set.seed(1)
 source('diffnet.r')
-dyn.load("../code/betamat_diffnet.so")
 fit.pval4 <- diffnet_multisplit(xx1,xx2,b.splits=5,include.mean=TRUE,screen.meth='cv.glasso',algorithm.mleggm='glasso_rho0',lambda=la,compute.evals='est2.my.ev3',save.mle=TRUE,method.compquadform='davies')
-fit.pval4$pval.onesided# 0.41396187 0.03941045 0.04237682 0.24559838 0.08484810
-fit.pval4$teststat#  38.72533 68.02944 56.17720 51.79453 57.12753
-str(fit.pval4)
+fit.pval4$pval.onesided# 0.41108191 0.03891415 0.04182479 0.24344562 0.08383726
+fit.pval4$teststat# 38.80127 68.10481 56.25340 51.87066 57.20336
+
 
 

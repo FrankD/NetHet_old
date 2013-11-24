@@ -14,15 +14,42 @@
 ###         - 09082012: add single-split method
 ###         - 11122012: diffregr.r originates from twosample_highdimregr-09082012.r
 
-##Packages
+#####################
+##Required Packages##
+#####################
 library(mvtnorm)
 library(glmnet)
 library(CompQuadForm)
+
+#' DiffRegr-package
+#'
+#' Differential regression (DiffRegr) performs formal two-sample testing between high-dimensional
+#' linear regression models.
+#' 
+#'
+#' DiffRegr provides test-statistic, p-values. 
+#' 
+#' 
+#' @references St\"adler, N. and Mukherjee, S. (2013). Two-Sample Testing in High-Dimensional Models.
+#' Preprint \url{http://arxiv.org/abs/1210.4584}.
+#' @import glmnet mvtnorm CompQuadForm 
+#' @docType package
+#' @name DiffRegr-package
+#' @useDynLib DiffRegr
+NULL
 
 #######################
 ##-----Screening-----##
 #######################
 
+##' Screening using cross-validation
+##'
+##' 'lambda.min'-rule
+##' @title Screening using cross-validation
+##' @param x no descr
+##' @param y no descr
+##' @return no descr
+##' @author n.stadler
 lasso.cvmin <- function(x,y){
   fit.cv <- cv.glmnet(x,y)
   beta <- as.numeric(coef(fit.cv,s='lambda.min')[-1])
@@ -32,14 +59,32 @@ lasso.cvmin <- function(x,y){
   return(which(beta!=0))
 }
 
-##' Screening using crossvalidation & truncation
+##' Screening using cross-validation 
 ##'
-##' Computes crossvalidated coefficients; if more nonzeros than n/k then truncate smallest coefficients
-##' @title Screening using crossvalidation & truncation
-##' @param x 
-##' @param y 
-##' @param k 
-##' @return 
+##' 'lambda.1se'-rule
+##' @title Screening using cross-validation
+##' @param x no descr
+##' @param y no descr
+##' @return no descr
+##' @author n.stadler
+lasso.cv1se <- function(x,y){
+  fit.cv <- cv.glmnet(x,y)
+  beta <- as.numeric(coef(fit.cv,s='lambda.1se')[-1])
+  p <- length(beta)
+  d <- min(p,n)
+  beta[-order(abs(beta),decreasing=TRUE)[1:d]] <- 0
+  return(which(beta!=0))
+}
+
+##' Screening using cross-validation & n/k-truncation
+##'
+##' Computes cross-validated regression coefficients
+##' if more nonzeros than n/k, then truncate the smallest coefficients
+##' @title Screening using cross-validation & n/k-truncation
+##' @param x no descr
+##' @param y no descr
+##' @param k no descr
+##' @return no descr
 ##' @author n.stadler
 lasso.cvtrunc <- function(x,y,k.trunc=5){
   n <- nrow(x)
@@ -51,15 +96,14 @@ lasso.cvtrunc <- function(x,y,k.trunc=5){
   return(which(beta!=0))
 }
 
-lasso.cv1se <- function(x,y){
-  fit.cv <- cv.glmnet(x,y)
-  beta <- as.numeric(coef(fit.cv,s='lambda.1se')[-1])
-  p <- length(beta)
-  d <- min(p,n)
-  beta[-order(abs(beta),decreasing=TRUE)[1:d]] <- 0
-  return(which(beta!=0))
-}
-
+##' Screening using cross-validation & sqrt-truncation 
+##'
+##' 
+##' @title Screening using cross-validation & sqrt-truncation 
+##' @param x no descr
+##' @param y no descr
+##' @return no descr
+##' @author n.stadler
 lasso.cvsqrt <- function(x,y){
   n <- nrow(x)
   fit.cv <- cv.glmnet(x,y)
@@ -70,6 +114,15 @@ lasso.cvsqrt <- function(x,y){
   return(which(beta!=0))
 }
 
+##' Screening using cross-validation & fixed number of predictors
+##'
+##' 
+##' @title Screening using cross-validation & fixed number of predictors
+##' @param x no descr
+##' @param y no descr
+##' @param no.predictors no descr
+##' @return no descr
+##' @author n.stadler
 lasso.cvfix <- function(x,y,no.predictors=10){
   n <- nrow(x)
   fit.cv <- cv.glmnet(x,y)
@@ -83,6 +136,7 @@ lasso.cvfix <- function(x,y,no.predictors=10){
 ##############################
 ##--------P-VALUES----------##
 ##############################
+
 logratio <- function(y1,y2,y,xx1,xx2,xx,beta1,beta2,beta){
   ##Compute 2*log-likelihood ratio
   ##Input:
