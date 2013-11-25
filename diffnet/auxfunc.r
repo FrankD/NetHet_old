@@ -1,3 +1,44 @@
+
+sparse_conc_new<- function(p,K,s=p,s.common=p,magn.nz=0.9,magn.nz.common=0.9,condnum=p){
+
+  #####generate adjacency matrices
+  ind.upper.tri <- which(upper.tri(matrix(NA,p,p)))
+  B.list <- list()
+  B <- matrix(0,p,p)
+  comp.nonzero <- tot.nonzero <- sample(ind.upper.tri,size=s,replace=FALSE)
+  same.nonzero <- sample(comp.nonzero,size=s.common,replace=FALSE)
+  remain.zero <- setdiff(ind.upper.tri,comp.nonzero)
+  B[same.nonzero] <- magn.nz.common
+  B[setdiff(comp.nonzero,same.nonzero)] <- magn.nz
+  B.list[[1]] <- B+t(B)
+  if (K>1){
+    for (k in 2:K){
+      B <- matrix(0,p,p)
+      comp.nonzero <- c(same.nonzero,sample(remain.zero,size=s-s.common,replace=FALSE))
+      tot.nonzero <- union(tot.nonzero,comp.nonzero)
+      B[same.nonzero] <- magn.nz.common
+      B[setdiff(comp.nonzero,same.nonzero)] <- magn.nz
+      B.list[[k]] <- B+t(B)
+      remain.zero <- setdiff(ind.upper.tri,tot.nonzero)
+    }
+  }
+
+  ######compute concentration matrices
+  SigInv <- list()
+  for (k in 1:K){
+    siginv <- B.list[[k]]
+    e.min <- min(eigen(siginv)$values)
+    siginv <- siginv+diag(abs(e.min)+0.1,p)
+    ev <- eigen(siginv)$values
+    del <- (max(ev)-min(ev)*condnum)/(condnum-1)
+    siginv <- siginv+diag(del,p)
+    SigInv[[k]] <- siginv
+    cat('ev.min: ',min(eigen(siginv)$values),'\n')
+    cat('condnum: ',max(abs(eigen(siginv)$values))/min(abs(eigen(siginv)$values)),'\n')
+  }
+  return(SigInv)
+}
+
 sparse_conc <- function(p,K,s,s.common,magn.nz=0.5,scale.parcor=TRUE,condnum=p){
     ##Generate K different Sparse Inverse Covariance-Matrices of dimension p:
     ##
