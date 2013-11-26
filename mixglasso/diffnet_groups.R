@@ -9,7 +9,7 @@
 #' 
 #' @references St\"adler, N. and Mukherjee, S. (2013). Two-Sample Testing in High-Dimensional Models.
 #' Preprint \url{http://arxiv.org/abs/1210.4584}.
-#' @import multicore DiffNet
+#' @import multicore DiffNet ICSNP
 #' @docType package
 #' @name DiffNetGroup-package
 #' @useDynLib DiffNetGroup
@@ -20,6 +20,7 @@ NULL
 #####################
 library(multicore)
 library(DiffNet)
+library(ICSNP)
 
 ######################
 ##P-value adjustment##
