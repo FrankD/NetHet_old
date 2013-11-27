@@ -139,12 +139,12 @@ par.diffnet_groups_multisplit<- function(x,groups,no.splits=50,method.p.adjust='
 }
 
 convert2mat <- function(vec,groups){
-  nr.groups <- length(levels(groups))
+  nr.groups <- length(groups)
   nr.comp <- 0.5*(nr.groups)*(nr.groups-1)
   uptri.rownr <- row(matrix(NA,nr.groups,nr.groups))[upper.tri(matrix(NA,nr.groups,nr.groups),diag=FALSE)]
   uptri.colnr <- col(matrix(NA,nr.groups,nr.groups))[upper.tri(matrix(NA,nr.groups,nr.groups),diag=FALSE)]
   mat <- matrix(0,nr.groups,nr.groups)
-  colnames(mat) <- rownames(mat) <- levels(groups)
+  colnames(mat) <- rownames(mat) <- groups
   for (i in 1:nr.comp){
     cl1 <- uptri.rownr[i]
     cl2 <- uptri.colnr[i]
@@ -152,6 +152,34 @@ convert2mat <- function(vec,groups){
   }
   mat <- mat+t(mat)
   return(mat)
+}
+
+trace.mat <- function(m){
+  sum(diag(m))
+}
+##' High-Dim Two-Sample Test (Srivastava, 2006)
+##'
+##' .. content for \details{} ..
+##' @title 
+##' @param x1 
+##' @param x2 
+##' @return 
+##' @author n.stadler
+test.sd <- function(x1,x2){
+  k <- ncol(x1)
+  N1 <- nrow(x1)
+  N2 <- nrow(x2)
+  n <- N1+N2-2
+  mu1 <- colMeans(x1)
+  mu2 <- colMeans(x2)
+  pooled.cov <-(var(x1)*(N1-1)+var(x2)*(N2-1))/n
+  d.pooled.cov <- diag(pooled.cov)
+  cormat <- diag(1/sqrt(d.pooled.cov))%*%pooled.cov%*%diag(1/sqrt(d.pooled.cov))
+  c.const <- 1+trace.mat(cormat%*%cormat)/(k^{3/2})
+  teststat <- ((N1*N2)/(N1+N2))*crossprod(mu1-mu2,diag(1/d.pooled.cov))%*%(mu1-mu2)-(n*k/(n-2))
+  teststat <- teststat/sqrt(2*(trace.mat(cormat%*%cormat)-(k^2)/n)*c.const)
+  
+  list(teststat=teststat,pval=1-pnorm(teststat))
 }
 
 test.sd_groups <- function(x,groups,method.p.adjust='bonferroni'){
