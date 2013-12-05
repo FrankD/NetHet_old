@@ -1,44 +1,89 @@
+library(huge)
 
-sparse_conc_new<- function(p,K,s=p,s.common=p,magn.nz=0.9,magn.nz.common=0.9,condnum=p){
+####################################
+#####Generate networks (invcov)#####
+####################################
 
-  #####generate adjacency matrices
-  ind.upper.tri <- which(upper.tri(matrix(NA,p,p)))
-  B.list <- list()
-  B <- matrix(0,p,p)
-  comp.nonzero <- tot.nonzero <- sample(ind.upper.tri,size=s,replace=FALSE)
-  same.nonzero <- sample(comp.nonzero,size=s.common,replace=FALSE)
-  remain.zero <- setdiff(ind.upper.tri,comp.nonzero)
-  B[same.nonzero] <- magn.nz.common
-  B[setdiff(comp.nonzero,same.nonzero)] <- magn.nz
-  B.list[[1]] <- B+t(B)
-  if (K>1){
-    for (k in 2:K){
-      B <- matrix(0,p,p)
-      comp.nonzero <- c(same.nonzero,sample(remain.zero,size=s-s.common,replace=FALSE))
-      tot.nonzero <- union(tot.nonzero,comp.nonzero)
-      B[same.nonzero] <- magn.nz.common
-      B[setdiff(comp.nonzero,same.nonzero)] <- magn.nz
-      B.list[[k]] <- B+t(B)
-      remain.zero <- setdiff(ind.upper.tri,tot.nonzero)
+##' Generate networks (invcov) for 2sample testing
+##'
+##' 
+##' @title Generate networks (invcov) for 2sample testing
+##' @param p number of nodes
+##' @param graph 'random' or 'hub'
+##' @param K K=1 (null hypothesis) or K=2 (alternative hypothesis)
+##' @param g number of hubs (only for graph='hub')
+##' @param n.nz number of edges per graph (only for graph='random')
+##' @param n.nz.common number of edges incommon between graphs (only for graph='random')
+##' @param magn.nz.diff 
+##' @param magn.nz.common 
+##' @param magn.diag 
+##' @param emin default=0.1 (see ?huge.generator)
+##' @return 
+##' @author n.stadler
+generate.2networks<- function(p,K=2,graph='random',n.nz=rep(p,2),n.nz.common=p,n.hub=2,magn.nz.diff=0.9,magn.nz.common=0.9,magn.diag=0,emin=0.1){
+
+  if(graph=='random'){
+    if(min(n.nz)<n.nz.common){stop('min(n.nz) < n.nz.common')}
+    ind.upper.tri <- which(upper.tri(matrix(NA,p,p)))
+    B.list <- list()
+    B1 <- matrix(0,p,p)
+    nz1 <- sample(ind.upper.tri,size=n.nz[1],replace=FALSE)
+    nz12 <- sample(nz1,size=n.nz.common,replace=FALSE)
+    remain.zero <- setdiff(ind.upper.tri,nz1)
+    B1[nz12] <- magn.nz.common
+    B1[setdiff(nz1,nz12)] <- magn.nz.diff
+    B.list[[1]] <- B1+t(B1)
+
+    if(K==2){
+      B2 <- matrix(0,p,p)
+      nz2 <- c(nz12,sample(remain.zero,size=n.nz[2]-n.nz.common,replace=FALSE))
+      B2[nz2] <- magn.nz.common
+      B2[setdiff(nz2,nz12)] <- magn.nz.diff
+      B.list[[2]] <- B2+t(B2)
     }
   }
-
-  ######compute concentration matrices
+  
+  if(graph=='hub'){
+    B.list <- list()
+    theta.hub <- as.matrix(huge.generator(d = p, graph = "hub",g=n.hub)$theta)##mk hub-network
+    B1 <- B2 <- matrix(0,p,p)
+    indhub.diff <- 1:floor(p/n.hub)##identify variables involved in 1st hub
+    if(length(indhub.diff)==1){stop('1st hub has only 1 variable; choose smaller number of hubs')}
+    B1[-indhub.diff,-indhub.diff] <- theta.hub[-indhub.diff,-indhub.diff]*magn.nz.common
+    B.list[[1]] <- B1
+    if(K==2){
+      B2[-indhub.diff,-indhub.diff] <- theta.hub[-indhub.diff,-indhub.diff]*magn.nz.common
+      B2[indhub.diff,indhub.diff] <- theta.hub[indhub.diff,indhub.diff]*magn.nz.diff
+      B.list[[2]] <- B2
+    }
+  }
+  
+  ####compute (positive definite) concentration matrices
   SigInv <- list()
   for (k in 1:K){
     siginv <- B.list[[k]]
     e.min <- min(eigen(siginv)$values)
-    siginv <- siginv+diag(abs(e.min)+0.1,p)
-    ev <- eigen(siginv)$values
-    del <- (max(ev)-min(ev)*condnum)/(condnum-1)
-    siginv <- siginv+diag(del,p)
+    siginv <- siginv+diag(abs(e.min)+emin+magn.diag,p)
     SigInv[[k]] <- siginv
     cat('ev.min: ',min(eigen(siginv)$values),'\n')
     cat('condnum: ',max(abs(eigen(siginv)$values))/min(abs(eigen(siginv)$values)),'\n')
   }
   return(SigInv)
 }
-
+    
+##' Generate random concentration matrices with overlap
+##'
+##' Similar to Rothman 2008; fixed condition number
+##' @title Generate random concentration matrices with overlap
+##' @param p number of nodes
+##' @param K number of concentration matrices
+##' @param s number of edges
+##' @param s.common number of edges in common 
+##' @param magn.nz magnitude of non-zeros
+##' @param scale.parcor return parcor ?
+##' @param condnum value of concentration matrix 
+##' @return SigInv (list)
+##' @author n.stadler
 sparse_conc <- function(p,K,s,s.common,magn.nz=0.5,scale.parcor=TRUE,condnum=p){
     ##Generate K different Sparse Inverse Covariance-Matrices of dimension p:
     ##
@@ -47,15 +92,12 @@ sparse_conc <- function(p,K,s,s.common,magn.nz=0.5,scale.parcor=TRUE,condnum=p){
     ##-s.common locations of non-zero entries are common among all SigInv;
     ## whereas s-s.common non-zero entries are at different locations
     
-
   if(s==0){
     SigInv <- list()
     for (k in 1:K){
       SigInv[[k]] <- diag(1,p)
     }
   }else{
-    
-
     ind.upper.tri <- which(upper.tri(matrix(NA,p,p)))
     
     B.list <- list()
@@ -87,77 +129,62 @@ sparse_conc <- function(p,K,s,s.common,magn.nz=0.5,scale.parcor=TRUE,condnum=p){
       }
     }
   }
-    
-    return(SigInv)
+  return(SigInv)
 }
 
-## sparse_mat<- function(p,K,s,s.common,magn.nz=0.5,myseed=1){
-##     ##Generate K different Sparse Inverse Covariance-Matrices of dimension p:
-##     ##
-##     ##-
-##     ##-for each SigInv there are s non-zero entries
-##     ##-s.common locations of non-zero entries are common among all SigInv;
-##     ## whereas s-s.common non-zero entries are at different locations
+##' Generate random concentration matrices with overlap
+##'
+##' similar to huge.generator
+##' @title Generate random concentration matrices with overlap
+##' @param p number of nodes
+##' @param K number of siginv's
+##' @param s number of edges
+##' @param s.common number of common edges
+##' @param magn.nz.diff magnitude of different nonzeros
+##' @param magn.nz.common  magnitude of common nonzeros
+##' @param magn.diag see ?huge.generator
+##' @param emin see ?huge.generator
+##' @return SigInv (list)
+##' @author n.stadler
+sparse_conc_v2<- function(p,K,s=p,s.common=p,magn.nz.diff=0.9,magn.nz.common=0.9,magn.diag=0,emin=0.01){
 
-##   set.seed(myseed)
-  
-##   if(s==0){
-##     SigInv <- list()
-##     for (k in 1:K){
-##       SigInv[[k]] <- diag(1,p)
-##     }
-##   }else{
-    
+  #####generate adjacency matrices
+  ind.upper.tri <- which(upper.tri(matrix(NA,p,p)))
+  B.list <- list()
+  B <- matrix(0,p,p)
+  comp.nonzero <- tot.nonzero <- sample(ind.upper.tri,size=s,replace=FALSE)
+  same.nonzero <- sample(comp.nonzero,size=s.common,replace=FALSE)
+  remain.zero <- setdiff(ind.upper.tri,comp.nonzero)
+  B[same.nonzero] <- magn.nz.common
+  B[setdiff(comp.nonzero,same.nonzero)] <- magn.nz.diff
+  B.list[[1]] <- B+t(B)
+  if (K>1){
+    for (k in 2:K){
+      B <- matrix(0,p,p)
+      comp.nonzero <- c(same.nonzero,sample(remain.zero,size=s-s.common,replace=FALSE))
+      tot.nonzero <- union(tot.nonzero,comp.nonzero)
+      B[same.nonzero] <- magn.nz.common
+      B[setdiff(comp.nonzero,same.nonzero)] <- magn.nz.diff
+      B.list[[k]] <- B+t(B)
+      remain.zero <- setdiff(ind.upper.tri,tot.nonzero)
+    }
+  }
+  ######compute concentration matrices
+  SigInv <- list()
+  for (k in 1:K){
+    siginv <- B.list[[k]]
+    e.min <- min(eigen(siginv)$values)
+    siginv <- siginv+diag(abs(e.min)+emin+magn.diag,p)
+    SigInv[[k]] <- siginv
+    cat('ev.min: ',min(eigen(siginv)$values),'\n')
+    cat('condnum: ',max(abs(eigen(siginv)$values))/min(abs(eigen(siginv)$values)),'\n')
+  }
+  return(SigInv)
+}
 
-##     ind.upper.tri <- which(upper.tri(matrix(NA,p,p)))
-    
-##     B.list <- list()
-##     B <- matrix(0,p,p)
-##     comp.nonzero <- tot.nonzero <- sample(ind.upper.tri,size=s,replace=FALSE)
-##     same.nonzero <- sample(comp.nonzero,size=s.common,replace=FALSE)
-##     remain.zero <- setdiff(ind.upper.tri,comp.nonzero)
-##     B[comp.nonzero] <- magn.nz
-##     B.list[[1]] <- B+t(B)
-##     if (K>1){
-##       for (k in 2:K){
-##         B <- matrix(0,p,p)
-##         comp.nonzero <- c(same.nonzero,sample(remain.zero,size=s-s.common,replace=FALSE))
-##         tot.nonzero <- union(tot.nonzero,comp.nonzero)
-##         B[comp.nonzero] <- magn.nz
-##         B.list[[k]] <- B+t(B)
-##         remain.zero <- setdiff(ind.upper.tri,tot.nonzero)
-##       }
-##     }
-
-##     SigInv <- list()
-##     for (k in 1:K){
-##       SigInv[[k]] <- B.list[[k]]
-##       diag(SigInv[[k]]) <- 1
-##     }
-##   }
-    
-##   return(SigInv)
-## }
-
-## sparse_conc_v2<- function(p,K,s,s.common,myseed=1){
-
-##   my.magnnz <- 0
-##   minev <- 1
-##   while(minev>10^-3){
-##     my.magnnz <- my.magnnz+0.01
-##     spmat<- sparse_mat(p=p,K=K,s=s,s.common=s.common,magn.nz=my.magnnz,myseed=myseed)
-##     ev <- sapply(spmat,function(x){min(eigen(x)$values)})
-##     minev <- min(ev)
-##   }
-  
-##   magnnz.max <- my.magnnz-0.01
-##   set.seed(myseed)
-##   spmat<- sparse_mat(p=p,K=K,s=s,s.common=s.common,magn.nz=magnnz.max)
-##   ev <- sapply(spmat,function(x){min(eigen(x)$values)});cat('min eigenvalue:',min(ev),'\n');cat('magnnz.max:',magnnz.max,'\n')
-##   return(spmat)
-## }
-
-
+####################################
+#####Other HighdimT2 tests     #####
+####################################
 
 ##' High-Dim Two-Sample Test based on multiple correction
 ##'
@@ -211,11 +238,11 @@ test.sd <- function(x1,x2){
   list(teststat=teststat,pval=1-pnorm(teststat))
 }
 
-######################
-##Plotting functions##
-######################
+############################
+#####Plotting functions#####
+############################
 
-##False positive -, True positive rate, ROC curve
+#####False positive -, True positive rate, ROC curve
 my.fpr <- function(res,index=1:3,signi=0.05){
   return(mean(res[index]<signi))
 }
