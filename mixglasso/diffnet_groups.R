@@ -1,10 +1,10 @@
 
 #' DiffNetGroup-package
 #'
-#' Performs Differential network (DiffNet) analyses for groups...
+#' Performs Differential network (DiffNet) analysis for different disease comparsions
 #' 
 #'
-#' DiffNet provides ....
+#' 
 #' 
 #' 
 #' @references St\"adler, N. and Mukherjee, S. (2013). Two-Sample Testing in High-Dimensional Models.
@@ -15,16 +15,24 @@
 #' @useDynLib DiffNetGroup
 NULL
 
-#####################
-##Required Packages##
-#####################
+###########################
+#####Required Packages#####
+###########################
 library(multicore)
 library(DiffNet)
 library(ICSNP)
 
-######################
-##P-value adjustment##
-######################
+############################
+#####P-value adjustment#####
+############################
+##' pvalue correction
+##'
+##' 
+##' @title pvalue correction
+##' @param p vector of pvalues
+##' @param method fdr, bonferroni, none
+##' @return adjusted pvalues
+##' @author n.stadler
 my.p.adjust <- function(p,method='fdr'){
   if(method=='fdr'){
     return(p.adjust(p,method='fdr'))
@@ -39,9 +47,17 @@ my.p.adjust <- function(p,method='fdr'){
     return(qvalue(p)$qvalues)
   }
 }
-#######################
-##p-value aggregation##
-#######################
+#############################
+#####p-value aggregation#####
+#############################
+##' pvalue aggregation (Meinshausen & Buehlmann)
+##'
+##' 
+##' @title pvalue aggregation (Meinshausen & Buehlmann)
+##' @param pval no decr
+##' @param gamma.min no decr
+##' @return no decr
+##' @author n.stadler
 aggpval <- function(pval,gamma.min=0.05){
   
   min(1,(1-log(gamma.min))*optimize(
@@ -50,9 +66,19 @@ aggpval <- function(pval,gamma.min=0.05){
                                     }
                                     ,interval=c(gamma.min,1),maximum=FALSE)$objective)
 }
-################
-##single-split##
-################
+######################
+#####single-split#####
+######################
+##' diffnet analysis for different disease comparisons for one a single data-split
+##'
+##'
+##' @title diffnet analysis for different disease comparisons for one a single data-split
+##' @param x data-matrix (rows: samples; cols: proteins)
+##' @param groups vector specifying which sample belongs to which disease (factor)
+##' @param method.p.adjust no descr
+##' @param ... no descr
+##' @return no descr
+##' @author n.stadler
 diffnet_groups_singlesplit<- function(x,groups,method.p.adjust="bonferroni",...){
   p <- ncol(x)
   nr.groups <- length(levels(groups))
@@ -88,9 +114,25 @@ diffnet_groups_singlesplit<- function(x,groups,method.p.adjust="bonferroni",...)
   cat('pvals: ',pvals.corrected,'\n')
   return(list(pvals=pvals.corrected,teststat=res['teststat',],teststat.aic=res['teststat.aic',],teststat.aic.sc=res['teststat.aic.sc',],rel.edgeinter=res['rel.edgeinter',],dfu=res['dfu',],dfv=res['dfv',],dfuv=res['dfuv',]))
 }
-###############
-##multi-split##
-###############
+#####################
+#####multi-split#####
+#####################
+##' diffnet analysis for different disease comparisons for many data-split
+##'
+##' this is the main function for performing the diffnet analysis of pancan methods paper
+##' @title diffnet analysis for different disease comparisons for many data-split
+##' @param x data-matrix (rows: samples; cols: proteins); take non-centered, non-scaled data-matrix
+##' @param groups vector specifying which sample belongs to which disease (factor)
+##' @param no.splits number of data-splits. default=50
+##' @param method.p.adjust method for p-value correction (default='bonferroni). paper uses 'fdr'
+##' @param order.adj.agg order of p-value adjustment and p-value aggregation (default='adj-agg'). paper uses 'agg-adj'
+##' @param ... no descr
+##' @return list of output
+##' \item{pvalmed}{median aggregated p-values. this are the pvalues reported in the paper (with option 'fdr' and 'agg-adj') }
+##' \item{pval}{matrix of pvalues for all sample-splits (not corrected and not aggregated)}
+##' \item{teststatmed}{median aggregated test-statistics}
+##' \item{teststat}{test-statistics for all sample-splits}
+##' @author n.stadler
 par.diffnet_groups_multisplit<- function(x,groups,no.splits=50,method.p.adjust='bonferroni',order.adj.agg='adj-agg',...){
 
   res <- mclapply(seq(no.splits),
@@ -137,7 +179,18 @@ par.diffnet_groups_multisplit<- function(x,groups,no.splits=50,method.p.adjust='
               dfuvmed=apply(res.dfuv,1,median,na.rm=TRUE),
               dfuv=res.dfuv))
 }
-
+#################################################################################################
+#####convert pvalue vector of disease comparisons into matrix of pvalues diseases by diseases####
+#################################################################################################
+##' convert pvalue vector of disease comparisons into matrix of pvalues (diseases by diseases)
+##'
+##' 
+##' @title convert pvalue vector of disease comparisons into matrix of pvalues (diseases by diseases)
+##' @param vec vector of p-values
+##' @param groups vector with different diseases (8! this is not the same variable as above; it only
+##' contains the levels of the factor groups from above)
+##' @return matrix of pvalues diseases by diseases
+##' @author n.stadler
 convert2mat <- function(vec,groups){
   nr.groups <- length(groups)
   nr.comp <- 0.5*(nr.groups)*(nr.groups-1)
@@ -154,16 +207,19 @@ convert2mat <- function(vec,groups){
   return(mat)
 }
 
+###########################################################
+#####Other functions not used for pancan methods paper#####
+###########################################################
 trace.mat <- function(m){
   sum(diag(m))
 }
-##' High-Dim Two-Sample Test (Srivastava, 2006)
+##' "SD-test": High-Dim Two-Sample Test for means (Srivastava, 2006)
 ##'
-##' .. content for \details{} ..
-##' @title 
-##' @param x1 
-##' @param x2 
-##' @return 
+##' 
+##' @title "SD-test": High-Dim Two-Sample Test for means (Srivastava, 2006)
+##' @param x1 no descr
+##' @param x2 no descr
+##' @return no descr
 ##' @author n.stadler
 test.sd <- function(x1,x2){
   k <- ncol(x1)
@@ -181,7 +237,15 @@ test.sd <- function(x1,x2){
   
   list(teststat=teststat,pval=1-pnorm(teststat))
 }
-
+##' "SD test" for disease comparison
+##'
+##' 
+##' @title "SD test" for disease comparison
+##' @param x  data-matrix (rows: samples; cols: proteins)
+##' @param groups vector specifying which sample belongs to which disease (factor)
+##' @param method.p.adjust method for p-value adjustment
+##' @return list of output
+##' @author n.stadler
 test.sd_groups <- function(x,groups,method.p.adjust='bonferroni'){
   nr.groups <- length(levels(groups))
   uptri.rownr <- row(matrix(NA,nr.groups,nr.groups))[upper.tri(matrix(NA,nr.groups,nr.groups),diag=FALSE)]
@@ -203,7 +267,15 @@ test.sd_groups <- function(x,groups,method.p.adjust='bonferroni'){
   res <- list(pval=pval,teststat=res['teststat',],l2norm=res['l2norm',])
   return(res)
 }
-
+##' HotellingT2-test for disease comparison
+##'
+##' 
+##' @title HotellingT2-test for disease comparison
+##' @param x data-matrix (rows: samples; cols: proteins)
+##' @param groups vector specifying which sample belongs to which disease (factor)
+##' @param method.p.adjust  method for p-value adjustment
+##' @return list of output
+##' @author n.stadler
 hotellingsT2_groups <- function(x,groups,method.p.adjust='bonferroni'){
   nr.groups <- length(levels(groups))
   uptri.rownr <- row(matrix(NA,nr.groups,nr.groups))[upper.tri(matrix(NA,nr.groups,nr.groups),diag=FALSE)]
@@ -230,63 +302,3 @@ hotellingsT2_groups <- function(x,groups,method.p.adjust='bonferroni'){
 }
 
 
-
-
-
-## diffnet_cluster <- function(x,class,no.splits=1,screen.meth='screen_bic.glasso',trunc.k=5){
-##   nr.class <- length(levels(class))
-##   uptri.rownr <- row(matrix(NA,nr.class,nr.class))[upper.tri(matrix(NA,nr.class,nr.class),diag=FALSE)]
-##   uptri.colnr <- col(matrix(NA,nr.class,nr.class))[upper.tri(matrix(NA,nr.class,nr.class),diag=FALSE)]
-##   p <- ncol(x)
-##   fit.pval <- mclapply(1:(0.5*(nr.class)*(nr.class-1)),function(i){
-##     cl1 <- uptri.rownr[i]
-##     cl2 <- uptri.colnr[i]
-##     cat(paste('comparison: ',levels(class)[cl1],'-',levels(class)[cl2],sep=''),'\n')
-##     x1 <- x[which(class==levels(class)[cl1]),]
-##     x2 <- x[which(class==levels(class)[cl2]),]
-##     fit <- diffnet_multisplit(scale(x1),scale(x2),b.splits=no.splits,
-##                                    screen.meth=screen.meth,
-##                                    trunc.k=trunc.k,verbose=FALSE)
-##     pvalmed <- fit$medpval.onesided
-##     return(pvalmed)
-    
-##   },mc.set.seed=TRUE, mc.preschedule = TRUE)
-##   my.pval <- simplify2array(fit.pval)
-##   mat.pval <- matrix(1,nr.class,nr.class)
-##   colnames(mat.pval) <- rownames(mat.pval) <- levels(class)
-##   for (i in 1:(0.5*(nr.class)*(nr.class-1))){
-##     cl1 <- uptri.rownr[i]
-##     cl2 <- uptri.colnr[i]
-##     mat.pval[cl1,cl2] <- my.pval[i]
-##   }
-##   res <- list(pval=mat.pval)
-##   return(res)
-## }
-
-## test.sd_cluster <- function(x,class){
-##   nr.class <- length(levels(class))
-##   uptri.rownr <- row(matrix(NA,nr.class,nr.class))[upper.tri(matrix(NA,nr.class,nr.class),diag=FALSE)]
-##   uptri.colnr <- col(matrix(NA,nr.class,nr.class))[upper.tri(matrix(NA,nr.class,nr.class),diag=FALSE)]
-##   p <- ncol(x)
-##   fit.pval <- lapply(1:(0.5*(nr.class)*(nr.class-1)),function(i){
-##     cl1 <- uptri.rownr[i]
-##     cl2 <- uptri.colnr[i]
-##     cat(paste('comparison: ',levels(class)[cl1],'-',levels(class)[cl2],sep=''),'\n')
-##     x1 <- x[which(class==levels(class)[cl1]),]
-##     x2 <- x[which(class==levels(class)[cl2]),]
-##     fit <- test.sd(x1,x2)
-##     pvalmed <- fit$pval
-##     return(pvalmed)
-    
-##   })
-##   my.pval <- simplify2array(fit.pval)
-##   mat.pval <- matrix(1,nr.class,nr.class)
-##   colnames(mat.pval) <- rownames(mat.pval) <- levels(class)
-##   for (i in 1:(0.5*(nr.class)*(nr.class-1))){
-##     cl1 <- uptri.rownr[i]
-##     cl2 <- uptri.colnr[i]
-##     mat.pval[cl1,cl2] <- my.pval[i]
-##   }
-##   res <- list(pval=mat.pval)
-##   return(res)
-## }

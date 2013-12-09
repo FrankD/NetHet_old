@@ -17,6 +17,15 @@ mixglasso_ss <-  function(x,k=3){
   list(cl=fit$comp)
 }
 
+mixunpen_ss <-  function(x,k=3){
+  la <- 0
+  p <- ncol(x)
+  fit <- mixglasso(x,n.comp=k,lambda=la,pen='glasso.parcor',
+                   init='kmeans',nstart.kmeans=100,iter.max.kmeans=1000,
+                   term=10^{-3},min.compsize=p,show.trace=TRUE,miniter=0)
+  list(cl=fit$comp)
+}
+
 kmeans_ss <- function(x,k){
   list(cl=kmeans(x, centers=k, iter.max = 1000, nstart = 100)$cluster)
 }
