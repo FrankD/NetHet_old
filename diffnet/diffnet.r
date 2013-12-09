@@ -494,7 +494,6 @@ screen_bic.glasso <- function(x,include.mean=TRUE,
 ##' @title Screen_aic.glasso
 ##' @param x no descr
 ##' @param include.mean no descr
-##' @param covMethod no descr
 ##' @param length.lambda no descr
 ##' @param lambdamin.ratio no descr
 ##' @param penalize.diagonal no descr
@@ -712,6 +711,7 @@ mcov <- function(x,include.mean,covMethod='ML'){
 ##' @param wi no descr
 ##' @param algorithm no descr
 ##' @param rho no descr
+##' @param include.mean no descr
 ##' @return no descr
 ##' @author n.stadler
 mle.ggm <- function(x,wi,algorithm='glasso_rho0',rho=NULL,include.mean){
