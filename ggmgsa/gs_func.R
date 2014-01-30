@@ -11,10 +11,34 @@ library(multicore)
 library(DiffNet)
 #library(qvalue)
 
+#' GGM-GSA package
+#'
+#' Multivariate gene-set testing based on Gaussian graphical models (GGMs)
+#'
+#' GGM-GSA is a novel approach for gene-set analysis that allows for truly
+#' multivariate hypothesis, in particular differences in gene-gene networks
+#' between conditions.
+#' 
+#'
+#' 
+#' @references St\"adler, N. and Mukherjee, S. (2013). Multivariate gene-set testing based on Gaussian graphical models.
+#' Preprint \url{http://arxiv.org/abs/1308.2771}.
+#' @import GSA limma multtest ICSNP multicore DiffNet 
+#' @docType package
+#' @name GGM-GSA package
+NULL
+
 #############################################################
 ##Some functions for data-format conversion (GSEA specific)##
 #############################################################
 
+##' Reads a gene expression dataset in GCT format and converts it into an R data frame
+##'
+##' 
+##' @title Reads a gene expression dataset in GCT format and converts it into an R data frame
+##' @param filename no descr
+##' @return no descr
+##' @author n.stadler
 GSEA.Gct2Frame <- function(filename = "NULL") { 
 #
 # Reads a gene expression dataset in GCT format and converts it into an R data frame
@@ -33,6 +57,13 @@ GSEA.Gct2Frame <- function(filename = "NULL") {
    return(ds)
 }
 
+##' Reads a gene expression dataset in GCT format and converts it into an R data frame
+##'
+##' 
+##' @title Reads a gene expression dataset in GCT format and converts it into an R data frame
+##' @param filename no descr
+##' @return no descr
+##' @author n.stadler
 GSEA.Gct2Frame2 <- function(filename = "NULL") { 
 #
 # Reads a gene expression dataset in GCT format and converts it into an R data frame
@@ -75,6 +106,13 @@ GSEA.Gct2Frame2 <- function(filename = "NULL") {
       return(ds)
 }
 
+##' Reads a gene expression dataset in RES format and converts it into an R data frame
+##'
+##' 
+##' @title Reads a gene expression dataset in RES format and converts it into an R data frame
+##' @param filename no descr
+##' @return R data frame
+##' @author n.stadler
 GSEA.Res2Frame <- function(filename = "NULL") { 
 #
 # Reads a gene expression dataset in RES format and converts it into an R data frame
@@ -104,6 +142,14 @@ GSEA.Res2Frame <- function(filename = "NULL") {
    return(table1)
 }
 
+##' Reads a class vector CLS file and defines phenotype
+##' and class labels vectors for the samples in a gene expression file (RES or GCT format)
+##'
+##' 
+##' @title Reads a class vector CLS file
+##' @param file no descr
+##' @return no descr
+##' @author n.stadler
 GSEA.ReadClsFile <- function(file = "NULL") { 
 #
 # Reads a class vector CLS file and defines phenotype and class labels vectors for the samples in a gene expression file (RES or GCT format)
@@ -145,6 +191,14 @@ GSEA.ReadClsFile <- function(file = "NULL") {
 ##P-value adjustment##
 ######################
 
+##' Pvalue adjustment
+##'
+##' 
+##' @title Pvalue adjustment
+##' @param p no descr
+##' @param method no descr
+##' @return no descr
+##' @author n.stadler
 my.p.adjust <- function(p,method='fdr'){
   if(method=='fdr'){
     return(p.adjust(p,method='fdr'))
@@ -164,6 +218,14 @@ my.p.adjust <- function(p,method='fdr'){
 ##Classical gene-set testing (Irizarry approach)##
 ##################################################
 
+##' T-test (equal variances)
+##'
+##' 
+##' @title T-test
+##' @param x1 no descr
+##' @param x2 no descr
+##' @return no descr
+##' @author n.stadler
 my.ttest <- function(x1,x2){
   ##equal variances
   s <- sqrt((var(x1)*(length(x1)-1)+var(x2)*(length(x2)-1))/(length(x1)+length(x2)-2))
@@ -171,6 +233,14 @@ my.ttest <- function(x1,x2){
   return(tstat)
 }
 
+##' T-test (unequal variances)
+##'
+##' 
+##' @title T-test
+##' @param x1 no descr
+##' @param x2 no descr
+##' @return no descr
+##' @author n.stadler
 my.ttest2 <- function(x1,x2){
   ##unequal variances
   s <- sqrt((var(x1)/length(x1))+(var(x2)/length(x2)))
@@ -178,12 +248,31 @@ my.ttest2 <- function(x1,x2){
   return(tstat)
 }
 
+##' Irizarry aggregate score (shift)
+##'
+##' 
+##' @title Irizarry aggregate score (shift)
+##' @param ttstat no descr
+##' @param geneset no descr
+##' @param gene.name no descr
+##' @return no descr
+##' @author n.stadler
 agg.score.iriz.shift <- function(ttstat,geneset,gene.name){
   genes.gs <- which(gene.name%in%geneset)
   ttstat <- ttstat[genes.gs]
   aggscore <- sqrt(length(genes.gs))*mean(ttstat)
   return(aggscore)
 }
+
+##' Irizarry aggregate score (scale)
+##'
+##' 
+##' @title Irizarry aggregate score (scale)
+##' @param ttstat no descr
+##' @param geneset no descr
+##' @param gene.name no descr
+##' @return no descr
+##' @author n.stadler
 agg.score.iriz.scale <- function(ttstat,geneset,gene.name){
   genes.gs <- which(gene.name%in%geneset)
   ttstat <- ttstat[genes.gs]
@@ -191,6 +280,19 @@ agg.score.iriz.scale <- function(ttstat,geneset,gene.name){
   return(aggscore)
 }
 
+##' Irizarry approach (shift only)
+##'
+##' 
+##' @title Irizarry approach (shift only)
+##' @param x1 no descr
+##' @param x2 no descr
+##' @param gene.sets no descr
+##' @param gene.names no descr
+##' @param gs.names no descr
+##' @param method.p.adjust no descr
+##' @param alternative no descr
+##' @return no descr
+##' @author n.stadler
 gsea.iriz.shift <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',alternative='two-sided'){
   
   no.genes <- ncol(x1)
@@ -216,6 +318,19 @@ gsea.iriz.shift <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method.p.ad
   }
 }
 
+##' Irizarry approach (scale only)
+##'
+##' 
+##' @title Irizarry approach (scale only)
+##' @param x1 no descr
+##' @param x2 no descr
+##' @param gene.sets no descr
+##' @param gene.names no descr
+##' @param gs.names no descr
+##' @param method.p.adjust no descr
+##' @param alternative no descr
+##' @return no descr
+##' @author n.stadler
 gsea.iriz.scale <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',alternative='two-sided'){
   
   no.genes <- ncol(x1)
@@ -241,6 +356,19 @@ gsea.iriz.scale <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method.p.ad
   }
 }
 
+##' Irizarry approach (shift and scale)
+##'
+##' 
+##' @title Irizarry approach (shift and scale)
+##' @param x1 no descr
+##' @param x2 no descr
+##' @param gene.sets no descr
+##' @param gene.names no descr
+##' @param gs.names no descr
+##' @param method.p.adjust no descr
+##' @param alternative no descr
+##' @return no descr
+##' @author n.stadler
 gsea.iriz <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',alternative='two-sided'){
 
   fit.shift <- gsea.iriz.shift(x1,x2,gene.sets,gene.names,gs.names,method.p.adjust,alternative)
@@ -264,10 +392,10 @@ gsea.iriz <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method.p.adjust='
 ##'
 ##' 
 ##' @title Classical likelihood-ratio test
-##' @param x1 
-##' @param x2 
-##' @param include.mean 
-##' @return 
+##' @param x1 no descr
+##' @param x2 no descr
+##' @param include.mean no descr
+##' @return no descr
 ##' @author n.stadler
 t2cov.lr <- function(x1,x2,include.mean=FALSE){
   k <- ncol(x1)
@@ -282,14 +410,15 @@ t2cov.lr <- function(x1,x2,include.mean=FALSE){
   }
   list(pval=pval.mle)
 }
+
 ##' Diagonal-restricted likelihood-ratio test
 ##'
 ##' 
 ##' @title Diagonal-restricted likelihood-ratio test
-##' @param x1 
-##' @param x2 
-##' @param include.mean 
-##' @return 
+##' @param x1 no descr
+##' @param x2 no descr
+##' @param include.mean no descr
+##' @return no descr
 ##' @author n.stadler
 t2diagcov.lr <- function(x1,x2,include.mean=FALSE){
   k <- ncol(x1)
@@ -307,6 +436,19 @@ t2diagcov.lr <- function(x1,x2,include.mean=FALSE){
   list(pval=pval.mle)
 }
 
+##' GSA using T2cov-test
+##'
+##' 
+##' @title GSA using T2cov-test
+##' @param x1 no descr
+##' @param x2 no descr
+##' @param gene.sets no descr
+##' @param gene.names no descr
+##' @param gs.names no descr
+##' @param method no descr
+##' @param method.p.adjust no descr
+##' @return no descr
+##' @author n.stadler
 gsea.t2cov <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method='t2cov.lr',method.p.adjust='fdr'){
   
   
@@ -326,27 +468,41 @@ gsea.t2cov <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method='t2cov.lr
   
 }
 
-
 #################
 ##Mean T2-tests##
 #################
 
+##' HotellingsT2
+##'
+##' 
+##' @title HotellingsT2
+##' @param x1 no descr
+##' @param x2 no descr
+##' @return no descr
+##' @author n.stadler
 test.t2 <- function(x1,x2){
   fit.t2 <- HotellingsT2(x1,x2, mu = NULL, test = "f")
   list(pval=fit.t2$p.value)
 }
 
+##' Trace of a matrix
+##'
+##' 
+##' @title Trace of a matrix
+##' @param m no descr
+##' @return no descr
+##' @author n.stadler
 trace.mat <- function(m){
   sum(diag(m))
 }
 
 ##' High-Dim Two-Sample Test (Srivastava, 2006)
 ##'
-##' .. content for \details{} ..
-##' @title 
-##' @param x1 
-##' @param x2 
-##' @return 
+##' 
+##' @title High-Dim Two-Sample Test (Srivastava, 2006)
+##' @param x1 no descr
+##' @param x2 no descr
+##' @return no descr
 ##' @author n.stadler
 test.sd <- function(x1,x2){
   k <- ncol(x1)
@@ -365,6 +521,19 @@ test.sd <- function(x1,x2){
   list(teststat=teststat,pval=1-pnorm(teststat))
 }
 
+##' GSA based on HighdimT2
+##'
+##' 
+##' @title GSA based on HighdimT2
+##' @param x1 no descr
+##' @param x2 no descr
+##' @param gene.sets no descr
+##' @param gene.names no descr
+##' @param gs.names no descr
+##' @param method no descr
+##' @param method.p.adjust no descr
+##' @return no descr
+##' @author n.stadler
 gsea.highdimT2 <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method='test.sd',method.p.adjust='fdr'){
   
   
@@ -385,8 +554,18 @@ gsea.highdimT2 <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method='test
 }
 
 ##############
-##NetGeneSet##
+##GGM-GSA   ##
 ##############
+
+##' Filter non-normal genes
+##'
+##' 
+##' @title Filter non-normal genes
+##' @param x1 no descr
+##' @param x2 no descr
+##' @param sign.level no descr
+##' @return no descr
+##' @author n.stadler
 shapiro_screen <- function(x1,x2,sign.level=0.01){
   p <- ncol(x1)
   pval1 <- sapply(1:p,function(j){shapiro.test(x1[,j])$p.value})
@@ -396,6 +575,15 @@ shapiro_screen <- function(x1,x2,sign.level=0.01){
   return(list(x1.filt=x1[,-which(pmin(pval1.adj,pval2.adj)<sign.level)],x2.filt=x2[,-which(pmin(pval1.adj,pval2.adj)<sign.level)]))
 }
 
+##' Pvalue aggregation
+##'
+##' 
+##' @title Pvalue aggregation
+##' @param pval no descr
+##' @param gamma.min no descr
+##' @return no descr
+##' @author n.stadler
+##' @export
 aggpval <- function(pval,gamma.min=0.05){
   
   min(1,(1-log(gamma.min))*optimize(
@@ -405,6 +593,18 @@ aggpval <- function(pval,gamma.min=0.05){
                                     ,interval=c(gamma.min,1),maximum=FALSE)$objective)
 }
 
+##' Single-split GGM-GSA
+##'
+##' 
+##' @title Single-split GGM-GSA
+##' @param x1 centered (scaled) data for condition 1
+##' @param x2 centered (scaled) data for condition 2
+##' @param gene.sets list of gene-sets
+##' @param gene.names gene names
+##' @param method.p.adjust method for p-value adjustment (default: 'fdr')
+##' @param ... other arguments (see diffnet_singlesplit)
+##' @return list with results
+##' @author n.stadler
 gsea.diffnet.singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust='fdr',...){
   n1 <- nrow(x1)
   n2 <- nrow(x2)
@@ -429,7 +629,23 @@ gsea.diffnet.singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust=
   return(list(pvals=pvals.corrected,teststat=res['teststat',],teststat.bic=res['teststat.bic',],teststat.aic=res['teststat.aic',],rel.edgeinter=res['rel.edgeinter',],dfu=res['dfu',],dfv=res['dfv',],dfuv=res['dfuv',]))
 }
 
-
+##' Multi-split GGM-GSA
+##'
+##' 
+##' @title Multi-split GGM-GSA
+##' @param x1 centered (scaled) data for condition 1
+##' @param x2 centered (scaled) data for condition 1
+##' @param no.splits number of random data splits (default: 50)
+##' @param gene.sets list of gene-sets
+##' @param gene.names gene names
+##' @param gs.names gene-set names
+##' @param method.p.adjust method for p-value adjustment (default: 'fdr')
+##' @param order.adj.agg order p-value aggregation/adjustment
+##' @param ... other arguments (see diffnet_singlesplit)
+##' @return list with results
+##' @author n.stadler
+##' @export
+##' @example ../diffnet-pkg_test.r
 gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',order.adj.agg='adj-agg',...){
 
   res <- lapply(seq(no.splits),
@@ -479,6 +695,23 @@ gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.n
   }
 }
 
+##' Multi-split GGM-GSA (multicore)
+##'
+##' 
+##' @title Multi-split GGM-GSA (multicore)
+##' @param x1 centered (scaled) data for condition 1
+##' @param x2 centered (scaled) data for condition 1
+##' @param no.splits number of random data splits (default: 50)
+##' @param gene.sets list of gene-sets
+##' @param gene.names gene names
+##' @param gs.names gene-set names
+##' @param method.p.adjust method for p-value adjustment (default: 'fdr')
+##' @param order.adj.agg order p-value aggregation/adjustment
+##' @param ... other arguments (see diffnet_singlesplit)
+##' @return list with results
+##' @author n.stadler
+##' @export
+##' @example ../diffnet-pkg_test.r
 par.gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',order.adj.agg='adj-agg',...){
 
   res <- mclapply(seq(no.splits),
@@ -528,6 +761,20 @@ par.gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,
   }
 }
 
+##' GSA with differential regression; 8! not sure if this works !!!
+##'
+##' 
+##' @title GSA with differential regression; 8! not sure if this works !!!
+##' @param y1 no descr
+##' @param y2 no descr
+##' @param x1 no descr
+##' @param x2 no descr
+##' @param gene.sets no descr
+##' @param gene.names no descr
+##' @param method.p.adjust no descr
+##' @param screen.meth no descr
+##' @return no descr
+##' @author n.stadler
 gsea.diffregr.singlesplit <- function(y1,y2,x1,x2,gene.sets,gene.names,method.p.adjust='fdr',screen.meth='lasso.cvtrunc'){
   n1 <- nrow(x1)
   n2 <- nrow(x2)
