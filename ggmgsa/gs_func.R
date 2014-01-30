@@ -645,7 +645,7 @@ gsea.diffnet.singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust=
 ##' @return list with results
 ##' @author n.stadler
 ##' @export
-##' @example ../diffnet-pkg_test.r
+##' @example ../ggmgsa-pkg_test.r
 gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',order.adj.agg='adj-agg',...){
 
   res <- lapply(seq(no.splits),
@@ -711,7 +711,7 @@ gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.n
 ##' @return list with results
 ##' @author n.stadler
 ##' @export
-##' @example ../diffnet-pkg_test.r
+##' @example ../ggmgsa-pkg_test.r
 par.gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',order.adj.agg='adj-agg',...){
 
   res <- mclapply(seq(no.splits),
