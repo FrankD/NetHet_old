@@ -9,15 +9,16 @@ library('multtest')
 library(ICSNP)
 library(multicore)
 library(DiffNet)
+library(mvtnorm)
 #library(qvalue)
 
-#' GGM-GSA package
+#' GGMGSA-package
 #'
 #' Multivariate gene-set testing based on Gaussian graphical models (GGMs)
 #'
-#' GGM-GSA is a novel approach for gene-set analysis that allows for truly
-#' multivariate hypothesis, in particular differences in gene-gene networks
-#' between conditions.
+#' GGMGSA is a novel approach for gene-set analysis that tests for differences
+#' in gene-gene networks between conditions. It involves high-dimensional two-sample
+#' testing and is based on differential network (R-package DiffNet)
 #' 
 #'
 #' 
@@ -25,7 +26,7 @@ library(DiffNet)
 #' Preprint \url{http://arxiv.org/abs/1308.2771}.
 #' @import GSA limma multtest ICSNP multicore DiffNet 
 #' @docType package
-#' @name GGM-GSA package
+#' @name GGMGSA-package
 NULL
 
 #############################################################
@@ -209,9 +210,9 @@ my.p.adjust <- function(p,method='fdr'){
    if(method=='bonferroni'){
     return(p.adjust(p,method='bonferroni'))
   }
-  if(method=='qvalue'){
-    return(qvalue(p)$qvalues)
-  }
+  #if(method=='qvalue'){
+  #  return(qvalue(p)$qvalues)
+  #}
 }
 
 ##################################################
@@ -605,6 +606,7 @@ aggpval <- function(pval,gamma.min=0.05){
 ##' @param ... other arguments (see diffnet_singlesplit)
 ##' @return list with results
 ##' @author n.stadler
+##' @export
 gsea.diffnet.singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust='fdr',...){
   n1 <- nrow(x1)
   n2 <- nrow(x2)
@@ -761,35 +763,35 @@ par.gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,
   }
 }
 
-##' GSA with differential regression; 8! not sure if this works !!!
-##'
-##' 
-##' @title GSA with differential regression; 8! not sure if this works !!!
-##' @param y1 no descr
-##' @param y2 no descr
-##' @param x1 no descr
-##' @param x2 no descr
-##' @param gene.sets no descr
-##' @param gene.names no descr
-##' @param method.p.adjust no descr
-##' @param screen.meth no descr
-##' @return no descr
-##' @author n.stadler
-gsea.diffregr.singlesplit <- function(y1,y2,x1,x2,gene.sets,gene.names,method.p.adjust='fdr',screen.meth='lasso.cvtrunc'){
-  n1 <- nrow(x1)
-  n2 <- nrow(x2)
-  split1 <- sample(1:n1,round(n1*0.5),replace=FALSE)
-  split2 <- sample(1:n2,round(n2*0.5),replace=FALSE)
-  pvals<- sapply(seq(length(gene.sets)),
-                 function(i){
-                   y <- gene.sets[[i]]
-                   cat('gene set:',i,'\n')
-                   ind.genes <- which(gene.names%in%y)
-                   diffregr_singlesplit(y1,y2,x1[,ind.genes],x2[,ind.genes],split1,split2,screen.meth=screen.meth)$pval.onesided
-                 })
-  pvals.corrected <- my.p.adjust(pvals,method=method.p.adjust)
-  return(list(pvals=pvals.corrected))
-}
+## ##' GSA with differential regression; 8! not sure if this works !!!
+## ##'
+## ##' 
+## ##' @title GSA with differential regression; 8! not sure if this works !!!
+## ##' @param y1 no descr
+## ##' @param y2 no descr
+## ##' @param x1 no descr
+## ##' @param x2 no descr
+## ##' @param gene.sets no descr
+## ##' @param gene.names no descr
+## ##' @param method.p.adjust no descr
+## ##' @param screen.meth no descr
+## ##' @return no descr
+## ##' @author n.stadler
+## gsea.diffregr.singlesplit <- function(y1,y2,x1,x2,gene.sets,gene.names,method.p.adjust='fdr',screen.meth='lasso.cvtrunc'){
+##   n1 <- nrow(x1)
+##   n2 <- nrow(x2)
+##   split1 <- sample(1:n1,round(n1*0.5),replace=FALSE)
+##   split2 <- sample(1:n2,round(n2*0.5),replace=FALSE)
+##   pvals<- sapply(seq(length(gene.sets)),
+##                  function(i){
+##                    y <- gene.sets[[i]]
+##                    cat('gene set:',i,'\n')
+##                    ind.genes <- which(gene.names%in%y)
+##                    diffregr_singlesplit(y1,y2,x1[,ind.genes],x2[,ind.genes],split1,split2,screen.meth=screen.meth)$pval.onesided
+##                  })
+##   pvals.corrected <- my.p.adjust(pvals,method=method.p.adjust)
+##   return(list(pvals=pvals.corrected))
+## }
 
 #########################################################################################################################################
 #########################################################################################################################################
