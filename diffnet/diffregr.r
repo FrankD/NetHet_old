@@ -27,7 +27,6 @@ library(CompQuadForm)
 #' linear regression models.
 #' 
 #'
-#' DiffRegr provides test-statistic, p-values. 
 #' 
 #' 
 #' @references St\"adler, N. and Mukherjee, S. (2013). Two-Sample Testing in High-Dimensional Models.
@@ -35,7 +34,6 @@ library(CompQuadForm)
 #' @import glmnet mvtnorm CompQuadForm 
 #' @docType package
 #' @name DiffRegr-package
-#' @useDynLib DiffRegr
 NULL
 
 #######################
@@ -46,10 +44,11 @@ NULL
 ##'
 ##' 'lambda.min'-rule
 ##' @title Screening using cross-validation
-##' @param x no descr
-##' @param y no descr
-##' @return no descr
+##' @param x predictor matrix
+##' @param y response 
+##' @return active-set
 ##' @author n.stadler
+##' @export
 lasso.cvmin <- function(x,y){
   fit.cv <- cv.glmnet(x,y)
   beta <- as.numeric(coef(fit.cv,s='lambda.min')[-1])
@@ -63,14 +62,16 @@ lasso.cvmin <- function(x,y){
 ##'
 ##' 'lambda.1se'-rule
 ##' @title Screening using cross-validation
-##' @param x no descr
-##' @param y no descr
-##' @return no descr
+##' @param x predictor matrix
+##' @param y response 
+##' @return active-set
 ##' @author n.stadler
+##' @export
 lasso.cv1se <- function(x,y){
   fit.cv <- cv.glmnet(x,y)
   beta <- as.numeric(coef(fit.cv,s='lambda.1se')[-1])
   p <- length(beta)
+  n <- nrow(x)
   d <- min(p,n)
   beta[-order(abs(beta),decreasing=TRUE)[1:d]] <- 0
   return(which(beta!=0))
@@ -81,11 +82,12 @@ lasso.cv1se <- function(x,y){
 ##' Computes cross-validated regression coefficients
 ##' if more nonzeros than n/k, then truncate the smallest coefficients
 ##' @title Screening using cross-validation & n/k-truncation
-##' @param x no descr
-##' @param y no descr
-##' @param k no descr
-##' @return no descr
+##' @param x predictor matrix
+##' @param y response 
+##' @param k.trunc "number of samples per predictor" (default=5)
+##' @return active-set
 ##' @author n.stadler
+##' @export
 lasso.cvtrunc <- function(x,y,k.trunc=5){
   n <- nrow(x)
   fit.cv <- cv.glmnet(x,y)
@@ -99,11 +101,12 @@ lasso.cvtrunc <- function(x,y,k.trunc=5){
 ##' Screening using cross-validation & sqrt-truncation 
 ##'
 ##' 
-##' @title Screening using cross-validation & sqrt-truncation 
-##' @param x no descr
-##' @param y no descr
-##' @return no descr
+##' @title Screening using cross-validation & sqrt-truncation
+##' @param x predictor matrix
+##' @param y response 
+##' @return active-set
 ##' @author n.stadler
+##' @export
 lasso.cvsqrt <- function(x,y){
   n <- nrow(x)
   fit.cv <- cv.glmnet(x,y)
@@ -118,11 +121,12 @@ lasso.cvsqrt <- function(x,y){
 ##'
 ##' 
 ##' @title Screening using cross-validation & fixed number of predictors
-##' @param x no descr
-##' @param y no descr
-##' @param no.predictors no descr
-##' @return no descr
+##' @param x predictor matrix
+##' @param y response 
+##' @param no.predictors size of active-set
+##' @return active-set
 ##' @author n.stadler
+##' @export
 lasso.cvfix <- function(x,y,no.predictors=10){
   n <- nrow(x)
   fit.cv <- cv.glmnet(x,y)
@@ -136,7 +140,21 @@ lasso.cvfix <- function(x,y,no.predictors=10){
 ##############################
 ##--------P-VALUES----------##
 ##############################
-
+##' LR statistic
+##'
+##' 
+##' @title LR statistic
+##' @param y1 no descr
+##' @param y2 no descr
+##' @param y no descr
+##' @param xx1 no descr
+##' @param xx2 no descr
+##' @param xx no descr
+##' @param beta1 no descr
+##' @param beta2 no descr
+##' @param beta no descr
+##' @return no descr
+##' @author n.stadler
 logratio <- function(y1,y2,y,xx1,xx2,xx,beta1,beta2,beta){
   ##Compute 2*log-likelihood ratio
   ##Input:
@@ -165,6 +183,16 @@ logratio <- function(y1,y2,y,xx1,xx2,xx,beta1,beta2,beta){
   2*(sum(dnorm(y1,mean=mu1,sd=sqrt(sig1),log=TRUE))+sum(dnorm(y2,mean=mu2,sd=sqrt(sig2),log=TRUE))-sum(dnorm(y,mean=mu,sd=sqrt(sig),log=TRUE)))
 }
 
+##' Computation M matrix and eigenvalues
+##'
+##' 
+##' @title Computation M matrix and eigenvalues
+##' @param Sig no descr
+##' @param act no descr
+##' @param act1 no descr
+##' @param act2 no descr
+##' @return no descr
+##' @author n.stadler
 ww.mat <- function(Sig,act,act1,act2){
   ##Compute W and Eval(W) (without simplification of W)
   ##
@@ -183,6 +211,16 @@ ww.mat <- function(Sig,act,act1,act2){
   return(list(ww.mat=mat,eval=eval))
 }
 
+##' Computation M matrix and eigenvalues
+##'
+##' 
+##' @title Computation M matrix and eigenvalues
+##' @param Sig no descr
+##' @param act no descr
+##' @param act1 no descr
+##' @param act2 no descr
+##' @return no descr
+##' @author n.stadler
 ww.mat2 <- function(Sig,act,act1,act2){
   ##Compute W and Eval(W) ('1st order' simplification of W)
   ##
@@ -213,6 +251,16 @@ ww.mat2 <- function(Sig,act,act1,act2){
   return(list(ww.mat=mat,eval=eval))
 }
 
+##' Computation Q matrix
+##'
+##' 
+##' @title Computation Q matrix
+##' @param Sig no descr
+##' @param a no descr
+##' @param b no descr
+##' @param s no descr
+##' @return no descr
+##' @author n.stadler
 q.matrix <- function(Sig,a,b,s){
   ##Compute Q: based on true information matrix (Sig)
   if(length(s)==0){
@@ -222,6 +270,16 @@ q.matrix <- function(Sig,a,b,s){
   }
 }
 
+##' Computation eigenvalues
+##'
+##' 
+##' @title Computation eigenvalues
+##' @param Sig no descr
+##' @param act no descr
+##' @param act1 no descr
+##' @param act2 no descr
+##' @return no descr
+##' @author n.stadler
 my.ev2 <- function(Sig,act,act1,act2){
   ##Compute Eval (with 2nd order simplification of W)
   ##
@@ -296,6 +354,21 @@ my.ev2 <- function(Sig,act,act1,act2){
   return(list(eval=eval,ev.aux.complex=ev.aux.complex))
 }
 
+##' Computation beta matrix
+##'
+##' 
+##' @title Computation beta matrix
+##' @param ind1 no descr
+##' @param ind2 no descr
+##' @param beta1 no descr
+##' @param beta2 no descr
+##' @param beta no descr
+##' @param sig1 no descr
+##' @param sig2 no descr
+##' @param sig no descr
+##' @param Sig no descr
+##' @return no descr
+##' @author n.stadler
 beta.mat<-function(ind1,ind2,beta1,beta2,beta,sig1,sig2,sig,Sig){
   ##compute Beta-Matrix
   ##Input:
@@ -309,6 +382,22 @@ beta.mat<-function(ind1,ind2,beta1,beta2,beta,sig1,sig2,sig,Sig){
   return(beta.mat[ind1,ind2,drop=FALSE])
 }
 
+##' Computation Q matrix
+##'
+##' 
+##' @title Computation Q matrix
+##' @param beta.a no descr
+##' @param beta.b no descr
+##' @param beta no descr
+##' @param sig.a no descr
+##' @param sig.b no descr
+##' @param sig no descr
+##' @param Sig no descr
+##' @param act.a no descr
+##' @param act.b no descr
+##' @param ss no descr
+##' @return no descr
+##' @author n.stadler
 q.matrix3 <- function(beta.a,beta.b,beta,sig.a,sig.b,sig,Sig,act.a,act.b,ss){
 
  ##Estimate Q
@@ -325,6 +414,23 @@ q.matrix3 <- function(beta.a,beta.b,beta,sig.a,sig.b,sig,Sig,act.a,act.b,ss){
     }
 }
 
+##' Computation Q matrix
+##'
+##' 
+##' @title Computation Q matrix
+##' @param b.mat no descr
+##' @param act.a no descr
+##' @param act.b no descr
+##' @param ss no descr
+##' @param beta.a no descr
+##' @param beta.b no descr
+##' @param beta no descr
+##' @param sig.a no descr
+##' @param sig.b no descr
+##' @param sig no descr
+##' @param Sig no descr
+##' @return no descr
+##' @author n.stadler
 q.matrix4 <- function(b.mat,act.a,act.b,ss){
 
  ##Estimate Q
@@ -340,6 +446,22 @@ q.matrix4 <- function(b.mat,act.a,act.b,ss){
     }
 }
 
+##' Estimate weights
+##'
+##' 
+##' @title Estimate weights
+##' @param y1 no descr
+##' @param y2 no descr
+##' @param x1 no descr
+##' @param x2 no descr
+##' @param beta1 no descr
+##' @param beta2 no descr
+##' @param beta no descr
+##' @param act1 no descr
+##' @param act2 no descr
+##' @param act no descr
+##' @return no descr
+##' @author n.stadler
 est2.ww.mat2 <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
   ##Estimate W and Eval(W) ('1st order' simplification of W)
   ##
@@ -417,8 +539,22 @@ est2.ww.mat2 <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
 }
 
 ##' Compute weights of sum-w-chi2 (2nd order simplification)
+##'
+##' 
 ##' *expansion of W in two directions ("dimf>dimg direction" & "dimf>dimg direction") 
 ##' *simplified computation of weights is obtained by assuming H0 and that X_u~X_v holds
+##' @param y1 no descr
+##' @param y2 no descr
+##' @param x1 no descr
+##' @param x2 no descr
+##' @param beta1 no descr
+##' @param beta2 no descr
+##' @param beta no descr
+##' @param act1 no descr
+##' @param act2 no descr
+##' @param act no descr
+##' @return no descr
+##' @author n.stadler
 est2.my.ev2 <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
 
   ##Estimate Evals ('2nd order' simplification of W)
@@ -527,10 +663,23 @@ est2.my.ev2 <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
   return(list(eval=eval,ev.aux.complex=ev.aux.complex))
 }
 
-
 ##' Compute weights of sum-w-chi2 (2nd order simplification)
+##'
+##' 
 ##' *expansion of W in one directions ("dimf>dimg direction") 
 ##' *simplified computation of weights is obtained without further invoking H0, or assuming X_u~X_v
+##' @param y1 no descr
+##' @param y2 no descr
+##' @param x1 no descr
+##' @param x2 no descr
+##' @param beta1 no descr
+##' @param beta2 no descr
+##' @param beta no descr
+##' @param act1 no descr
+##' @param act2 no descr
+##' @param act no descr
+##' @return no descr
+##' @author n.stadler
 est2.my.ev3 <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
 
   ##Estimate Evals ('2nd order' simplification of W)
@@ -616,10 +765,42 @@ est2.my.ev3 <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
   return(list(eval=eval,ev.aux.complex=ev.aux.complex))
 }
 
+##' P-value aggregation
+##'
+##' 
+##' @title P-value aggregation (Meinshausen et al 2009)
+##' @param gamma see Meinshausen et al 2009
+##' @param pval vector of p-values
+##' @return inf-quantile aggregated p-value
+##' @author n.stadler
+##' @export
 agg.pval <- function(gamma,pval){
     min(quantile(pval/gamma,probs=gamma),1)
 }
 
+##' Computation "split-asym" p-values
+##'
+##' 
+##' @title Computation "split-asym" p-values
+##' @param y1 no descr
+##' @param y2 no descr
+##' @param x1 no descr
+##' @param x2 no descr
+##' @param beta1 no descr
+##' @param beta2 no descr
+##' @param beta no descr
+##' @param act1 no descr
+##' @param act2 no descr
+##' @param act no descr
+##' @param compute.evals no descr
+##' @param method.compquadform no descr
+##' @param acc no descr
+##' @param epsabs no descr
+##' @param epsrel no descr
+##' @param verbose no descr
+##' @param n.perm no descr
+##' @return no descr
+##' @author n.stadler
 diffregr_pval <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act,compute.evals,method.compquadform,acc,epsabs,epsrel,verbose,n.perm){
 
   if(is.null(n.perm)){
@@ -653,6 +834,18 @@ diffregr_pval <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act,compute.eva
   }
 }
 
+##' Help function for "split-perm"
+##'
+##' 
+##' @title Help function for "split-perm"
+##' @param y1 no descr
+##' @param y2 no descr
+##' @param y12 no descr
+##' @param x1 no descr
+##' @param x2 no descr
+##' @param x12 no descr
+##' @return no descr
+##' @author n.stadler
 perm.diffregr_teststat <- function(y1,y2,y12,x1,x2,x12){
   p1 <- ncol(x1)
   p2 <- ncol(x2)
@@ -676,6 +869,20 @@ perm.diffregr_teststat <- function(y1,y2,y12,x1,x2,x12){
   return(logratio(y1,y2,y12,x1,x2,x12,beta1,beta2,beta))
 }
 
+##' Computation "split-perm" p-values
+##'
+##' 
+##' @title Computation "split-perm" p-values
+##' @param y1 no descr
+##' @param y2 no descr
+##' @param x1 no descr
+##' @param x2 no descr
+##' @param act1 no descr
+##' @param act2 no descr
+##' @param act no descr
+##' @param n.perm no descr
+##' @return no descr
+##' @author n.stadler
 perm.diffregr_pval <- function(y1,y2,x1,x2,act1,act2,act,n.perm){
   n1 <- nrow(x1);n2 <- nrow(x2)
   x12 <- rbind(x1,x2)
@@ -700,8 +907,36 @@ perm.diffregr_pval <- function(y1,y2,x1,x2,act1,act2,act,n.perm){
   return(list(pval.onesided=pval,pval.twosided=pval,weights.nulldistr=NULL,teststat=tobs))
 }
               
-
-diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='lasso.cvmin',
+##' Diffregr (single-split)
+##'
+##' 
+##' @title Diffregr (single-split)
+##' @param y1 response 1
+##' @param y2 response 2
+##' @param x1 predictor matrix 1
+##' @param x2 predictor matrix 2
+##' @param split1 samples (from condition 1) used for screening
+##' @param split2 samples (from condition 2) used for screening
+##' @param screen.meth screening method (default='lasso.cvtrunc')
+##' @param compute.evals algorithm for computation of weights (default='est2.my.ev3')
+##' @param method.compquadform algorithm for computing weighted-sum-of-chi2 (default='imhof')
+##' @param acc accuracy method.compquadform
+##' @param epsabs accuracy method.compquadform
+##' @param epsrel accuracy method.compquadform
+##' @param verbose TRUE or FALSE (show some output of algorithm)
+##' @param n.perm number of permutation for "split-perm" p-value
+##' @param ... other arguments for screening method
+##' @return list consisting of
+##' \item{pval.onesided}{p-value}
+##' \item{pval.twosided}{ignore all "*.twosided results}
+##' \item{teststat}{LR statistic}
+##' \item{weights.nulldistr}{estimated weights of asymptotic weighted-sum-of-chi2}
+##' \item{active}{active-sets obtained in screening step}
+##' \item{beta}{regression coefficients (MLE) obtaind from 2nd half of the data}
+##' @author n.stadler
+##' @export
+##' @example ../diffregr-pkg_test.r
+diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='lasso.cvtrunc',
                                 compute.evals='est2.my.ev3',method.compquadform='imhof',acc=1e-04,
                                 epsabs=1e-10,epsrel=1e-10,
                                 verbose=FALSE,n.perm=NULL,...){
@@ -775,7 +1010,40 @@ diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='lasso.cvm
               active=active,beta=est.beta))
 }
 
-diffregr_multisplit<- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,screen.meth='lasso.cvmin',
+##' Diffregr (multi-split)
+##'
+##' 
+##' @title Diffregr (single-split)
+##' @param y1 response 1 
+##' @param y2 response 2
+##' @param x1 predictor matrix 1
+##' @param x2 predictor matrix 2
+##' @param b.splits number of random splits (default=50)
+##' @param frac.split fraction of data used for screening (default=0.5)
+##' @param screen.meth screening method (default='lasso.cvtrunc')
+##' @param gamma.min see agg.pval (default=0.05)
+##' @param compute.evals algorithm for computation of weights (default='est2.my.ev3')
+##' @param method.compquadform algorithm for computing weighted-sum-of-chi2 (default='imhof')
+##' @param acc accuracy method.compquadform
+##' @param epsabs accuracy method.compquadform
+##' @param epsrel accuracy method.compquadform
+##' @param verbose TRUE or FALSE (show some output of algorithm ?)
+##' @param n.perm number of permutation for "split-perm" p-value
+##' @param ... other arguments for screening method
+##' @return list consisting of
+##' \item{pval.onesided}{p-values for all B splits}
+##' \item{pval.twosided}{ignore all "*.twosided" results}
+##' \item{sspval.onesided}{single-split p-value}
+##' \item{medpval.onesided}{median aggregated p-value}
+##' \item{aggpval.onesided}{MB-aggregated p-value}
+##' \item{teststat}{LR statistics for all B splits}
+##' \item{weights.nulldistr}{estimated weights of asymptotic weighted-sum-of-chi2}
+##' \item{active.last}{active-sets obtained in last sample split}
+##' \item{beta.last}{regression coefficients obtained in last sample split}
+##' @author n.stadler
+##' @export
+##' @example ../diffregr-pkg_test.r
+diffregr_multisplit<- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,screen.meth='lasso.cvtrunc',
                               gamma.min=0.05,compute.evals='est2.my.ev3',
                                method.compquadform='imhof',acc=1e-04,epsabs=1e-10,epsrel=1e-10,
                                verbose=FALSE,n.perm=NULL,...){
@@ -806,6 +1074,20 @@ diffregr_multisplit<- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,screen.met
               active.last=res.multisplit[[b.splits]]$active,beta.last=res.multisplit[[b.splits]]$beta))
 }
 
+##' old single-split function for diffregr
+##'
+##' 
+##' @title old single-split function for diffregr
+##' @param y1 no descr
+##' @param y2 no descr
+##' @param x1 no descr
+##' @param x2 no descr
+##' @param n.screen.pop1 no descr
+##' @param n.screen.pop2 no descr
+##' @param screen.meth no descr
+##' @param compute.evals no descr
+##' @return no descr
+##' @author n.stadler
 twosample_single_regr <- function(y1,y2,x1,x2,n.screen.pop1=100,n.screen.pop2=100,screen.meth=lasso.cvmin,compute.evals='est2.my.ev3'){
 
   ##Single-Split Pvalues
