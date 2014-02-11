@@ -196,9 +196,9 @@ GSEA.ReadClsFile <- function(file = "NULL") {
 ##'
 ##' 
 ##' @title Pvalue adjustment
-##' @param p no descr
-##' @param method no descr
-##' @return no descr
+##' @param p p-values
+##' @param method method for p-value adjustment (default='fdr')
+##' @return adjusted p-values
 ##' @author n.stadler
 my.p.adjust <- function(p,method='fdr'){
   if(method=='fdr'){
@@ -357,18 +357,22 @@ gsea.iriz.scale <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method.p.ad
   }
 }
 
-##' Irizarry approach (shift and scale)
+##' Irizarry approach for gene-set testing (shift and scale)
 ##'
+##' tests for shift and change in scale of distribution
 ##' 
 ##' @title Irizarry approach (shift and scale)
-##' @param x1 no descr
-##' @param x2 no descr
-##' @param gene.sets no descr
-##' @param gene.names no descr
-##' @param gs.names no descr
-##' @param method.p.adjust no descr
-##' @param alternative no descr
-##' @return no descr
+##' @param x1 expression matrix (condition 1)
+##' @param x2 expression matrix (condition 2)
+##' @param gene.sets list of gene-sets
+##' @param gene.names gene names
+##' @param gs.names gene-set names
+##' @param method.p.adjust method for p-value adjustment (default: 'fdr')
+##' @param alternative default='two-sided': two-sided p-values
+##' @return list consisting of
+##' \item{pval.shift}{p-values measuring shift}
+##' \item{pval.scale}{p-values measuring scale}
+##' \item{pval.combined}{combined p-values (minimum of pval.shift and pval.scale)}
 ##' @author n.stadler
 gsea.iriz <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',alternative='two-sided'){
 
@@ -441,14 +445,14 @@ t2diagcov.lr <- function(x1,x2,include.mean=FALSE){
 ##'
 ##' 
 ##' @title GSA using T2cov-test
-##' @param x1 no descr
-##' @param x2 no descr
-##' @param gene.sets no descr
-##' @param gene.names no descr
-##' @param gs.names no descr
-##' @param method no descr
-##' @param method.p.adjust no descr
-##' @return no descr
+##' @param x1 expression matrix (condition 1)
+##' @param x2 expression matrix (condition 2)
+##' @param gene.sets list of gene-sets
+##' @param gene.names gene names
+##' @param gs.names gene-set names
+##' @param method method for testing equality of covariance matrices
+##' @param method.p.adjust method for p-value adjustment (default: 'fdr')
+##' @return list of results
 ##' @author n.stadler
 gsea.t2cov <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method='t2cov.lr',method.p.adjust='fdr'){
   
@@ -558,16 +562,21 @@ gsea.highdimT2 <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method='test
 ##GGM-GSA   ##
 ##############
 
-##' Filter non-normal genes
+##' Filter "non-normal" genes
 ##'
+##' dicards genes with Shapiro-Wilk p-value (corrected for multiple comparision)
+##' smaller than sign.level in either of the two conditions
+##' (we used sign.level=0.001 in the GGMGSA paper)
 ##' 
-##' @title Filter non-normal genes
-##' @param x1 no descr
-##' @param x2 no descr
-##' @param sign.level no descr
-##' @return no descr
+##' @title Filter "non-normal" genes
+##' @param x1 expression matrix (condition 1)
+##' @param x2 expression matrix (condition 2)
+##' @param sign.level sign.level in Shapiro-Wilk tests (default: sign.level=0.001)
+##' @return list consisting of
+##' \item{x1.filt}{expression matrix (condition 1) after filtering}
+##' \item{x2.filt}{expression matrix (condition 2) after filtering}
 ##' @author n.stadler
-shapiro_screen <- function(x1,x2,sign.level=0.01){
+shapiro_screen <- function(x1,x2,sign.level=0.001){
   p <- ncol(x1)
   pval1 <- sapply(1:p,function(j){shapiro.test(x1[,j])$p.value})
   pval1.adj <- p.adjust(pval1,method='bonferroni')
@@ -576,13 +585,13 @@ shapiro_screen <- function(x1,x2,sign.level=0.01){
   return(list(x1.filt=x1[,-which(pmin(pval1.adj,pval2.adj)<sign.level)],x2.filt=x2[,-which(pmin(pval1.adj,pval2.adj)<sign.level)]))
 }
 
-##' Pvalue aggregation
-##'
+##' P-value aggregation (inf-quantile formula of Meinshausen et al 2009)
 ##' 
-##' @title Pvalue aggregation
-##' @param pval no descr
-##' @param gamma.min no descr
-##' @return no descr
+##' 
+##' @title P-value aggregation (inf-quantile formula of Meinshausen et al 2009)
+##' @param pval p-values
+##' @param gamma.min see inf-quantile formula of Meinshausen et al 2009 (default=0.05)
+##' @return aggregated p-value
 ##' @author n.stadler
 ##' @export
 aggpval <- function(pval,gamma.min=0.05){
@@ -604,9 +613,8 @@ aggpval <- function(pval,gamma.min=0.05){
 ##' @param gene.names gene names
 ##' @param method.p.adjust method for p-value adjustment (default: 'fdr')
 ##' @param ... other arguments (see diffnet_singlesplit)
-##' @return list with results
+##' @return list of results
 ##' @author n.stadler
-##' @export
 gsea.diffnet.singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust='fdr',...){
   n1 <- nrow(x1)
   n2 <- nrow(x2)
@@ -631,24 +639,27 @@ gsea.diffnet.singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust=
   return(list(pvals=pvals.corrected,teststat=res['teststat',],teststat.bic=res['teststat.bic',],teststat.aic=res['teststat.aic',],rel.edgeinter=res['rel.edgeinter',],dfu=res['dfu',],dfv=res['dfv',],dfuv=res['dfuv',]))
 }
 
-##' Multi-split GGM-GSA
+##' GGM-GSA
 ##'
 ##' 
-##' @title Multi-split GGM-GSA
-##' @param x1 centered (scaled) data for condition 1
-##' @param x2 centered (scaled) data for condition 1
+##' @title GGM-GSA
+##' @param x1 expression matrix for condition 1 (mean centered !)
+##' @param x2 expression matrix for condition 2 (mean centered !)
 ##' @param no.splits number of random data splits (default: 50)
 ##' @param gene.sets list of gene-sets
 ##' @param gene.names gene names
 ##' @param gs.names gene-set names
 ##' @param method.p.adjust method for p-value adjustment (default: 'fdr')
-##' @param order.adj.agg order p-value aggregation/adjustment
+##' @param order.adj.agg order of "pvalue-aggregation / -adjustment" (default='agg-adj')
 ##' @param ... other arguments (see diffnet_singlesplit)
-##' @return list with results
+##' @return list consisting of
+##' \item{pvalmed}{median aggregated p-values}
+##' \item{pvalagg}{inf-quantile aggregated p-values}
+##' \item{pval}{p-value matrix number of gene-sets \times number of splits (before correction and adjustement)}
 ##' @author n.stadler
 ##' @export
 ##' @example ../ggmgsa-pkg_test.r
-gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',order.adj.agg='adj-agg',...){
+gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',order.adj.agg='agg-adj',...){
 
   res <- lapply(seq(no.splits),
                 function(i){
@@ -697,24 +708,28 @@ gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.n
   }
 }
 
-##' Multi-split GGM-GSA (multicore)
+##' GGM-GSA
 ##'
+##' computation parallelized over many data splits
 ##' 
-##' @title Multi-split GGM-GSA (multicore)
-##' @param x1 centered (scaled) data for condition 1
-##' @param x2 centered (scaled) data for condition 1
+##' @title GGM-GSA (parallelized computation)
+##' @param x1 expression matrix for condition 1 (mean centered !)
+##' @param x2 expression matrix for condition 2 (mean centered !)
 ##' @param no.splits number of random data splits (default: 50)
 ##' @param gene.sets list of gene-sets
 ##' @param gene.names gene names
 ##' @param gs.names gene-set names
 ##' @param method.p.adjust method for p-value adjustment (default: 'fdr')
-##' @param order.adj.agg order p-value aggregation/adjustment
+##' @param order.adj.agg order of "pvalue-aggregation / -adjustment" (default='agg-adj')
 ##' @param ... other arguments (see diffnet_singlesplit)
-##' @return list with results
+##' @return list consisting of
+##' \item{pvalmed}{median aggregated p-values}
+##' \item{pvalagg}{inf-quantile aggregated p-values}
+##' \item{pval}{p-value matrix number of gene-sets \times number of splits (before correction and adjustement)}
 ##' @author n.stadler
 ##' @export
 ##' @example ../ggmgsa-pkg_test.r
-par.gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',order.adj.agg='adj-agg',...){
+par.gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',order.adj.agg='agg-adj',...){
 
   res <- mclapply(seq(no.splits),
                   function(i){
