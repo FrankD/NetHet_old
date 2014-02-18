@@ -655,7 +655,7 @@ gsea.diffnet.singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust=
 ##' @return list consisting of
 ##' \item{pvalmed}{median aggregated p-values}
 ##' \item{pvalagg}{inf-quantile aggregated p-values}
-##' \item{pval}{p-value matrix number of gene-sets \times number of splits (before correction and adjustement)}
+##' \item{pval}{p-value matrix (number of gene-sets)x(number of splits); before correction and adjustement}
 ##' @author n.stadler
 ##' @export
 ##' @example ../ggmgsa-pkg_test.r
@@ -725,7 +725,7 @@ gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.n
 ##' @return list consisting of
 ##' \item{pvalmed}{median aggregated p-values}
 ##' \item{pvalagg}{inf-quantile aggregated p-values}
-##' \item{pval}{p-value matrix number of gene-sets \times number of splits (before correction and adjustement)}
+##' \item{pval}{p-value matrix (number of gene-sets)x(number of splits); before correction and adjustement}
 ##' @author n.stadler
 ##' @export
 ##' @example ../ggmgsa-pkg_test.r
