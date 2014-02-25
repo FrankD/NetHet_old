@@ -446,6 +446,75 @@ q.matrix4 <- function(b.mat,act.a,act.b,ss){
     }
 }
 
+##' Estimate weights 
+##'
+##' estimate W-matrix (using plug-in estimates of Beta-matrix); calculate eigenvalues(W-matrix)
+##' 
+##' @title Estimate weights
+##' @param y1 no descr
+##' @param y2 no descr
+##' @param x1 no descr
+##' @param x2 no descr
+##' @param beta1 no descr
+##' @param beta2 no descr
+##' @param beta no descr
+##' @param act1 no descr
+##' @param act2 no descr
+##' @param act no descr
+##' @return no descr
+##' @author n.stadler
+est2.ww.mat <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
+
+  n1 <- length(y1)
+  n2 <- length(y2)
+  y <- c(y1,y2)
+  x <- rbind(x1,x2)
+  n <- length(y)
+
+  ##get mle's for sigma
+  mu1<-mu2<-mu<-0
+  sig1 <- (sum(y1^2)/n1);sig2 <- (sum(y2^2)/n2);sig <- (sum(y^2)/n)
+  if(length(beta1)!=0){
+    mu1<-x1[,act1,drop=FALSE]%*%beta1
+    sig1 <- sum((y1-mu1)^2)/n1
+  }
+  if(length(beta2)!=0){
+    mu2<-x2[,act2,drop=FALSE]%*%beta2
+    sig2 <- sum((y2-mu2)^2)/n2
+  }
+  if(length(beta)!=0){
+    mu<-x[,act,drop=FALSE]%*%beta
+    sig <- sum((y-mu)^2)/n
+  }
+
+  ##expand beta's with zeros
+  exp.beta <- exp.beta1 <- exp.beta2 <- rep(0,ncol(x1))
+  exp.beta[act] <- beta
+  exp.beta1[act1] <- beta1
+  exp.beta2[act2] <- beta2
+
+  ##compute beta.mat
+  bact.pop1<- beta.mat(act,act,exp.beta,exp.beta,exp.beta1,sig,sig,sig1,var(x1))
+  bact.pop2<- beta.mat(act,act,exp.beta,exp.beta,exp.beta2,sig,sig,sig2,var(x2))
+  bact1<- beta.mat(act1,act1,exp.beta1,exp.beta1,exp.beta1,sig1,sig1,sig1,var(x1))
+  bact2<- beta.mat(act2,act2,exp.beta2,exp.beta2,exp.beta2,sig2,sig2,sig2,var(x2))
+  bact1.act<- beta.mat(act1,act,exp.beta1,exp.beta,exp.beta1,sig1,sig,sig1,var(x1))
+  bact2.act<- beta.mat(act2,act,exp.beta2,exp.beta,exp.beta2,sig2,sig,sig2,var(x2))
+  
+  bfg <- rbind(bact1.act,bact2.act)
+  bgf <- t(bfg)
+  bf <- matrix(0,length(act1)+length(act2),length(act1)+length(act2))
+  bf[1:length(act1),1:length(act1)] <- bact1
+  bf[length(act1)+(1:length(act2)),length(act1)+(1:length(act2))] <- bact2
+  bg <- bact.pop1+bact.pop2
+  mat <- rbind(cbind(diag(1,length(act1)+length(act2)),bfg%*%solve(bg)),cbind(-t(bfg)%*%solve(bf),diag(-1,length(act))))
+  
+  eval.complex<-eigen(mat)$values
+  eval <- as.double(eval.complex)
+  
+  return(list(eval=c(1,0,0,eval),eval.complex=eval.complex))## eigenvalues 1,0,0 correspond to sig1, sig2 and sig12
+}
+
 ##' Estimate weights
 ##'
 ##' 
