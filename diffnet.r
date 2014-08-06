@@ -25,25 +25,25 @@ library(GeneNet)
 library(huge)
 library(CompQuadForm)
 library(ggm)
-##load C-code
-#dyn.load("../code/betamat_diffnet.so")
+## ##load C-code
+## #dyn.load("../code/betamat_diffnet.so")
 
-#' DiffNet-package
-#'
-#' Differential network (DiffNet) performs formal two-sample testing between high-dimensional
-#' Gaussian graphical models (GGMs).
-#' 
-#'
-#' DiffNet provides test-statistic, p-value and networks. 
-#' 
-#' 
-#' @references St\"adler, N. and Mukherjee, S. (2013). Two-Sample Testing in High-Dimensional Models.
-#' Preprint \url{http://arxiv.org/abs/1210.4584}.
-#' @import glasso mvtnorm parcor GeneNet huge CompQuadForm ggm 
-#' @docType package
-#' @name DiffNet-package
-#' @useDynLib DiffNet
-NULL
+## #' DiffNet-package
+## #'
+## #' Differential network (DiffNet) performs formal two-sample testing between high-dimensional
+## #' Gaussian graphical models (GGMs).
+## #' 
+## #'
+## #' DiffNet provides test-statistic, p-value and networks. 
+## #' 
+## #' 
+## #' @references St\"adler, N. and Mukherjee, S. (2013). Two-Sample Testing in High-Dimensional Models.
+## #' Preprint \url{http://arxiv.org/abs/1210.4584}.
+## #' @import glasso mvtnorm parcor GeneNet huge CompQuadForm ggm 
+## #' @docType package
+## #' @name DiffNet-package
+## #' @useDynLib DiffNet
+## NULL
 
 #############################
 ##-------Screening---------##

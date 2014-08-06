@@ -47,25 +47,25 @@ library(mvtnorm)
 library(mclust)
 library(multicore)
 
-#' MixGLasso-package
-#'
-#' The MixGLasso-package is a powerful tool for clustering high-dimensional data.
-#' It is based on a Gaussian mixture model. Each component is characterized by a mean vector an a
-#' covariance matrix. The inverse covariance matrices are sparse and represent a
-#' Gaussian graphical models (GGM). Estimation is performed using a novel penalized EM algorithm.
-#' Several strategies to select an optimal number of mixture components are implemented.
-#' 
-#'
-#' MixGLasso provides an optimal number of mixture components; optimal cluster assignments;
-#' Cluster-specific networks (sparse inverse covariance matrices); Cluster-specific means.
-#' 
-#' @references St\"adler, N. and Mukherjee, S. (2012).
-#' Penalized estimation in high-dimensional hidden Markov models with comp-specific graphical models.
-#' To appear in the Annals of Applied Statistics. \url{http://arxiv.org/abs/1208.4989}.
-#' @import glasso mvtnorm mclust multicore
-#' @docType package
-#' @name MixGLasso-package
-NULL
+## #' MixGLasso-package
+## #'
+## #' The MixGLasso-package is a powerful tool for clustering high-dimensional data.
+## #' It is based on a Gaussian mixture model. Each component is characterized by a mean vector an a
+## #' covariance matrix. The inverse covariance matrices are sparse and represent a
+## #' Gaussian graphical models (GGM). Estimation is performed using a novel penalized EM algorithm.
+## #' Several strategies to select an optimal number of mixture components are implemented.
+## #' 
+## #'
+## #' MixGLasso provides an optimal number of mixture components; optimal cluster assignments;
+## #' Cluster-specific networks (sparse inverse covariance matrices); Cluster-specific means.
+## #' 
+## #' @references St\"adler, N. and Mukherjee, S. (2012).
+## #' Penalized estimation in high-dimensional hidden Markov models with comp-specific graphical models.
+## #' To appear in the Annals of Applied Statistics. \url{http://arxiv.org/abs/1208.4989}.
+## #' @import glasso mvtnorm mclust multicore
+## #' @docType package
+## #' @name MixGLasso-package
+## NULL
 
 
 ##' Simulate from mixture model with MVN components
@@ -725,7 +725,7 @@ mixglasso_init<- function(x,n.comp,lambda,
 ##' \item{warn}{Warning infos for all fits}
 ##' @author n.stadler
 ##' @export
-##' @example ../mixglasso_test.R
+##' @example ../mixglasso-pkg_test.R
 mixglasso_path <- function(x,n.comp,
                           lambda=sqrt(2*nrow(x)*log(ncol(x)))/2,
                           pen='glasso.parcor',
@@ -787,7 +787,7 @@ mixglasso_path <- function(x,n.comp,
 ##' \item{fit.mixgl.selcrit}{Results for model with optimal number of components. List see mixglasso_init}
 ##' @author n.stadler
 ##' @export
-##' @example ../mixglasso_test.R
+##' @example ../mixglasso-pkg_test.R
 bwprun_mixglasso <- function(x,
                              n.comp.min=1,n.comp.max,
                              lambda=sqrt(2*nrow(x)*log(ncol(x)))/2,

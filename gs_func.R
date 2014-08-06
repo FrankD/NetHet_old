@@ -12,22 +12,22 @@ library(DiffNet)
 library(mvtnorm)
 #library(qvalue)
 
-#' GGMGSA-package
-#'
-#' Multivariate gene-set testing based on Gaussian graphical models (GGMs)
-#'
-#' GGMGSA is a novel approach for gene-set analysis that tests for differences
-#' in gene-gene networks between conditions. It involves high-dimensional two-sample
-#' testing and is based on differential network (R-package DiffNet)
-#' 
-#'
-#' 
-#' @references St\"adler, N. and Mukherjee, S. (2013). Multivariate gene-set testing based on Gaussian graphical models.
-#' Preprint \url{http://arxiv.org/abs/1308.2771}.
-#' @import GSA limma multtest ICSNP multicore DiffNet 
-#' @docType package
-#' @name GGMGSA-package
-NULL
+## #' GGMGSA-package
+## #'
+## #' Multivariate gene-set testing based on Gaussian graphical models (GGMs)
+## #'
+## #' GGMGSA is a novel approach for gene-set analysis that tests for differences
+## #' in gene-gene networks between conditions. It involves high-dimensional two-sample
+## #' testing and is based on differential network (R-package DiffNet)
+## #' 
+## #'
+## #' 
+## #' @references St\"adler, N. and Mukherjee, S. (2013). Multivariate gene-set testing based on Gaussian graphical models.
+## #' Preprint \url{http://arxiv.org/abs/1308.2771}.
+## #' @import GSA limma multtest ICSNP multicore DiffNet 
+## #' @docType package
+## #' @name GGMGSA-package
+## NULL
 
 #############################################################
 ##Some functions for data-format conversion (GSEA specific)##

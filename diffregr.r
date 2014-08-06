@@ -21,20 +21,20 @@ library(mvtnorm)
 library(glmnet)
 library(CompQuadForm)
 
-#' DiffRegr-package
-#'
-#' Differential regression (DiffRegr) performs formal two-sample testing between high-dimensional
-#' linear regression models.
-#' 
-#'
-#' 
-#' 
-#' @references St\"adler, N. and Mukherjee, S. (2013). Two-Sample Testing in High-Dimensional Models.
-#' Preprint \url{http://arxiv.org/abs/1210.4584}.
-#' @import glmnet mvtnorm CompQuadForm 
-#' @docType package
-#' @name DiffRegr-package
-NULL
+## #' DiffRegr-package
+## #'
+## #' Differential regression (DiffRegr) performs formal two-sample testing between high-dimensional
+## #' linear regression models.
+## #' 
+## #'
+## #' 
+## #' 
+## #' @references St\"adler, N. and Mukherjee, S. (2013). Two-Sample Testing in High-Dimensional Models.
+## #' Preprint \url{http://arxiv.org/abs/1210.4584}.
+## #' @import glmnet mvtnorm CompQuadForm 
+## #' @docType package
+## #' @name DiffRegr-package
+## NULL
 
 #######################
 ##-----Screening-----##
