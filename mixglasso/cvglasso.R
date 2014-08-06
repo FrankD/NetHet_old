@@ -7,7 +7,15 @@ library(huge)
 ##-------Screening---------##
 #############################
 
-##Convert inverse covariance to partial correlation
+
+#' Convert inverse covariance to partial correlation
+#' 
+#'  
+#' @param invcov Inverse covariance matrix
+#' @export
+#' @return The partial correlation matrix.
+#' @examples
+#' 
 invcov2parcor <- function(invcov){
   return(-invcov*tcrossprod(sqrt(1/diag(invcov))))
 }
@@ -92,9 +100,36 @@ mytrunc.method <- function(n,wi,method='linear.growth',trunc.k=5){
   }
 }
 
-##GLasso with Cross-validation
-screen_cv.glasso <- function(x,include.mean=TRUE,covMethod=NULL,
-                             folds=10,length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,
+#' Cross-validated glasso on single dataset
+#' 
+#'
+#' Run glasso on a single dataset, using cross-validation to estimate the
+#' penalty parameter lambda.
+#'
+#'  
+#' @param x The input data. Needs to be a num.samples by dim.samples matrix.
+#' @param include.mean 
+#' @param fold Number of folds in the cross-validation (default=10).
+#' @param length.lambda Length of lambda path to consider (default=20).
+#' @param lambdamin.ratio 
+#' @param penalize.diagonal If TRUE apply penalization to diagonal of inverse
+#' covariance as well. (default=FALSE)
+#' @param trunc.method
+#' @param trunc.k
+#' @param plot.it
+#' @param se
+#' @param use.package 'glasso' (default) or 'huge'
+#' @param verbose If TRUE, output progress.
+#' @export
+#' @return Returns a list with named elements 'rho.opt', 'wi', 'wi.orig', 'mu', 
+#' Variable rho.opt is the scaled penalization parameter (?). 
+#' The variables wi and wi.orig are matrices of size dim.samples by dim.samples 
+#' containing the truncated and untruncated inverse covariance matrix. Variable 
+#' Mu mean of the input data.
+#' @examples
+#' 
+screen_cv.glasso <- function(x,include.mean=TRUE,folds=10,length.lambda=20,
+                             lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,
                              trunc.method='none',trunc.k=5,plot.it=FALSE,se=FALSE,use.package='glasso',verbose=TRUE)
 {
   
@@ -141,3 +176,102 @@ screen_cv.glasso <- function(x,include.mean=TRUE,covMethod=NULL,
   list(rho.opt=2*lambda[which.min(cv)]/nrow(x),wi=wi.trunc,wi.orig=wi,mu=colMeans(x))
 }
 
+#' Cross-validated glasso on heterogeneous dataset with grouping
+#' 
+#'
+#' Run glasso on a heterogeneous dataset to obtain networks (inverse covariance 
+#' matrices) of the variables in the dataset for each pre-specified group of 
+#' samples.
+#'
+#' This function uses code{\link{screen_cv.lasso}} to run glasso with 
+#' cross-validation to determine the best parameter lambda for each group of 
+#' samples. Note that this function defaults to using package huge (rather than
+#' package glasso) unless otherwise specified, as it tends to be more 
+#' numerically stable.
+#'
+#'  
+#' @param data The heterogenous network data. Needs to be 
+#' a num.samples by dim.samples matrix or dataframe.
+#' @param grouping The grouping of samples; a vector of length num.samples,
+#' with num.groups unique elements.
+#' @param mc.flag Whether to use parallel processing via package mclapply to
+#' distribute the glasso estimation over different groups.
+#' @param use.package 'glasso' for glasso package, or 'huge' for huge package 
+#' (default)
+#' @param normalise If TRUE, normalise the columns of the data matrix before 
+#' running glasso.
+#' @param verbose If TRUE, output progress.
+#' @param ... Further parameters to be passed to code{\link{screen_cv.lasso}}.
+#' @export
+#' @return Returns a list with named elements 'Sig', 'SigInv', 'Mu', 'Sigma.diag', 
+#' 'group.names' and 'var.names. 
+#' The variables Sig and SigInv are arrays of size dim.samples by dim.samples 
+#' by num.groups, where the first two dimensions contain the (inverse)
+#' covariance matrix for the network obtained by running glasso on group k. Variables 
+#' Mu and Sigma.diag contain the mean and variance of the input data,
+#' and group.names and var.names contains the names for the groups and
+#' variables in the data (if specified as colnames of the input data matrix).
+#' @examples
+#' 
+het.cv.glasso <- function(data, grouping=rep(1, dim(data)[1]), mc.flag=FALSE,
+                          use.package='huge', normalise=FALSE, verbose=FALSE, ...) {
+  
+  group.names = sort(unique(grouping))
+  
+  mu = matrix(0, dim(data)[2], length(group.names))
+  Sigma.diag = matrix(0, dim(data)[2], length(group.names))
+  
+  data.list = list()
+  
+  # Scale data if necessary and split into list
+  for(group.i in 1:length(group.names)) {
+    group.name = group.names[group.i]
+    group.data = data[grouping==group.name,]
+    
+    scaled.group.data = scale(group.data)
+    
+    data.list[[group.i]] =  if(normalise) scaled.group.data
+                            else group.data 
+      
+    mu[,group.i] = attributes(scaled.group.data)[['scaled:center']]
+    Sigma.diag[,group.i] = attributes(scaled.group.data)[['scaled:scale']]
+    
+    rownames(mu) = colnames(group.data)
+    colnames(mu) = group.names
+    rownames(Sigma.diag) = colnames(group.data)
+    colnames(Sigma.diag) = group.names
+  }
+  
+  # Run glasso on each group
+  if(mc.flag) {
+    results = mclapply(data.list, screen_cv.glasso, use.package=use.package, 
+                       verbose=verbose, ...)
+  } else {
+    results = lapply(data.list, screen_cv.glasso, use.package=use.package, 
+                     verbose=verbose, ...)
+  }
+  
+  
+  # Collect results
+  results.all = list()
+  
+  wi = array(0, dim=c(dim(data)[2], dim(data)[2], length(group.names)))
+  w = array(0, dim=c(dim(data)[2], dim(data)[2], length(group.names)))
+      
+  for(group.i in 1:length(group.names)) {
+    wi[,,group.i] = results[[group.i]]$wi
+    w[,,group.i] = solve(wi[,,group.i])
+  }
+      
+  results.all$SigInv = wi
+  results.all$Sig = w
+  results.all$Mu = mu
+  results.all$Sigma.diag = Sigma.diag
+  results.all$group.names = group.names
+  results.all$proteins = colnames(data)
+  
+  class(results.all) = 'nethetclustering'
+  
+  return(results.all)    
+  
+}
