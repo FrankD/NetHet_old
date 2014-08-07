@@ -14,7 +14,6 @@ library(huge)
 #' @param invcov Inverse covariance matrix
 #' @export
 #' @return The partial correlation matrix.
-#' @examples
 #' 
 invcov2parcor <- function(invcov){
   return(-invcov*tcrossprod(sqrt(1/diag(invcov))))
@@ -126,7 +125,6 @@ mytrunc.method <- function(n,wi,method='linear.growth',trunc.k=5){
 #' The variables wi and wi.orig are matrices of size dim.samples by dim.samples 
 #' containing the truncated and untruncated inverse covariance matrix. Variable 
 #' Mu mean of the input data.
-#' @examples
 #' 
 screen_cv.glasso <- function(x,include.mean=TRUE,folds=10,length.lambda=20,
                              lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,
@@ -211,7 +209,6 @@ screen_cv.glasso <- function(x,include.mean=TRUE,folds=10,length.lambda=20,
 #' Mu and Sigma.diag contain the mean and variance of the input data,
 #' and group.names and var.names contains the names for the groups and
 #' variables in the data (if specified as colnames of the input data matrix).
-#' @examples
 #' 
 het.cv.glasso <- function(data, grouping=rep(1, dim(data)[1]), mc.flag=FALSE,
                           use.package='huge', normalise=FALSE, verbose=FALSE, ...) {

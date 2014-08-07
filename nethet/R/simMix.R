@@ -58,3 +58,60 @@ simMIX <- function(n,n.comp,mix.prob,Mu,Sig, dist='norm', df=2){
 	
   return(list(S=s,X=x))
 }
+
+
+# Wrapper function for generating an inverse covariance matrix with a given 
+# sparsity and dimensionality.
+generateInvCovs <- function(p=162, sparsity=0.7) {
+	num.edges = p*(p-1)/2
+	
+	edge.prop = 1 - sparsity
+	s = round(num.edges*edge.prop) # Number of non-zero entries in each matrix
+	
+	return(getinvcov(p, s=s))
+}
+
+# Generate inv cov using beta distribution for coefficients
+getinvcov<- function(p,s, a.diff=5,b.diff=5,magn.diag=0,emin=0.1){
+	#####8!!! act1 are the indices of the upper-diagonal non-zero entries of a pxp matrix 
+	
+	ind.upper.tri <- which(upper.tri(matrix(NA,p,p)))
+	act1 <- sample(ind.upper.tri,size=s,replace=FALSE)
+	
+	B1 <- matrix(0,p,p)
+	B1[act1] <- rbeta(length(act1),a.diff,b.diff)
+	diag(B1) <- 0
+	B1 <- (t(B1)+B1)
+	
+	
+	####compute (positive definite) concentration matrices
+	SigInv <- list()
+	
+	siginv <- B1
+	e.min <- min(eigen(siginv)$values)
+	siginv <- siginv+diag(abs(e.min)+emin+magn.diag,p)
+	SigInv <- siginv
+	
+	return(SigInv)
+}
+
+# Generate inverse covariances, means, mixing probabilities,
+# and simulate data from resulting mixture model.
+sim.mix.networks <- function(n, p, n.comp, sparsity=0.7, 
+														 mix.prob=rep(1/n.comp, n.comp),
+														 Mu=NULL, Sig=NULL, ...) {
+	
+	if(is.null(Mu)) {
+	  Mu = sapply(1:n.comp, function(n.comp) rnorm(p))
+	}
+	
+	if(is.null(Sig)) {
+	  Sig = sapply(1:n.comp, 
+												function(n.comp) solve(generateInvCovs(p, sparsity)), 
+												simplify='array')
+	}
+	
+	data = simMIX(n, n.comp, mix.prob, Mu, Sig, ...)
+	
+	return(list(Mu=Mu, Sig=Sig, data=data$X, comp=data$S))
+}
