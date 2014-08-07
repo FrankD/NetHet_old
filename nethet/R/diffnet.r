@@ -2,18 +2,7 @@
 #################################################################################################
 #################################################################################################
 ###High-Dimensional Two-Sample Testing for Gaussian Graphical Model
-###Date: 27/11/2012
-###
-###Changes: - align with twosample_highdimregr-07062012.r
-###         - add function for multi-split pvals
-###         - 07062012: additional option diag.invcov=TRUE/FALSE
-###         - 12062012: oracle-versions of multisplit-pvals
-###         - 15062012: set Pval=NA if "p>n" (changes only in est.my.ev2)
-###         - 21062012: new function: beta.mat, q.matrix3, est2.ww.mat2, est2.my.ev2
-###         - 25062012: twosample_diffnet2 with additional glasso.launi option
-###         - 12072012: small change in cv.glasso function
-###         - 20072012: cleaning up and get rid of old functions; single-split method added on 13082012
-###         - 27112012: diffnet.r originates from twosample_diffnet-20072012.R
+
 
 #####################
 ##Required Packages##
@@ -25,25 +14,7 @@ library(GeneNet)
 library(huge)
 library(CompQuadForm)
 library(ggm)
-## ##load C-code
-## #dyn.load("../code/betamat_diffnet.so")
 
-## #' DiffNet-package
-## #'
-## #' Differential network (DiffNet) performs formal two-sample testing between high-dimensional
-## #' Gaussian graphical models (GGMs).
-## #' 
-## #'
-## #' DiffNet provides test-statistic, p-value and networks. 
-## #' 
-## #' 
-## #' @references St\"adler, N. and Mukherjee, S. (2013). Two-Sample Testing in High-Dimensional Models.
-## #' Preprint \url{http://arxiv.org/abs/1210.4584}.
-## #' @import glasso mvtnorm parcor GeneNet huge CompQuadForm ggm 
-## #' @docType package
-## #' @name DiffNet-package
-## #' @useDynLib DiffNet
-## NULL
 
 #############################
 ##-------Screening---------##
@@ -1190,11 +1161,12 @@ est2.my.ev3 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
 ##' P-value aggregation
 ##'
 ##' 
-##' @title P-value aggregation
-##' @param gamma no descr
-##' @param pval no descr
-##' @return no descr
+##' @title P-value aggregation (Meinshausen et al 2009)
+##' @param gamma see Meinshausen et al 2009
+##' @param pval vector of p-values
+##' @return inf-quantile aggregated p-value
 ##' @author n.stadler
+##' @export
 agg.pval <- function(gamma,pval){
     min(quantile(pval/gamma,probs=gamma),1)
 }
@@ -1457,32 +1429,4 @@ diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='scre
               active.last=res.multisplit[[b.splits]]$active,medwi=medwi,sig.last=res.multisplit[[b.splits]]$sig,wi.last=res.multisplit[[b.splits]]$wi))
 }
 
-
-
-
-## glasso.parcor.launi <- function(x,maxiter=1000,term=10^{-3}){
-##   s <- var(x)
-##   rho.uni <- sqrt(2*log(ncol(x))/nrow(x))
-
-##   ww <- rep(1,p)#sqrt(diag(s))
-##   iter <- 0
-##   err <- Inf #convergence of parameters
-##   param <- as.vector(diag(ww))
-##   while((err>term)&(iter<maxiter)){
-##     gl <- glasso(s,rho=rho.uni*ww,penalize.diagonal=FALSE)
-##     ww <- 1/(diag(gl$wi))
-##     param.old <- param
-##     param <- as.vector(gl$w)
-##     err <- max(abs(param-param.old)/(1+abs(param)))
-##     iter <- iter+1
-##   }
-##   list(w=gl$w,wi=gl$wi,iter=iter)
-## }
-
-## glasso.launi <- function(x){
-##   s <- var(x)
-##   rho.uni <- sqrt(2*log(ncol(x))/nrow(x))
-##   gl <- glasso(s,rho=rho.uni,penalize.diagonal=FALSE)
-##   list(w=gl$w,wi=gl$wi)
-## }
 
