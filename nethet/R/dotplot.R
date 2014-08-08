@@ -1,9 +1,13 @@
 # Code for creating a dot plot of the strongest edges from mixglasso output
-
 require(ggplot2)
 
 
-# Build up dataframe for plotting dot plot with ggplot2
+
+#' Build up dataframe for plotting dot plot with ggplot2
+#' 
+#'
+#' Internal function
+#' 
 buildDotPlotDataFrame <- function(net.clustering, cluster.names, node.names) {
 	results.frame = data.frame()
 	
@@ -46,8 +50,37 @@ buildDotPlotDataFrame <- function(net.clustering, cluster.names, node.names) {
 	
 }
 
-# Main function for creating dotplot of edges with the highest partial correlation
-# (in any cluster).
+
+#' Create a plot showing the edges with the highest partial correlation in any cluster.
+#' 
+#' This function takes the output of {\link{screen_cv.glasso} or 
+#' {\link{mixglasso} and creates a plot of the highest scoring edges along the
+#' y axis, where, the edge in each cluster is represented by a circle whose area
+#' is proportional to the smallest mean of the two nodes that make up the edge,
+#' and the position along the y axis shows the partial correlation of the edge.
+#'
+#' @param net.clustering A network clustering object as returned by {\link{screen_cv.glasso} or 
+#' {\link{mixglasso}.
+#' @param pcor.cutoff Cutoff for the partial correlations; only edges with absolute 
+#' partial correlation > pcor.cutoff (in any cluster) will be displayed. 
+#' @param hard.limit Additional hard limit on the number of edges to display. If 
+#' pcor.cutoff results in more edges than hard.limit, only hard.limit edges with the
+#' highest partial correlation are returned. 
+#' @param display If TRUE, print the plot to the current output device.
+#' @param node.names Names for the nodes in the network.
+#' @param cluster.names Names for the clusters or groups.
+#' @param dot.size.range Graphical parameter for scaling the size of the circles (dots)
+#' representing an edge in each cluster.
+#' @export
+#' @return Returns a ggplot2 object. If display=TRUE, additionally displays the 
+#' plot.
+#' The variables Sig and SigInv are arrays of size dim.samples by dim.samples 
+#' by num.groups, where the first two dimensions contain the (inverse)
+#' covariance matrix for the network obtained by running glasso on group k. Variables 
+#' Mu and Sigma.diag contain the mean and variance of the input data,
+#' and group.names and var.names contains the names for the groups and
+#' variables in the data (if specified as colnames of the input data matrix).
+#' 
 dotPlot <- function(net.clustering, pcor.cutoff=0.25, hard.limit=50,
 										display=TRUE, node.names=rownames(net.clustering$Mu),
 										cluster.names=sort(unique(net.clustering$comp)),
