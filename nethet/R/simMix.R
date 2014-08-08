@@ -60,9 +60,18 @@ simMIX <- function(n,n.comp,mix.prob,Mu,Sig, dist='norm', df=2){
 }
 
 
-# Wrapper function for generating an inverse covariance matrix with a given 
-# sparsity and dimensionality.
-generateInvCovs <- function(p=162, sparsity=0.7) {
+##' Generate an inverse covariance matrix with a given sparsity and dimensionality
+##'
+##' This function generates an inverse covariance matrix, with at most (1-sparsity)*p(p-1)
+##' non-zero off-diagonal entries, where the non-zero entries are sampled from a 
+##' beta distribution.
+##' 
+##' @title generateInvCov
+##' @param p Dimensionality of the matrix.
+##' @param sparsity Determined the proportion of non-zero off-diagonal entries.
+##' @return A p by p positive definite inverse covariance matrix.
+##' @export
+generateInvCov <- function(p=162, sparsity=0.7) {
 	num.edges = p*(p-1)/2
 	
 	edge.prop = 1 - sparsity
@@ -71,13 +80,15 @@ generateInvCovs <- function(p=162, sparsity=0.7) {
 	return(getinvcov(p, s=s))
 }
 
-# Generate inv cov using beta distribution for coefficients
+##' Generate an inverse covariance matrix with a given sparsity and dimensionality
+##'
+##' Internal function
 getinvcov<- function(p,s, a.diff=5,b.diff=5,magn.diag=0,emin=0.1){
 	#####8!!! act1 are the indices of the upper-diagonal non-zero entries of a pxp matrix 
 	
 	ind.upper.tri <- which(upper.tri(matrix(NA,p,p)))
 	act1 <- sample(ind.upper.tri,size=s,replace=FALSE)
-	
+  
 	B1 <- matrix(0,p,p)
 	B1[act1] <- rbeta(length(act1),a.diff,b.diff)
 	diag(B1) <- 0
@@ -95,8 +106,35 @@ getinvcov<- function(p,s, a.diff=5,b.diff=5,magn.diag=0,emin=0.1){
 	return(SigInv)
 }
 
-# Generate inverse covariances, means, mixing probabilities,
-# and simulate data from resulting mixture model.
+
+
+##' Generate inverse covariances, means, mixing probabilities, and simulate 
+##' data from resulting mixture model.
+##'
+##' This function generates n.comp mean vectors from a standard Gaussian and
+##' n.comp covariance matrices, with at most (1-sparsity)*p(p-1)/2
+##' non-zero off-diagonal entries, where the non-zero entries are sampled from a 
+##' beta distribution. Then it uses {\link{simMIX}} to simulate from a 
+##' mixture model with these means and covariance matrices.
+##' 
+##' Means Mu and covariance matrices Sig can also be supplied by the user.
+##' 
+##' @title sim.mix.networks
+##' @param n Number of data points to simulate.
+##' @param p Dimensionality of the data.
+##' @param n.comp Number of components of the mixture model.
+##' @param sparsity Determined the proportion of non-zero off-diagonal entries.
+##' @param mix.prob Mixture probabilities for the components; defaults to uniform distribution.
+##' @param Mu Means for the mixture components, a p by n.comp matrix. If NULL, 
+##' sampled from a standard Gaussian.
+##' @param Sig Covariances for the mixture components, a p by p by n.comp array. If NULL,
+##' generated using {\link{generateInvCov}}.
+##' @return A list with components:
+##' \item{Mu} Means of the mixture components.
+##' \item{Sig} Covariances of the mixture components.
+##' \item{data} Simulated data, a n by p matrix.
+##' \item{S} Component assignments, a vector of length n.
+##' @export
 sim.mix.networks <- function(n, p, n.comp, sparsity=0.7, 
 														 mix.prob=rep(1/n.comp, n.comp),
 														 Mu=NULL, Sig=NULL, ...) {
@@ -107,7 +145,7 @@ sim.mix.networks <- function(n, p, n.comp, sparsity=0.7,
 	
 	if(is.null(Sig)) {
 	  Sig = sapply(1:n.comp, 
-												function(n.comp) solve(generateInvCovs(p, sparsity)), 
+												function(n.comp) solve(generateInvCov(p, sparsity)), 
 												simplify='array')
 	}
 	

@@ -39,3 +39,21 @@ test_that("Correct mixture components",
 test_that("t-distribution throws no error",
           expect_true({simMIX(100, n.comps, mix.prob, Mu[,1], Sigma, 
                                       dist='t', df=2);TRUE}))
+
+context('Simulating means, covariances, and simulating data from Gaussian mixture model')
+
+test.covariance = generateInvCov(10, 0.8)
+
+test_that("Inverting inverse covariance",
+          expect_true({solve(test.covariance); TRUE}))
+
+test_that("Sparsity of inverse covariance",
+          expect_equal((sum(test.covariance != 0) - 10)/(10*9), 0.2))
+
+test.data = sim.mix.networks(1e4, p, n.comps)
+emp.mean = sapply(1:4, function(x) colMeans(test.data$data[test.data$comp==x,]))
+emp.cov = sapply(1:4, function(x) var(test.data$data[test.data$comp==x,]), simplify='array')
+
+test_that("Correct Mean and Sigma", {
+  expect_less_than(sum(abs(emp.mean-test.data$Mu)), 0.1*p*n.comps)
+  expect_less_than(sum(abs(emp.cov-test.data$Sig)), 0.1*p*n.comps*n.comps)})
