@@ -1375,14 +1375,10 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
 ##' @param save.mle should MLEs be saved for output ? default: FALSE
 ##' @param ... additional arguments for screen.meth
 ##' @return list consisting of
-##' \item{pval.onesided}{p-values for all b.splits}
-##' \item{pval.twosided}{ignore this output}
-##' \item{sspval.onesided}{single split p-value}
-##' \item{sspval.twosided}{ignore this output}
-##' \item{medpval.onesided}{median aggregated p-value}
-##' \item{medpval.twosided}{ignore this output}
-##' \item{aggpval.onesided}{aggregated p-value (meinshausen, meier, buehlmann 2009)}
-##' \item{aggpval.twosided}{ignore this output}
+##' \item{ms.pval}{p-values for all b.splits}
+##' \item{ss.pval}{single split p-value}
+##' \item{medagg.pval}{median aggregated p-value}
+##' \item{meinshagg.pval}{aggregated p-value (meinshausen, meier, buehlmann 2009)}
 ##' \item{teststat}{test statistics for b.splits}
 ##' \item{weights.nulldistr}{ignore this output}
 ##' \item{active.last}{ignore this output}
