@@ -220,23 +220,31 @@ cv.glasso <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se
   }
   invisible(object)
 }
-##' Screen_cv.glasso
+##' Cross-validated glasso with additional thresholding
 ##'
+##'
+##' Run glasso on a single dataset, using cross-validation to estimate the
+##' penalty parameter lambda. Performs additional thresholding (optionally).
 ##' 
 ##' @title Screen_cv.glasso
-##' @param x no descr
+##' @param x The input data. Needs to be a num.samples by dim.samples matrix.
 ##' @param include.mean no descr
-##' @param folds no descr
-##' @param length.lambda no descr
+##' @param folds Number of folds in the cross-validation (default=10).
+##' @param length.lambda Length of lambda path to consider (default=20).
 ##' @param lambdamin.ratio no descr
-##' @param penalize.diagonal no descr
+##' @param penalize.diagonal If TRUE apply penalization to diagonal of inverse
+##'        covariance as well. (default=FALSE)
 ##' @param trunc.method no descr
 ##' @param trunc.k no descr
 ##' @param plot.it no descr
 ##' @param se no descr
-##' @param use.package no descr
-##' @param verbose no descr
-##' @return no descr
+##' @param use.package 'glasso' or 'huge' (default)
+##' @param verbose If TRUE, output progress.
+##' @return  Returns a list with named elements 'rho.opt', 'wi', 'wi.orig', 'mu', 
+##'          Variable rho.opt is the scaled penalization parameter (?). 
+##'          The variables wi and wi.orig are matrices of size dim.samples by dim.samples 
+##'          containing the truncated and untruncated inverse covariance matrix. Variable 
+##'          Mu mean of the input data.
 ##' @author n.stadler
 ##' @export
 screen_cv.glasso <- function(x,include.mean=FALSE,
@@ -283,7 +291,7 @@ screen_cv.glasso <- function(x,include.mean=FALSE,
   if (plot.it){
     plotCV(lambda,cv,cv.error,se=se)
   }
-  list(rho.opt=2*lambda[which.min(cv)]/nrow(x),wi=wi.trunc,wi.orig=wi)
+  list(rho.opt=2*lambda[which.min(cv)]/nrow(x),wi=wi.trunc,wi.orig=wi,mu=colMeans(x))
 }
 ##' BIC.glasso
 ##'
@@ -1254,7 +1262,6 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
 ##' \item{mu}{Mean (MLE on 2nd half of data)}
 ##' @author n.stadler
 ##' @export
-##' @example ../diffnet-pkg_test.r
 diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glasso',
                                compute.evals='est2.my.ev3',algorithm.mleggm='glasso_rho0',include.mean=FALSE,
                                method.compquadform='imhof',acc=1e-04,epsabs=1e-10,epsrel=1e-10,
@@ -1384,7 +1391,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
 ##' \item{wi.last}{ignore this output}
 ##' @author n.stadler
 ##' @export
-##' @example ../diffnet-pkg_test.r
+##' @example ../diffnet_ex.R
 diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='screen_bic.glasso',include.mean=FALSE,
                               gamma.min=0.05,compute.evals='est2.my.ev3',algorithm.mleggm='glasso_rho0',
                               method.compquadform='imhof',acc=1e-04,epsabs=1e-10,epsrel=1e-10,show.trace=FALSE,save.mle=FALSE,...){
