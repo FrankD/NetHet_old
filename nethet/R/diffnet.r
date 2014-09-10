@@ -1,11 +1,12 @@
-#################################################################################################
-#################################################################################################
-#################################################################################################
-###High-Dimensional Two-Sample Testing for Gaussian Graphical Model
-
+###############################################################################
+# High-Dimensional Two-Sample Testing for Gaussian Graphical Model
+#------------------------------------------------------------------
+#
+#
+###############################################################################
 
 #####################
-##Required Packages##
+# Required Packages 
 #####################
 library(mvtnorm)
 library(glasso)
@@ -33,6 +34,7 @@ lambda.max <- function(x){
   diag(s.var) <- 0
   return(n*max(abs(s.var))/2)
 }
+
 ##' Lambda-grid (log scale)
 ##'
 ##' 
@@ -46,6 +48,7 @@ lambdagrid_mult <- function(lambda.min,lambda.max,nr.gridpoints){
     mult.const <- (lambda.max/lambda.min)^(1/(nr.gridpoints-1))
     return(lambda.min*mult.const^((nr.gridpoints-1):0))
 }
+
 ##' Lambda-grid (linear scale)
 ##'
 ##' 
@@ -58,6 +61,7 @@ lambdagrid_mult <- function(lambda.min,lambda.max,nr.gridpoints){
 lambdagrid_lin <- function(lambda.min,lambda.max,nr.gridpoints){
     return(seq(lambda.max,lambda.min,length=nr.gridpoints))
 }
+
 ##' Make grid
 ##'
 ##' 
@@ -71,6 +75,7 @@ lambdagrid_lin <- function(lambda.min,lambda.max,nr.gridpoints){
 make_grid <- function(lambda.min,lambda.max,nr.gridpoints,method='lambdagrid_mult'){
   eval(as.name(method))(lambda.min,lambda.max,nr.gridpoints)
 }
+
 ##' Error bars for plotCV
 ##'
 ##' 
@@ -91,6 +96,7 @@ error.bars <- function (x, upper, lower, width = 0.02, ...)
     segments(x - barw, lower, x + barw, lower, ...)
     range(upper, lower)
 }
+
 ##' plotCV
 ##'
 ##' 
@@ -111,6 +117,7 @@ plotCV <- function(lambda,cv,cv.error,se=TRUE,type='b',...){
     error.bars(lambda,cv+cv.error,cv-cv.error,width=1/length(lambda))
   invisible()
 }
+
 ##' Make folds
 ##'
 ##' 
@@ -122,6 +129,7 @@ plotCV <- function(lambda,cv,cv.error,se=TRUE,type='b',...){
 cv.fold <- function(n,folds=10){
   split(sample(1:n),rep(1:folds,length=n))
 }
+
 ##' Graphical Lasso path with huge package
 ##'
 ##' 
@@ -140,6 +148,7 @@ hugepath <- function(s,rholist,penalize.diagonal=NULL,trace=NULL){
   #return(list(wi=wi[,,length(fit.huge$lambda):1],w=w[,,length(fit.huge$lambda):1]))
   return(list(rholist=rholist,wi=wi[,,length(rholist):1],w=w[,,length(rholist):1]))
 }
+
 ##' Additional thresholding
 ##'
 ##' 
@@ -172,6 +181,7 @@ mytrunc.method <- function(n,wi,method='linear.growth',trunc.k=5){
     return(list(wi=wi.trunc))
   }
 }
+
 ##' Crossvalidation for GLasso 
 ##'
 ##' 8! lambda-grid has to be increasing (see glassopath)
@@ -220,28 +230,29 @@ cv.glasso <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se
   }
   invisible(object)
 }
+
 ##' Cross-validated glasso with additional thresholding
 ##'
 ##'
 ##' Run glasso on a single dataset, using cross-validation to estimate the
 ##' penalty parameter lambda. Performs additional thresholding (optionally).
 ##' 
-##' @title Screen_cv.glasso
+##' @title screen_cv.glasso
 ##' @param x The input data. Needs to be a num.samples by dim.samples matrix.
-##' @param include.mean no descr
+##' @param include.mean Include mean in likelihood. TRUE / FALSE (default).
 ##' @param folds Number of folds in the cross-validation (default=10).
 ##' @param length.lambda Length of lambda path to consider (default=20).
-##' @param lambdamin.ratio no descr
+##' @param lambdamin.ratio Ratio lambda.min/lambda.max.
 ##' @param penalize.diagonal If TRUE apply penalization to diagonal of inverse
 ##'        covariance as well. (default=FALSE)
-##' @param trunc.method no descr
-##' @param trunc.k no descr
-##' @param plot.it no descr
-##' @param se no descr
-##' @param use.package 'glasso' or 'huge' (default)
+##' @param trunc.method None / linear.growth (default) / sqrt.growth
+##' @param trunc.k truncation constant, number of samples per predictor (default=5)
+##' @param plot.it TRUE / FALSE (default)
+##' @param se default=FALSE.
+##' @param use.package 'glasso' or 'huge' (default).
 ##' @param verbose If TRUE, output progress.
 ##' @return  Returns a list with named elements 'rho.opt', 'wi', 'wi.orig', 'mu', 
-##'          Variable rho.opt is the scaled penalization parameter (?). 
+##'          Variable rho.opt is the optimal (scaled) penalization parameter (rho.opt=2*la.opt/n). 
 ##'          The variables wi and wi.orig are matrices of size dim.samples by dim.samples 
 ##'          containing the truncated and untruncated inverse covariance matrix. Variable 
 ##'          Mu mean of the input data.
@@ -293,6 +304,7 @@ screen_cv.glasso <- function(x,include.mean=FALSE,
   }
   list(rho.opt=2*lambda[which.min(cv)]/nrow(x),wi=wi.trunc,wi.orig=wi,mu=colMeans(x))
 }
+
 ##' BIC.glasso
 ##'
 ##' 
@@ -362,6 +374,7 @@ bic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package
   
   list(rho.opt=2*lambda[which.min(myscore)]/nrow(x),lambda=lambda,la.opt=lambda[index.opt],bic.score=myscore,Mu=Mu,wi=wi,w=w)
 }
+
 ##' AIC.glasso
 ##'
 ##' 
@@ -431,21 +444,26 @@ aic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package
   
   list(rho.opt=2*lambda[which.min(myscore)]/nrow(x),lambda=lambda,la.opt=lambda[index.opt],bic.score=myscore,Mu=Mu,wi=wi,w=w)
 }
-##' Screen_bic.glasso
+
+##' Glasso, lambda estimated using BIC, additional thresholding
 ##'
 ##' 
-##' @title Screen_bic.glasso
-##' @param x no descr
-##' @param include.mean no descr
-##' @param length.lambda no descr
-##' @param lambdamin.ratio no descr
-##' @param penalize.diagonal no descr
-##' @param plot.it no descr
-##' @param trunc.method no descr
-##' @param trunc.k no descr
-##' @param use.package no descr
-##' @param verbose no descr
-##' @return no descr
+##' @title screen_bic.glasso
+##' @param x  The input data. Needs to be a num.samples by dim.samples matrix.
+##' @param include.mean Include mean in likelihood. TRUE / FALSE (default).
+##' @param length.lambda Length of lambda path to consider (default=20).
+##' @param lambdamin.ratio Ratio lambda.min/lambda.max.
+##' @param penalize.diagonal  If TRUE apply penalization to diagonal of inverse
+##'        covariance as well. (default=FALSE)
+##' @param plot.it TRUE / FALSE (default)
+##' @param trunc.method None / linear.growth (default) / sqrt.growth
+##' @param trunc.k truncation constant, number of samples per predictor (default=5)
+##' @param use.package 'glasso' or 'huge' (default).
+##' @param verbose If TRUE, output progress.
+##' @return  Returns a list with named elements 'rho.opt', 'wi', 'wi.orig', 
+##'          Variable rho.opt is the optimal (scaled) penalization parameter (rho.opt=2*la.opt/n). 
+##'          The variables wi and wi.orig are matrices of size dim.samples by dim.samples 
+##'          containing the truncated and untruncated inverse covariance matrix. 
 ##' @author n.stadler
 ##' @export
 screen_bic.glasso <- function(x,include.mean=TRUE,
@@ -467,21 +485,26 @@ screen_bic.glasso <- function(x,include.mean=TRUE,
   wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
   list(rho.opt=fit.bicgl$rho.opt,wi=wi.trunc,wi.orig=wi) 
 }
-##' Screen_aic.glasso
+
+##' Glasso, lambda estimated using AIC, additional thresholding
 ##'
 ##' 
-##' @title Screen_aic.glasso
-##' @param x no descr
-##' @param include.mean no descr
-##' @param length.lambda no descr
-##' @param lambdamin.ratio no descr
-##' @param penalize.diagonal no descr
-##' @param plot.it no descr
-##' @param trunc.method no descr
-##' @param trunc.k no descr
-##' @param use.package no descr
-##' @param verbose no descr
-##' @return no descr
+##' @title screen_aic.glasso
+##' @param x  The input data. Needs to be a num.samples by dim.samples matrix.
+##' @param include.mean Include mean in likelihood. TRUE / FALSE (default).
+##' @param length.lambda Length of lambda path to consider (default=20).
+##' @param lambdamin.ratio Ratio lambda.min/lambda.max.
+##' @param penalize.diagonal  If TRUE apply penalization to diagonal of inverse
+##'        covariance as well. (default=FALSE)
+##' @param plot.it TRUE / FALSE (default)
+##' @param trunc.method None / linear.growth (default) / sqrt.growth
+##' @param trunc.k truncation constant, number of samples per predictor (default=5)
+##' @param use.package 'glasso' or 'huge' (default).
+##' @param verbose If TRUE, output progress.
+##' @return  Returns a list with named elements 'rho.opt', 'wi', 'wi.orig'.
+##'          Variable rho.opt is the optimal (scaled) penalization parameter (rho.opt=2*la.opt/n). 
+##'          The variables wi and wi.orig are matrices of size dim.samples by dim.samples 
+##'          containing the truncated and untruncated inverse covariance matrix. 
 ##' @author n.stadler
 ##' @export
 screen_aic.glasso <- function(x,include.mean=TRUE,length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),
@@ -503,6 +526,7 @@ screen_aic.glasso <- function(x,include.mean=TRUE,length.lambda=20,lambdamin.rat
   wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
   list(rho.opt=fit.aicgl$rho.opt,wi=wi.trunc,wi.orig=wi) 
 }
+
 ##' Screen_lasso
 ##'
 ##' 
@@ -520,15 +544,19 @@ screen_lasso <- function(x,include.mean=NULL,
   wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
   list(rho.opt=NULL,wi=wi.trunc,wi.orig=wi)
 }
-##' Screen_shrink
+
+##' Estimate GGM using shrinkage approach
 ##'
 ##' 
-##' @title Screen_shrink
-##' @param x no descr
-##' @param include.mean no descr
-##' @param trunc.method no descr
-##' @param trunc.k no descr
-##' @return no descr
+##' @title screen_shrink
+##' @param x  The input data. Needs to be a num.samples by dim.samples matrix.
+##' @param include.mean Include mean in likelihood. TRUE / FALSE (default).
+##' @param trunc.method None / linear.growth (default) / sqrt.growth
+##' @param trunc.k truncation constant, number of samples per predictor (default=5)
+##' @return Returns a list with named elements 'rho.opt', 'wi', 'wi.orig'.
+##'          Variable rho.opt=NULL (no tuning parameter involved). 
+##'          The variables wi and wi.orig are matrices of size dim.samples by dim.samples 
+##'          containing the truncated and untruncated inverse covariance matrix.
 ##' @author n.stadler
 ##' @export
 screen_shrink <- function(x,include.mean=NULL,
@@ -539,22 +567,28 @@ screen_shrink <- function(x,include.mean=NULL,
   wi.trunc <- mytrunc.method(n=nrow(x),wi=wi,method=trunc.method,trunc.k=trunc.k)$wi
   list(rho.opt=NULL,wi=wi.trunc,wi.orig=wi)
 }
-##' Screen_mb
-##'
+
+##' Estimate GGM by performing Lasso-regressions for each node 
+##' (Meinshausen-Buehlmann approach)
 ##' 
-##' @title Screen_mb
-##' @param x no descr
-##' @param include.mean no descr
-##' @param folds no descr
-##' @param length.lambda no descr
-##' @param lambdamin.ratio no descr
-##' @param penalize.diagonal no descr
-##' @param trunc.method no descr
-##' @param trunc.k no descr
-##' @param plot.it no descr
-##' @param se no descr
-##' @param verbose no descr
-##' @return no descr
+##' @title screen_mb
+##' @param x The input data. Needs to be a num.samples by dim.samples matrix.
+##' @param include.mean Include mean in likelihood. TRUE / FALSE (default).
+##' @param folds Number of folds in the cross-validation (default=10).
+##' @param length.lambda  Length of lambda path to consider (default=20).
+##' @param lambdamin.ratio  Ratio lambda.min/lambda.max.
+##' @param penalize.diagonal If TRUE apply penalization to diagonal of inverse
+##'        covariance as well. (default=FALSE)
+##' @param trunc.method None / linear.growth (default) / sqrt.growth
+##' @param trunc.k truncation constant, number of samples per predictor (default=5)
+##' @param plot.it TRUE / FALSE (default)
+##' @param se default=FALSE.
+##' @param verbose If TRUE, output progress.
+##' @return  Returns a list with named elements 'rho.opt', 'wi'.
+##'          Variable rho.opt is the optimal (scaled) penalization parameter (rho.opt=2*la.opt/n). 
+##'          The variables wi is a matrix of size dim.samples by dim.samples 
+##'          containing the truncated inverse covariance matrix. Variable 
+##'          Mu mean of the input data.
 ##' @author n.stadler
 ##' @export
 screen_mb <- function(x,include.mean=NULL,
@@ -639,6 +673,7 @@ screen_mb2 <- function(x,include.mean=NULL,length.lambda=20,
   
   list(rho.opt=NULL,wi=wi)
 }
+
 ##' Screen_full
 ##'
 ##' 
@@ -656,9 +691,9 @@ screen_full <- function(x,include.mean=NULL,length.lambda=NULL,trunc.method=NULL
 }
 
 
-##########################
-##-------covMethod------##
-##########################
+###################################################################
+##-------covMethod------
+###################################################################
 
 ##' Compute covariance matrix
 ##'
@@ -678,9 +713,9 @@ mcov <- function(x,include.mean,covMethod='ML'){
   }
 }
   
-##############################
-##--------P-VALUES----------##
-##############################
+#################################################################
+##--------P-VALUES----------
+#################################################################
 
 ##' MLE in GGM
 ##'
@@ -717,26 +752,29 @@ mle.ggm <- function(x,wi,algorithm='glasso_rho0',rho=NULL,include.mean){
     return(list(w=fit.mle$Shat,wi=wi))
   }
 }
-##' LogLikelihood-Ratio 
+
+##' log-likelihood-ratio statistics of GGM
 ##'
 ##' 
-##' @title LogLikelihood-Ratio
-##' @param x1 no descr
-##' @param x2 no descr
-##' @param x no descr
-##' @param sig1 no descr
-##' @param sig2 no descr
-##' @param sig no descr
-##' @param mu1 no descr
-##' @param mu2 no descr
-##' @param mu no descr
-##' @return no descr
+##' @title log-likelihood-ratio statistic of GGM
+##' @param x1 data-matrix sample 1
+##' @param x2 data-matrix sample 2
+##' @param x pooled data-matrix
+##' @param sig1 covariance sample 1
+##' @param sig2 covariance sample 2
+##' @param sig pooled covariance
+##' @param mu1 mean sample 1
+##' @param mu2 mean sample 2
+##' @param mu pooled mean
+##' @return Returns a list with named elements 'twiceLR', 'sig1', 'sig2', 'sig'.
+##'         'twiceLR' is twice the log-likelihood-ratio statistic.
 ##' @author n.stadler
 ##' @export
 logratio <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu){
   twiceLR <- 2*(sum(dmvnorm(x1,mean=mu1,sigma=sig1,log=TRUE))+sum(dmvnorm(x2,mean=mu2,sigma=sig2,log=TRUE))-sum(dmvnorm(x,mean=mu,sigma=sig,log=TRUE)))
   list(twiceLR=twiceLR,sig1=sig1,sig2=sig2,sig=sig)
 }
+
 ##' Compute Information Matrix of Gaussian Graphical Model
 ##'
 ##' computes E_0[s(Y;Omega)s(Y;Omega)'] where s(Y;Omega)=(d/dOmega) LogLik
@@ -778,6 +816,7 @@ inf.mat<-function(Sig,include.mean=FALSE){
   }
   return(infmat)
 }
+
 ##' Calculates weight-matrix and eigenvalues
 ##'
 ##' calculation based on true information matrix
@@ -801,6 +840,7 @@ ww.mat <- function(imat,act,act1,act2){
   
   return(list(ww.mat=mat,eval=eval))
 }
+
 ##' Calculates eigenvalues of weight-matrix (using 1st order simplification)
 ##'
 ##' calculation based on true information matrix
@@ -837,6 +877,7 @@ ww.mat2 <- function(imat,act,act1,act2){
   eval <- c(eval,sqrt(eval2),-sqrt(eval2))
   return(list(ww.mat=mat,eval=eval))
 }
+
 ##' Compute beta-matrix 
 ##'
 ##' beta-matrix=E[s_ind1(Y;sig1) s_ind2(Y;sig2)'|sig]
@@ -859,6 +900,7 @@ beta.mat<-function(ind1,ind2,sig1,sig2,sig){
   
   return(betamat)
 }
+
 ## beta.mat<-function(ind1,ind2,sig1,sig2,sig){
 ##   k <- ncol(sig)
 ##   p <- k*(k+1)/2
@@ -903,6 +945,7 @@ q.matrix3 <- function(sig,sig.a,sig.b,act.a,act.b,ss){
     return(b.ab[aa,bb,drop=FALSE]-(b.ab[aa,s.b,drop=FALSE]%*%solve(b.ab[s.a,s.b,drop=FALSE])%*%b.ab[s.a,bb,drop=FALSE]))
   }
 }
+
 ##' q.matrix4
 ##'
 ##' 
@@ -926,6 +969,7 @@ q.matrix4 <- function(b.mat,act.a,act.b,ss){
         return(b.mat[aa,bb,drop=FALSE]-(b.mat[aa,s.b,drop=FALSE]%*%solve(b.mat[s.a,s.b,drop=FALSE])%*%b.mat[s.a,bb,drop=FALSE]))
     }
 }
+
 ##' Compute weights of sum-w-chi2 (1st order simplification)
 ##'
 ##' 
@@ -992,6 +1036,7 @@ est2.ww.mat2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
   }
   return(list(ww.mat=mat,eval=eval,eval.mu.complex=eval.mu.complex))
 }
+
 ##' Compute weights of sum-w-chi2 (2nd order simplification)
 ##' 
 ##' *expansion of W in two directions ("dimf>dimg direction" & "dimf>dimg direction") 
@@ -1166,6 +1211,7 @@ est2.my.ev3 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
   }
   return(list(eval=eval,ev.aux.complex=ev.aux.complex))
 }
+
 ##' P-value aggregation
 ##'
 ##' 
@@ -1178,6 +1224,7 @@ est2.my.ev3 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
 agg.pval <- function(gamma,pval){
     min(quantile(pval/gamma,probs=gamma),1)
 }
+
 ##' P-value calculation
 ##'
 ##' 
@@ -1229,6 +1276,7 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
   }
   return(list(pval.onesided=pval.onesided,pval.twosided=pval.twosided,weights.nulldistr=weights.nulldistr,teststat=teststat))
 }
+
 ##' Differential Network for user specified data split
 ##'
 ##' If include.mean=FALSE then x1 and x2 have zero mean.
@@ -1352,6 +1400,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
               teststat=res.pval$teststat,weights.nulldistr=res.pval$weights.nulldistr,
               active=active,sig=est.sig,wi=est.wi,mu=est.mu))
 }
+
 ##' Differential Network (mulitsplit)
 ##'
 ##' If include.mean=FALSE then x1 and x2 have zero mean.
@@ -1436,18 +1485,22 @@ diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='scre
 }
 
 plot.diffnet <- function(x){
-    if(is.null(x$medwi)){
-        hist(x$ms.pval,breaks=10,
-             main='histogram single-split p-values',xlab='p-values',ylab='frequency')
+    #if(is.null(x$medwi)){
+        hh <- hist(x$ms.pval,breaks=10,
+                   main='histogram single-split p-values',xlab='p-values',ylab='frequency')
         abline(v=x$medagg.pval,lty=2,col='red')
-    }else{
-        medwi <- x$medwi
-        k <- ncol(x$medwi[[1]])
-        par(mfrow=c(2,2))
-        image(x=1:k,y=1:k,abs(medwi$modIpop1),xlab='',ylab='',main='median invcov1')
-        image(x=1:k,y=1:k,abs(medwi$modIpop2),xlab='',ylab='',main='median invcov2')
-        hist(x$ms.pval,breaks=10,
-             main='histogram single-split p-values',xlab='p-values',ylab='frequency')
-        abline(v=x$medagg.pval,lty=2,col='red')
-    }
+        abline(v=x$meinshagg.pval,lty=2,col='green')
+        legend(x=min(hh$mids),y=max(hh$counts),lty=c(2,2),col=c('red','green'),legend=c('median aggregated','meinshausen aggregated'))
+    #}else{
+    #    medwi <- x$medwi
+    #    k <- ncol(x$medwi[[1]])
+    #    par(mfrow=c(2,2))
+    #    image(x=1:k,y=1:k,abs(medwi$modIpop1),xlab='',ylab='',main='median invcov1')
+    #    image(x=1:k,y=1:k,abs(medwi$modIpop2),xlab='',ylab='',main='median invcov2')
+    #    hist(x$ms.pval,breaks=10,
+    #         main='histogram single-split p-values',xlab='p-values',ylab='frequency')
+    #    abline(v=x$medagg.pval,lty=2,col='red')
+    #}
 }
+
+
