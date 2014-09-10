@@ -1,0 +1,205 @@
+\documentclass{article}
+
+%\VignetteEngine{knitr::knitr}
+
+<<style-knitr, eval=TRUE, echo=FALSE, results="asis">>=
+BiocStyle::latex()
+@
+
+\title{Heterogeneous Clustering and Network Inference with the MixGLasso}
+
+\begin{document}
+
+\maketitle
+
+<<echo=FALSE, include=TRUE>>=
+# Load package
+#library(nethet)
+
+library(ggplot2)
+
+# For now, load only needed source files
+source('../R/simMix.R')
+source('../R/mixglasso.R')
+source('../R/cvglasso.R')
+source('../R/diffnet.r')
+@
+
+\section{Introduction}
+
+Data analysis in systems biology and medicine often requires analysing 
+data whose dynamics can be described as a network of observed and unobserved 
+variables. A simple example is a protein signalling network in a cell. 
+
+Simplifying the process greatly, signalling proteins known as kinases can be 
+unphosphorylated (inactive) or phosphorylated (active). Cell signalling 
+uses the phosphorylation machinery to pass messages from the exterior of the 
+cell to the interior where they will be acted upon. This message passing is 
+achieved via a relay of kinases and other proteins (the signalling pathway), 
+which can be thought of as a network.
+
+Numerous software packages exist for reconstructing networks from observational
+data [some citations?]. However, most of these packages assume that there is a 
+single underlying network. Package \texttt{nethet} was designed with the intent
+of handling heterogeneous datasets arising from a collection of (possibly 
+related) networks. 
+
+A simple example would be protein measurements of breast cancer tumor cells. It
+is known that there exist several subtypes of breast cancer with different 
+molecular profiles. We might be interested in whether the signalling pathways
+(networks) reconstructed from two subtypes are statistically different. If 
+they are not, then we might be interested in identifying new subtypes that 
+present different molecular profiles, and reconstructing the networks for each
+identified subtype. The \texttt{nethet} package contains functionalities to tackle
+all of these tasks.
+
+\section{Functionality}
+
+The package consists of two main parts:
+
+\begin{itemize}
+ \item The \texttt{diffnet} functions implement a statistical test for whether
+       the networks underlying a pair of dataset are different.
+ \item The \texttt{mixglasso} functions implement a network-based clustering and 
+       reconstruction algorithm based on the graphical lasso \cite{glasso}, 
+       which allows reconstruction of networks from heterogeneous datasets.
+\end{itemize}
+
+The underlying statistical model for networks in this package is the 
+l1-penalised partial correlation matrix. Information about the model and theory
+behind it can be found in \cite{staedler}. This vignette will mainly deal 
+with how to use the package in practice.
+
+In addition to the two main functionalities of the package, we include functions 
+for simulating data from a pre-defined heterogeneous network model, and for 
+plotting and outputting the results in a sensible way.
+
+\section{Simulate data}
+
+In order to demonstrate the functionalities of the package, we will first simulate data from a Gaussian mixture model with a known covariance structure. The \textit{nethet} package includes code for generating random covariance matrices with a given sparsity, and for simulating from a Gaussian mixture model with given means and covariances. The function \texttt{sim.mix.networks} provides a convenient wrapper for both:
+
+<<echo=TRUE, include=TRUE>>=
+# Specify number of simulated samples and dimensionality
+n = 100
+p = 25
+
+# Specify number of components of the mixture model and mixture probabilities
+n.comp = 4
+mix.prob = c(0.2, 0.4, 0.3, 0.1)
+
+# Specify sparsity in [0,1], indicating fraction of off-diagonal zero entries.
+s = 0.9
+
+
+# Generate networks with random means and covariances. Means will be drawn from 
+# a standard Gaussian distribution, non-zero covariance values from a 
+# Beta(1,1) distribution.
+sim.result = sim.mix.networks(n, p, n.comp, s, mix.prob)
+@
+
+The data is contained in \texttt{sim.result\$data}, and the components that each 
+data point belongs to are contained in \texttt{sim.result\$comp}. Let's check
+that the mixture probabilities are correct and then plot the first two 
+dimensions of the data. Note that we do not expect these to be well-separated in
+any way.
+
+<<echo=TRUE, include=TRUE>>=
+print(table(sim.result$comp)/n)
+
+component = as.factor(sim.result$comp)
+
+qplot(x=sim.result$data[,1], y=sim.result$data[,2], 
+      colour=component) + 
+  xlab('Dimension 1') +
+  ylab('Dimension 2')
+  
+@
+
+The means and covariances of the data are contained in \texttt{sim.result\$Mu} 
+and \texttt{sim.result\$Sig}. If desired, they can also be specified when calling
+\texttt{sim.mix.networks}.
+
+<<echo=TRUE, include=TRUE>>=
+# Generate new dataset with the same covariances, but different means
+sim.result.new = sim.mix.networks(n, p, n.comp, s, mix.prob, Sig=sim.result$Sig)
+
+component = as.factor(sim.result.new$comp)
+
+qplot(x=sim.result.new$data[,1], y=sim.result.new$data[,2], 
+      colour=component) + 
+  xlab('Dimension 1') +
+  ylab('Dimension 2')
+@
+
+When the covariance matrices for the components are not specified in advance, 
+the \texttt{sim.mix.networks} function implicitly assumes that they are 
+generated independently of each other. In order to test the \texttt{diffnet} 
+functions, we also want to be able to generate simulated data from pairs of 
+networks that present some common edges. The \texttt{generate.2networks}
+function is used to generate pairs of networks with an arbitrary overlap.
+
+\textbf{Nic: Insert generate.2networks example here.}
+
+\section{Network reconstruction with known components using \texttt{het.cv.glasso}}
+
+If it is known a priori to which component each sample belongs, then the problem
+of reconstructing the network reduces to a simple application of the graphical 
+lasso to each component. For convenience, we have included a wrapper function 
+\texttt{het.cv.glasso} in \texttt{nethet} that applies the \texttt{cv.glasso} 
+function (from package \texttt{glasso}) to each component in a heterogeneous 
+dataset with specified component labels.
+
+To demonstrate \texttt{het.cv.glasso}, we will generate some data in the same 
+way as in the previous section:
+
+<<echo=TRUE, include=TRUE>>=
+# Generate networks with random means and covariances. 
+sim.result = sim.mix.networks(n, p, n.comp, s, mix.prob)
+
+test.data = sim.result$data
+test.labels = sim.result$comp
+
+# Reconstruct networks for each component
+networks = het.cv.glasso(data=test.data, grouping=test.labels)
+@
+
+One way of checking if the reconstructed networks are sensible is plotting the
+covariance matrices used for generating the networks against the reconstructed
+covariance matrices.
+
+<<echo=TRUE, include=TRUE>>=
+# Component labels for covariance values
+components = as.factor(rep(1:n.comp, each=p^2))
+
+qplot(x=c(networks$Sig), y=c(sim.result$Sig),
+			colour=components) + 
+  xlab('Reconstructed Covariances') +
+  ylab('True Covariances')
+  
+@
+
+\section{Testing whether two networks are statistically significantly different
+(with \texttt{diffnet})}
+
+\textbf{Nic: Can you do this section and the following one? I think diffregr 
+should just be mentioned as an extension of diffnet within this section.}
+
+\section{Gene set testing (with \texttt{GGMGSA})}
+
+...
+
+\section{Network reconstruction with unknown components using \texttt{mixglasso}}
+
+...
+
+\section{Plotting and Exporting Results}
+
+\subsection{Network Plots}
+
+\subsection{Edge Plots}
+
+Dot plot and scatter plot
+
+\subsection{Exporting Results}
+
+\end{document}
