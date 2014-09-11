@@ -237,7 +237,7 @@ cv.glasso <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se
 ##' Run glasso on a single dataset, using cross-validation to estimate the
 ##' penalty parameter lambda. Performs additional thresholding (optionally).
 ##' 
-##' @title screen_cv.glasso
+##' @title Cross-validated glasso with additional thresholding
 ##' @param x The input data. Needs to be a num.samples by dim.samples matrix.
 ##' @param include.mean Include mean in likelihood. TRUE / FALSE (default).
 ##' @param folds Number of folds in the cross-validation (default=10).
@@ -445,10 +445,10 @@ aic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package
   list(rho.opt=2*lambda[which.min(myscore)]/nrow(x),lambda=lambda,la.opt=lambda[index.opt],bic.score=myscore,Mu=Mu,wi=wi,w=w)
 }
 
-##' Glasso, lambda estimated using BIC, additional thresholding
+##' BIC-tuned glasso with additional thresholding
 ##'
 ##' 
-##' @title screen_bic.glasso
+##' @title BIC-tuned glasso with additional thresholding
 ##' @param x  The input data. Needs to be a num.samples by dim.samples matrix.
 ##' @param include.mean Include mean in likelihood. TRUE / FALSE (default).
 ##' @param length.lambda Length of lambda path to consider (default=20).
@@ -486,10 +486,10 @@ screen_bic.glasso <- function(x,include.mean=TRUE,
   list(rho.opt=fit.bicgl$rho.opt,wi=wi.trunc,wi.orig=wi) 
 }
 
-##' Glasso, lambda estimated using AIC, additional thresholding
+##' AIC-tuned glasso with additional thresholding
 ##'
 ##' 
-##' @title screen_aic.glasso
+##' @title AIC-tuned glasso with additional thresholding
 ##' @param x  The input data. Needs to be a num.samples by dim.samples matrix.
 ##' @param include.mean Include mean in likelihood. TRUE / FALSE (default).
 ##' @param length.lambda Length of lambda path to consider (default=20).
@@ -545,10 +545,10 @@ screen_lasso <- function(x,include.mean=NULL,
   list(rho.opt=NULL,wi=wi.trunc,wi.orig=wi)
 }
 
-##' Estimate GGM using shrinkage approach
+##' Shrinkage approach for estimating Gaussian graphical model
 ##'
 ##' 
-##' @title screen_shrink
+##' @title Shrinkage approach for estimating Gaussian graphical model
 ##' @param x  The input data. Needs to be a num.samples by dim.samples matrix.
 ##' @param include.mean Include mean in likelihood. TRUE / FALSE (default).
 ##' @param trunc.method None / linear.growth (default) / sqrt.growth
@@ -568,10 +568,11 @@ screen_shrink <- function(x,include.mean=NULL,
   list(rho.opt=NULL,wi=wi.trunc,wi.orig=wi)
 }
 
-##' Estimate GGM by performing Lasso-regressions for each node 
+##' Node-wise Lasso-regressions for GGM estimation
+##' 
 ##' (Meinshausen-Buehlmann approach)
 ##' 
-##' @title screen_mb
+##' @title Node-wise Lasso-regressions for GGM estimation
 ##' @param x The input data. Needs to be a num.samples by dim.samples matrix.
 ##' @param include.mean Include mean in likelihood. TRUE / FALSE (default).
 ##' @param folds Number of folds in the cross-validation (default=10).
@@ -632,6 +633,7 @@ screen_mb <- function(x,include.mean=NULL,
   
   list(rho.opt=2*lambda[which.min(cv)]/nrow(x),wi=wi)
 }
+
 ##' Screen_mb2
 ##'
 ##' 
@@ -645,7 +647,6 @@ screen_mb <- function(x,include.mean=NULL,
 ##' @param verbose no descr
 ##' @return no descr
 ##' @author n.stadler
-##' @export
 screen_mb2 <- function(x,include.mean=NULL,length.lambda=20,
                        trunc.method='linear.growth',trunc.k=5,plot.it=FALSE,verbose=FALSE)
 {
@@ -753,10 +754,10 @@ mle.ggm <- function(x,wi,algorithm='glasso_rho0',rho=NULL,include.mean){
   }
 }
 
-##' log-likelihood-ratio statistics of GGM
+##' Log-likelihood-ratio statistics used in Differential Network
 ##'
 ##' 
-##' @title log-likelihood-ratio statistic of GGM
+##' @title Log-likelihood-ratio statistics used in DiffNet
 ##' @param x1 data-matrix sample 1
 ##' @param x2 data-matrix sample 2
 ##' @param x pooled data-matrix
@@ -1220,12 +1221,11 @@ est2.my.ev3 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
 ##' @param pval vector of p-values
 ##' @return inf-quantile aggregated p-value
 ##' @author n.stadler
-##' @export
 agg.pval <- function(gamma,pval){
     min(quantile(pval/gamma,probs=gamma),1)
 }
 
-##' P-value calculation
+##' P-value calculation 
 ##'
 ##' 
 ##' @title P-value calculation
@@ -1277,37 +1277,39 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
   return(list(pval.onesided=pval.onesided,pval.twosided=pval.twosided,weights.nulldistr=weights.nulldistr,teststat=teststat))
 }
 
-##' Differential Network for user specified data split
+##' Differential Network for user specified data splits
 ##'
 ##' If include.mean=FALSE then x1 and x2 have zero mean.
 ##' We recommend to set include.mean=FALSE and to center&scale x1 and x2.
-##' @title DiffNet for user specified data split
-##' @param x1 if include.mean=FALSE: scale data (var=1,mean=0).
-##' @param x2 if include.mean=FALSE: scale data (var=1,mean=0).
-##' @param split1 samples from condition 1 used in screening step. 
-##' @param split2 samples from condition 2 used in screening step. 
-##' @param screen.meth screening procedure. default 'screen_bic.glasso'.
-##' @param compute.evals method to compute weights in w-chi2 distribution.
-##' default 'est2.my.ev3' ('est2.my.ev2'/'est2.ww.mat2 ').
-##' @param algorithm.mleggm algorithm to compute MLE of GGM. default 'glasso_rho'.
-##' @param include.mean should the mean be included. include.mean=FALSE assumes that we know mu1=mu2=0.
-##' include.mean=FALSE recommended.
-##' @param method.compquadform method to compute distribution function of w-sum-of-chi2. default='imhof'.
-##' @param acc accuracy of p-value. see ?davies. default 1e-04
-##' @param epsabs see ?imhof.
-##' @param epsrel see ?imhof.
-##' @param show.trace should warnings be showed ? default: FALSE
-##' @param save.mle should MLEs be saved for output ? default: FALSE
-##' @param ... additional arguments for screen.meth
+##' 
+##' @title Differential Network for user specified data splits
+##' @param x1 If include.mean=FALSE: scale data (var=1,mean=0).
+##' @param x2 If include.mean=FALSE: scale data (var=1,mean=0).
+##' @param split1 Samples (condition 1) used in screening step. 
+##' @param split2 Samples (condition 2) used in screening step. 
+##' @param screen.meth Screening procedure. Options: 'screen_bic.glasso' (default),
+##'                    'screen_cv.glasso', 'screen_shrink' (not recommended), 'screen_mb'.
+##' @param compute.evals Method to estimate weights in w-chi2 distribution. 
+##'                      Use 'est2.my.ev3' (default).
+##' @param algorithm.mleggm Algorithm to compute MLE of GGM. Use 'glasso_rho' (default).
+##' @param include.mean Should mean be included in test? Use include.mean=FALSE (default and recommended).
+##'                     include.mean=FALSE assumes mu1=mu2=0, therefore, x1 and x2 should have mean 0.
+##' @param method.compquadform Method to compute distribution function of w-sum-of-chi2 (default='imhof').
+##' @param acc Accuracy of p-value. See ?davies. (default 1e-04).
+##' @param epsabs See ?imhof.
+##' @param epsrel See ?imhof.
+##' @param show.trace Should warnings be showed (default=FALSE)?
+##' @param save.mle Should MLEs be in the output (default=FALSE)?
+##' @param ... Additional arguments for screen.meth.
 ##' @return list consisting of
 ##' \item{pval.onesided}{p-value}
 ##' \item{pval.twosided}{ignore this output}
-##' \item{teststat}{test statistic}
-##' \item{weights.nulldistr}{ignore this output}
-##' \item{active}{active-sets}
-##' \item{sig}{Sigma (MLE on 2nd half of data)}
-##' \item{wi}{SigmaInverse (MLE on 2nd half of data)}
-##' \item{mu}{Mean (MLE on 2nd half of data)}
+##' \item{teststat}{log-likelihood-ratio test statistic}
+##' \item{weights.nulldistr}{estimated weights}
+##' \item{active}{active-sets obtained in screening-step}
+##' \item{sig}{constrained mle (covariance) obtained in cleaning-step}
+##' \item{wi}{constrained mle (inverse covariance) obtained in cleaning-step}
+##' \item{mu}{mle (mean) obtained in cleaning-step}
 ##' @author n.stadler
 ##' @export
 diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glasso',
@@ -1401,45 +1403,49 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
               active=active,sig=est.sig,wi=est.wi,mu=est.mu))
 }
 
-##' Differential Network (mulitsplit)
+##' Differential Network 
 ##'
 ##' If include.mean=FALSE then x1 and x2 have zero mean.
 ##' We recommend to set include.mean=FALSE and to center&scale x1 and x2.
-##' @title DiffNet
-##' @param x1 if include.mean=FALSE: scale data (var=1,mean=0).
-##' @param x2 if include.mean=FALSE: scale data (var=1,mean=0).
-##' @param b.splits number of splits
-##' @param frac.split fraction train-data (screening) / test-data (cleaning)
-##' @param screen.meth screening procedure. default 'screen_bic.glasso'.
-##' @param include.mean should the mean be included. include.mean=FALSE assumes that we know mu1=mu2=0.
-##' @param gamma.min tuning parameter in p-value aggregation of Meinshausen,Meier,Buehlmann 2009.
-##' @param compute.evals method to compute weights in w-chi2 distribution.
-##' default 'est2.my.ev3' ('est2.my.ev2'/'est2.ww.mat2 ').
-##' @param algorithm.mleggm algorithm to compute MLE of GGM. default 'glasso_rho'.
-##' @param method.compquadform method to compute distribution function of w-sum-of-chi2. default='imhof'.
-##' @param acc accuracy of p-value. see ?davies. default 1e-04
-##' @param epsabs see ?imhof.
-##' @param epsrel see ?imhof.
-##' @param show.trace should warnings be showed ? default: FALSE
-##' @param save.mle should MLEs be saved for output ? default: FALSE
-##' @param ... additional arguments for screen.meth
+##' 
+##' @title Differential Network 
+##' @param x1 If include.mean=FALSE: scale data (var=1,mean=0).
+##' @param x2 If include.mean=FALSE: scale data (var=1,mean=0).
+##' @param b.splits Number of splits (default=50).
+##' @param frac.split Fraction train-data (screening) / test-data (cleaning) (default=0.5).
+##' @param screen.meth Screening procedure. Options: 'screen_bic.glasso' (default),
+##'                    'screen_cv.glasso', 'screen_shrink' (not recommended), 'screen_mb'.
+##' @param include.mean Should mean be included in test? Use include.mean=FALSE (default and recommended).
+##'                     include.mean=FALSE assumes mu1=mu2=0, therefore, x1 and x2 should have mean 0.
+##' @param gamma.min Tuning parameter in p-value aggregation of Meinshausen et al (2009). (Default=0.05).
+##' @param compute.evals Method to estimate weights in w-chi2 distribution. 
+##'                      Use 'est2.my.ev3' (default).
+##' @param algorithm.mleggm Algorithm to compute MLE of GGM. Use 'glasso_rho' (default).
+##' @param method.compquadform Method to compute distribution function of w-sum-of-chi2 (default='imhof').
+##' @param acc Accuracy of p-value. See ?davies. (default 1e-04).
+##' @param epsabs See ?imhof.
+##' @param epsrel See ?imhof.
+##' @param show.trace Should warnings be showed (default=FALSE)?
+##' @param save.mle Should MLEs be in the output (default=FALSE)?
+##' @param ... Additional arguments for screen.meth.
 ##' @return list consisting of
 ##' \item{ms.pval}{p-values for all b.splits}
-##' \item{ss.pval}{single split p-value}
+##' \item{ss.pval}{single-split p-value}
 ##' \item{medagg.pval}{median aggregated p-value}
-##' \item{meinshagg.pval}{aggregated p-value (meinshausen, meier, buehlmann 2009)}
+##' \item{meinshagg.pval}{meinshausen aggregated p-value (meinshausen et al 2009)}
 ##' \item{teststat}{test statistics for b.splits}
-##' \item{weights.nulldistr}{ignore this output}
-##' \item{active.last}{ignore this output}
-##' \item{medwi}{median MLEs over b.splits}
-##' \item{sig.last}{ignore this output}
-##' \item{wi.last}{ignore this output}
+##' \item{weights.nulldistr}{estimated weights}
+##' \item{active.last}{active-sets obtained in last screening-step}
+##' \item{medwi}{median of inverse covariance matrices over b.splits}
+##' \item{sig.last}{constrained mle (covariance matrix) obtained in last cleaning-step}
+##' \item{wi.last}{constrained mle (inverse covariance matrix) obtained in last cleaning-step}
 ##' @author n.stadler
 ##' @export
 ##' @example ../diffnet_ex.R
 diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='screen_bic.glasso',include.mean=FALSE,
                               gamma.min=0.05,compute.evals='est2.my.ev3',algorithm.mleggm='glasso_rho0',
-                              method.compquadform='imhof',acc=1e-04,epsabs=1e-10,epsrel=1e-10,show.trace=FALSE,save.mle=FALSE,...){
+                              method.compquadform='imhof',acc=1e-04,epsabs=1e-10,epsrel=1e-10,
+                              show.trace=FALSE,save.mle=FALSE,...){
 
   ##????Important Notes: Pval can be NA, because...
   ##????
@@ -1484,6 +1490,14 @@ diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='scre
   return(result)
 }
 
+##' Plotting function for object of class 'diffnet' 
+##'
+##' 
+##' @title Plotting function for object of class 'diffnet' 
+##' @param object of class 'diffnet'
+##' @return Histogram over multi-split p-values.
+##' @author nicolas
+##' @export
 plot.diffnet <- function(x){
     #if(is.null(x$medwi)){
         hh <- hist(x$ms.pval,breaks=10,

@@ -1,3 +1,11 @@
+######################################################################
+# Multivariate gene-set testing based on graphical models (GGM-GSA)
+# -------------------------------------------------------------------
+#
+#
+######################################################################
+
+
 #####################
 ##Required packages##
 #####################
@@ -338,9 +346,9 @@ gsea.iriz.scale <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method.p.ad
   }
 }
 
-##' Irizarry approach for gene-set testing (shift and scale)
+##' Irizarry approach for gene-set testing
 ##'
-##' tests for shift and change in scale of distribution
+##' Tests for shift and change in scale of distribution.
 ##' 
 ##' @title Irizarry approach (shift and scale)
 ##' @param x1 expression matrix (condition 1)
@@ -587,7 +595,7 @@ aggpval <- function(pval,gamma.min=0.05){
 ##' Single-split GGM-GSA
 ##'
 ##' 
-##' @title Single-split GGM-GSA
+##' @title ggmgsa_singlesplit
 ##' @param x1 centered (scaled) data for condition 1
 ##' @param x2 centered (scaled) data for condition 2
 ##' @param gene.sets list of gene-sets
@@ -596,7 +604,7 @@ aggpval <- function(pval,gamma.min=0.05){
 ##' @param ... other arguments (see diffnet_singlesplit)
 ##' @return list of results
 ##' @author n.stadler
-gsea.diffnet.singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust='fdr',...){
+ggmgsa_singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust='fdr',...){
   n1 <- nrow(x1)
   n2 <- nrow(x2)
   split1 <- sample(1:n1,round(n1*0.5),replace=FALSE)
@@ -620,10 +628,10 @@ gsea.diffnet.singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust=
   return(list(pvals=pvals.corrected,teststat=res['teststat',],teststat.bic=res['teststat.bic',],teststat.aic=res['teststat.aic',],rel.edgeinter=res['rel.edgeinter',],dfu=res['dfu',],dfv=res['dfv',],dfuv=res['dfuv',]))
 }
 
-##' GGM-GSA
+##' Multi-split GGM-GSA
 ##'
 ##' 
-##' @title GGM-GSA
+##' @title ggmgsa_multisplit
 ##' @param x1 expression matrix for condition 1 (mean centered !)
 ##' @param x2 expression matrix for condition 2 (mean centered !)
 ##' @param no.splits number of random data splits (default: 50)
@@ -640,13 +648,13 @@ gsea.diffnet.singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust=
 ##' @author n.stadler
 ##' @export
 ##' @example ../ggmgsa-pkg_test.r
-gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',order.adj.agg='agg-adj',...){
+ggmgsa_multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',order.adj.agg='agg-adj',...){
 
   res <- lapply(seq(no.splits),
                 function(i){
                   cat('split:',i,'\n')
-                  res <- gsea.diffnet.singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
-                                                    method.p.adjust='none',...)
+                  res <- ggmgsa_singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
+                                            method.p.adjust='none',...)
                   cat('pvals: ',res$pvals,'\n')
                   mat <- cbind(res$pvals,res$teststat,res$teststat.bic,res$teststat.aic,res$rel.edgeinter,res$dfu,res$dfv,res$dfuv)
                   colnames(mat) <- c('pvals','teststat','teststat.bic','teststat.aic','rel.edgeinter','dfu','dfv','dfuv')
@@ -689,11 +697,11 @@ gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.n
   }
 }
 
-##' GGM-GSA
+##' Multi-split GGM-GSA
 ##'
 ##' computation parallelized over many data splits
 ##' 
-##' @title GGM-GSA (parallelized computation)
+##' @title par_ggmgsa_multisplit (parallelized computation)
 ##' @param x1 expression matrix for condition 1 (mean centered !)
 ##' @param x2 expression matrix for condition 2 (mean centered !)
 ##' @param no.splits number of random data splits (default: 50)
@@ -710,12 +718,12 @@ gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.n
 ##' @author n.stadler
 ##' @export
 ##' @example ../ggmgsa-pkg_test.r
-par.gsea.diffnet.multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',order.adj.agg='agg-adj',...){
+par_ggmgsa_multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',order.adj.agg='agg-adj',...){
 
   res <- mclapply(seq(no.splits),
                   function(i){
                     cat('split:',i,'\n')
-                    res <- gsea.diffnet.singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
+                    res <- ggmgsa_singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
                                                     method.p.adjust='none',...)
 
                     cat('pvals: ',res$pvals,'\n')
