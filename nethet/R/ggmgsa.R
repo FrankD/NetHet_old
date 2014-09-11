@@ -181,13 +181,13 @@ GSEA.ReadClsFile <- function(file = "NULL") {
 ##P-value adjustment##
 ######################
 
-##' Pvalue adjustment
+##' P-value adjustment
 ##'
 ##' 
-##' @title Pvalue adjustment
-##' @param p p-values
-##' @param method method for p-value adjustment (default='fdr')
-##' @return adjusted p-values
+##' @title P-value adjustment
+##' @param p Vector of p-values.
+##' @param method Method for p-value adjustment (default='fdr').
+##' @return Vector of adjusted p-values.
 ##' @author n.stadler
 my.p.adjust <- function(p,method='fdr'){
   if(method=='fdr'){
@@ -348,21 +348,24 @@ gsea.iriz.scale <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method.p.ad
 
 ##' Irizarry approach for gene-set testing
 ##'
-##' Tests for shift and change in scale of distribution.
+##' Implements the approach described in
+##' "Gene set enrichment analysis made simple" by Irizarry et al (2011).
+##' It tests for shift and/or change in scale of the distribution.
 ##' 
-##' @title Irizarry approach (shift and scale)
-##' @param x1 expression matrix (condition 1)
-##' @param x2 expression matrix (condition 2)
-##' @param gene.sets list of gene-sets
-##' @param gene.names gene names
-##' @param gs.names gene-set names
-##' @param method.p.adjust method for p-value adjustment (default: 'fdr')
-##' @param alternative default='two-sided': two-sided p-values
-##' @return list consisting of
+##' @title Irizarry approach for gene-set testing
+##' @param x1 Expression matrix (condition 1)
+##' @param x2 Expression matrix (condition 2)
+##' @param gene.sets List of gene-sets
+##' @param gene.names Gene names
+##' @param gs.names Gene-set names
+##' @param method.p.adjust Method for p-value adjustment (default='fdr')
+##' @param alternative Default='two-sided' (uses two-sided p-values).
+##' @return List consisting of
 ##' \item{pval.shift}{p-values measuring shift}
 ##' \item{pval.scale}{p-values measuring scale}
 ##' \item{pval.combined}{combined p-values (minimum of pval.shift and pval.scale)}
 ##' @author n.stadler
+##' @export
 gsea.iriz <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',alternative='two-sided'){
 
   fit.shift <- gsea.iriz.shift(x1,x2,gene.sets,gene.names,gs.names,method.p.adjust,alternative)
@@ -547,15 +550,15 @@ gsea.highdimT2 <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method='test
   
 }
 
-##############
-##GGM-GSA   ##
-##############
+###########################################################
+##------------GGMGSA---------------------------------------
+###########################################################
 
 ##' Filter "non-normal" genes
 ##'
-##' dicards genes with Shapiro-Wilk p-value (corrected for multiple comparision)
-##' smaller than sign.level in either of the two conditions
-##' (we used sign.level=0.001 in the GGMGSA paper)
+##' Discarding genes which have Shapiro-Wilk p-value (corrected for multiplicity)
+##' smaller than sign.level in either of the two conditions. We used sign.level=0.001
+##' in the GGMGSA paper.
 ##' 
 ##' @title Filter "non-normal" genes
 ##' @param x1 expression matrix (condition 1)
@@ -574,13 +577,14 @@ shapiro_screen <- function(x1,x2,sign.level=0.001){
   return(list(x1.filt=x1[,-which(pmin(pval1.adj,pval2.adj)<sign.level)],x2.filt=x2[,-which(pmin(pval1.adj,pval2.adj)<sign.level)]))
 }
 
-##' P-value aggregation (inf-quantile formula of Meinshausen et al 2009)
+##' Meinshausen p-value aggregation.
+##'
+##' Inf-quantile formula for p-value aggregation presented in Meinshausen et al 2009.
 ##' 
-##' 
-##' @title P-value aggregation (inf-quantile formula of Meinshausen et al 2009)
-##' @param pval p-values
-##' @param gamma.min see inf-quantile formula of Meinshausen et al 2009 (default=0.05)
-##' @return aggregated p-value
+##' @title Meinshausen p-value aggregation
+##' @param pval Vector of p-values.
+##' @param gamma.min See inf-quantile formula of Meinshausen et al 2009 (default=0.05).
+##' @return Aggregated p-value.
 ##' @author n.stadler
 ##' @export
 aggpval <- function(pval,gamma.min=0.05){
@@ -592,17 +596,18 @@ aggpval <- function(pval,gamma.min=0.05){
                                     ,interval=c(gamma.min,1),maximum=FALSE)$objective)
 }
 
-##' Single-split GGM-GSA
+##' Single-split GGMGSA
 ##'
 ##' 
-##' @title ggmgsa_singlesplit
+##' @title Single-split GGMGSA
 ##' @param x1 centered (scaled) data for condition 1
 ##' @param x2 centered (scaled) data for condition 2
-##' @param gene.sets list of gene-sets
-##' @param gene.names gene names
-##' @param method.p.adjust method for p-value adjustment (default: 'fdr')
-##' @param ... other arguments (see diffnet_singlesplit)
-##' @return list of results
+##' @param gene.sets List of gene-sets.
+##' @param gene.names Gene names. Each column in x1 (and x2) corresponds
+##'                   to a gene.   
+##' @param method.p.adjust Method for p-value adjustment (default='fdr').
+##' @param ... Other arguments (see diffnet_singlesplit).
+##' @return List of results.
 ##' @author n.stadler
 ggmgsa_singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust='fdr',...){
   n1 <- nrow(x1)
@@ -628,142 +633,172 @@ ggmgsa_singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust='fdr',
   return(list(pvals=pvals.corrected,teststat=res['teststat',],teststat.bic=res['teststat.bic',],teststat.aic=res['teststat.aic',],rel.edgeinter=res['rel.edgeinter',],dfu=res['dfu',],dfv=res['dfv',],dfuv=res['dfuv',]))
 }
 
-##' Multi-split GGM-GSA
+##' Multi-split GGMGSA
 ##'
 ##' 
-##' @title ggmgsa_multisplit
-##' @param x1 expression matrix for condition 1 (mean centered !)
-##' @param x2 expression matrix for condition 2 (mean centered !)
-##' @param no.splits number of random data splits (default: 50)
-##' @param gene.sets list of gene-sets
-##' @param gene.names gene names
-##' @param gs.names gene-set names
-##' @param method.p.adjust method for p-value adjustment (default: 'fdr')
-##' @param order.adj.agg order of "pvalue-aggregation / -adjustment" (default='agg-adj')
-##' @param ... other arguments (see diffnet_singlesplit)
-##' @return list consisting of
-##' \item{pvalmed}{median aggregated p-values}
-##' \item{pvalagg}{inf-quantile aggregated p-values}
-##' \item{pval}{p-value matrix (number of gene-sets)x(number of splits); before correction and adjustement}
+##' @title Multi-split GGMGSA
+##' @param x1 Expression matrix for condition 1 (mean zero is required).
+##' @param x2 Expression matrix for condition 2 (mean zero is required).
+##' @param no.splits Number of random data splits (default=50).
+##' @param gene.sets List of gene-sets.
+##' @param gene.names Gene names. Each column in x1 (and x2) corresponds
+##'                   to a gene. 
+##' @param gs.names Gene-set names (default=NULL).
+##' @param method.p.adjust Method for p-value adjustment (default='fdr').
+##' @param order.adj.agg Order of aggregation and adjustment of p-values.
+##'                      Options: 'agg-adj' (default), 'adj-agg'.
+##' @param ... Other arguments (see diffnet_singlesplit).
+##' @return List consisting of
+##' \item{medagg.pval}{Median aggregated p-values}
+##' \item{meinshagg.pval}{Meinshausen aggregated p-values}
+##' \item{pval}{matrix of p-values before correction and adjustement, dim(pval)=(number of gene-sets)x(number of splits)}
+##' \item{teststatmed}{median aggregated test-statistic}
+##' \item{teststatmed.bic}{median aggregated bic-corrected test-statistic}
+##' \item{teststatmed.aic}{median aggregated aic-corrected test-statistic}
+##' \item{teststat}{matrix of test-statistics, dim(teststat)=(number of gene-sets)x(number of splits)}
+##' \item{rel.edgeinter}{normalized intersection of edges in condition 1 and 2}
+##' \item{df1}{degrees of freedom of GGM obtained from condition 1}
+##' \item{df2}{degrees of freedom of GGM obtained from condition 2}
+##' \item{df12}{degrees of freedom of GGM obtained from pooled data (condition 1 and 2)}
 ##' @author n.stadler
 ##' @export
-##' @example ../ggmgsa-pkg_test.r
-ggmgsa_multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',order.adj.agg='agg-adj',...){
+##' @example ../ggmgsa_ex.R
+ggmgsa_multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,
+                              method.p.adjust='fdr',order.adj.agg='agg-adj',...){
 
-  res <- lapply(seq(no.splits),
-                function(i){
-                  cat('split:',i,'\n')
-                  res <- ggmgsa_singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
-                                            method.p.adjust='none',...)
-                  cat('pvals: ',res$pvals,'\n')
-                  mat <- cbind(res$pvals,res$teststat,res$teststat.bic,res$teststat.aic,res$rel.edgeinter,res$dfu,res$dfv,res$dfuv)
-                  colnames(mat) <- c('pvals','teststat','teststat.bic','teststat.aic','rel.edgeinter','dfu','dfv','dfuv')
-                  return(mat)
-                }
-                )
-  res.pval <- sapply(seq(no.splits),function(i){res[[i]][,'pvals']})
-  res.teststat <- sapply(seq(no.splits),function(i){res[[i]][,'teststat']})
-  res.teststat.bic <- sapply(seq(no.splits),function(i){res[[i]][,'teststat.bic']})
-  res.teststat.aic <- sapply(seq(no.splits),function(i){res[[i]][,'teststat.aic']})
-  res.rel.edgeinter <- sapply(seq(no.splits),function(i){res[[i]][,'rel.edgeinter']})
-  res.dfu <- sapply(seq(no.splits),function(i){res[[i]][,'dfu']})
-  res.dfv <- sapply(seq(no.splits),function(i){res[[i]][,'dfv']})
-  res.dfuv <- sapply(seq(no.splits),function(i){res[[i]][,'dfuv']})
+    res <- lapply(seq(no.splits),
+                  function(i){
+                      cat('split:',i,'\n')
+                      res <- ggmgsa_singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
+                                                method.p.adjust='none',...)
+                      cat('pvals: ',res$pvals,'\n')
+                      mat <- cbind(res$pvals,res$teststat,res$teststat.bic,res$teststat.aic,res$rel.edgeinter,res$dfu,res$dfv,res$dfuv)
+                      colnames(mat) <- c('pvals','teststat','teststat.bic','teststat.aic','rel.edgeinter','dfu','dfv','dfuv')
+                      return(mat)
+                  }
+                  )
+    res.pval <- sapply(seq(no.splits),function(i){res[[i]][,'pvals']})
+    res.teststat <- sapply(seq(no.splits),function(i){res[[i]][,'teststat']})
+    res.teststat.bic <- sapply(seq(no.splits),function(i){res[[i]][,'teststat.bic']})
+    res.teststat.aic <- sapply(seq(no.splits),function(i){res[[i]][,'teststat.aic']})
+    res.rel.edgeinter <- sapply(seq(no.splits),function(i){res[[i]][,'rel.edgeinter']})
+    res.dfu <- sapply(seq(no.splits),function(i){res[[i]][,'dfu']})
+    res.dfv <- sapply(seq(no.splits),function(i){res[[i]][,'dfv']})
+    res.dfuv <- sapply(seq(no.splits),function(i){res[[i]][,'dfuv']})
   
-  if(order.adj.agg=='agg-adj'){
-    pvalagg <- my.p.adjust(apply(res.pval,1,aggpval),method=method.p.adjust)
-    pvalmed <- my.p.adjust(apply(res.pval,1,median,na.rm=TRUE),method=method.p.adjust)
-  }
-  if(order.adj.agg=='adj-agg'){
-    pvalagg <- apply(apply(res.pval,2,my.p.adjust,method=method.p.adjust),1,aggpval)
-    pvalmed <- apply(apply(res.pval,2,my.p.adjust,method=method.p.adjust),1,median)
-  }
+    if(order.adj.agg=='agg-adj'){
+        pvalagg <- my.p.adjust(apply(res.pval,1,aggpval),method=method.p.adjust)
+        pvalmed <- my.p.adjust(apply(res.pval,1,median,na.rm=TRUE),method=method.p.adjust)
+    }
+    if(order.adj.agg=='adj-agg'){
+        pvalagg <- apply(apply(res.pval,2,my.p.adjust,method=method.p.adjust),1,aggpval)
+        pvalmed <- apply(apply(res.pval,2,my.p.adjust,method=method.p.adjust),1,median)
+    }
 
-  if(is.null(gs.names)){
-    return(list(pvalmed=pvalmed,pvalagg=pvalagg,
-                pval=res.pval,
-                teststatmed=apply(res.teststat,1,median,na.rm=TRUE),
-                teststatmed.bic=apply(res.teststat.bic,1,median,na.rm=TRUE),
-                teststatmed.aic=apply(res.teststat.aic,1,median,na.rm=TRUE),
-                teststat=res.teststat,teststat.aic=res.teststat.aic,rel.edgeinter=res.rel.edgeinter,dfu=res.dfu,dfv=res.dfv,dfuv=res.dfuv))
-  }else{
-    return(list(pvalmed=pvalmed,pvalagg=pvalagg,
-                pval=res.pval,
-                teststatmed=apply(res.teststat,1,median,na.rm=TRUE),
-                teststatmed.bic=apply(res.teststat.bic,1,median,na.rm=TRUE),
-                teststatmed.aic=apply(res.teststat.aic,1,median,na.rm=TRUE),
-                teststat=res.teststat,teststat.aic=res.teststat.aic,rel.edgeinter=res.rel.edgeinter,dfu=res.dfu,dfv=res.dfv,dfuv=res.dfuv,
-                gs.names=gs.names))
-  }
+    if(is.null(gs.names)){
+        out <- list(medagg.pval=pvalmed,meinshagg.pval=pvalagg,
+                    pval=res.pval,
+                    teststatmed=apply(res.teststat,1,median,na.rm=TRUE),
+                    teststatmed.bic=apply(res.teststat.bic,1,median,na.rm=TRUE),
+                    teststatmed.aic=apply(res.teststat.aic,1,median,na.rm=TRUE),
+                    teststat=res.teststat,teststat.aic=res.teststat.aic,
+                    rel.edgeinter=res.rel.edgeinter,df1=res.dfu,df2=res.dfv,df12=res.dfuv)
+        return(out)
+    }else{
+        out <- list(medagg.pval=pvalmed,meinshagg.pval=pvalagg,
+                    pval=res.pval,
+                    teststatmed=apply(res.teststat,1,median,na.rm=TRUE),
+                    teststatmed.bic=apply(res.teststat.bic,1,median,na.rm=TRUE),
+                    teststatmed.aic=apply(res.teststat.aic,1,median,na.rm=TRUE),
+                    teststat=res.teststat,teststat.aic=res.teststat.aic,
+                    rel.edgeinter=res.rel.edgeinter,df1=res.dfu,df2=res.dfv,df12=res.dfuv,
+                    gs.names=gs.names)
+        return(out)
+    }
 }
 
-##' Multi-split GGM-GSA
+##' Multi-split GGMGSA (parallelized computation)
 ##'
-##' computation parallelized over many data splits
+##' Computation parallelized over many data splits.
 ##' 
-##' @title par_ggmgsa_multisplit (parallelized computation)
-##' @param x1 expression matrix for condition 1 (mean centered !)
-##' @param x2 expression matrix for condition 2 (mean centered !)
-##' @param no.splits number of random data splits (default: 50)
-##' @param gene.sets list of gene-sets
-##' @param gene.names gene names
-##' @param gs.names gene-set names
-##' @param method.p.adjust method for p-value adjustment (default: 'fdr')
-##' @param order.adj.agg order of "pvalue-aggregation / -adjustment" (default='agg-adj')
-##' @param ... other arguments (see diffnet_singlesplit)
-##' @return list consisting of
-##' \item{pvalmed}{median aggregated p-values}
-##' \item{pvalagg}{inf-quantile aggregated p-values}
-##' \item{pval}{p-value matrix (number of gene-sets)x(number of splits); before correction and adjustement}
+##' @title Multi-split GGMGSA (parallelized computation)
+##' @param x1 Expression matrix for condition 1 (mean zero is required).
+##' @param x2 Expression matrix for condition 2 (mean zero is required).
+##' @param no.splits Number of random data splits (default=50).
+##' @param gene.sets List of gene-sets.
+##' @param gene.names Gene names. Each column in x1 (and x2) corresponds
+##'                   to a gene. 
+##' @param gs.names Gene-set names (default=NULL).
+##' @param method.p.adjust Method for p-value adjustment (default='fdr').
+##' @param order.adj.agg Order of aggregation and adjustment of p-values.
+##'                      Options: 'agg-adj' (default), 'adj-agg'.
+##' @param ... Other arguments (see diffnet_singlesplit).
+##' @return List consisting of
+##' \item{medagg.pval}{Median aggregated p-values}
+##' \item{meinshagg.pval}{Meinshausen aggregated p-values}
+##' \item{pval}{matrix of p-values before correction and adjustement, dim(pval)=(number of gene-sets)x(number of splits)}
+##' \item{teststatmed}{median aggregated test-statistic}
+##' \item{teststatmed.bic}{median aggregated bic-corrected test-statistic}
+##' \item{teststatmed.aic}{median aggregated aic-corrected test-statistic}
+##' \item{teststat}{matrix of test-statistics, dim(teststat)=(number of gene-sets)x(number of splits)}
+##' \item{rel.edgeinter}{normalized intersection of edges in condition 1 and 2}
+##' \item{df1}{degrees of freedom of GGM obtained from condition 1}
+##' \item{df2}{degrees of freedom of GGM obtained from condition 2}
+##' \item{df12}{degrees of freedom of GGM obtained from pooled data (condition 1 and 2)}
 ##' @author n.stadler
 ##' @export
-##' @example ../ggmgsa-pkg_test.r
-par_ggmgsa_multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',order.adj.agg='agg-adj',...){
+##' @example ../ggmgsa_ex.R
+ggmgsa_multisplit_par<- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,
+                                 method.p.adjust='fdr',order.adj.agg='agg-adj',...){
 
-  res <- mclapply(seq(no.splits),
-                  function(i){
-                    cat('split:',i,'\n')
-                    res <- ggmgsa_singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
-                                                    method.p.adjust='none',...)
+    res <- mclapply(seq(no.splits),
+                    function(i){
+                        cat('split:',i,'\n')
+                        res <- ggmgsa_singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
+                                                  method.p.adjust='none',...)
 
-                    cat('pvals: ',res$pvals,'\n')
-                    mat <- cbind(res$pvals,res$teststat,res$teststat.bic,res$teststat.aic,res$rel.edgeinter,res$dfu,res$dfv,res$dfuv)
-                    colnames(mat) <- c('pvals','teststat','teststat.bic','teststat.aic','rel.edgeinter','dfu','dfv','dfuv')
-                    return(mat)
-                  }, mc.set.seed=TRUE, mc.preschedule = TRUE)
-  res.pval <- sapply(seq(no.splits),function(i){res[[i]][,'pvals']})
-  res.teststat <- sapply(seq(no.splits),function(i){res[[i]][,'teststat']})
-  res.teststat.bic <- sapply(seq(no.splits),function(i){res[[i]][,'teststat.bic']})
-  res.teststat.aic <- sapply(seq(no.splits),function(i){res[[i]][,'teststat.aic']})
-  res.rel.edgeinter <- sapply(seq(no.splits),function(i){res[[i]][,'rel.edgeinter']})
-  res.dfu <- sapply(seq(no.splits),function(i){res[[i]][,'dfu']})
-  res.dfv <- sapply(seq(no.splits),function(i){res[[i]][,'dfv']})
-  res.dfuv <- sapply(seq(no.splits),function(i){res[[i]][,'dfuv']})
+                        cat('pvals: ',res$pvals,'\n')
+                        mat <- cbind(res$pvals,res$teststat,res$teststat.bic,res$teststat.aic,res$rel.edgeinter,res$dfu,res$dfv,res$dfuv)
+                        colnames(mat) <- c('pvals','teststat','teststat.bic','teststat.aic','rel.edgeinter','dfu','dfv','dfuv')
+                        return(mat)
+                    }, mc.set.seed=TRUE, mc.preschedule = TRUE)
+    res.pval <- sapply(seq(no.splits),function(i){res[[i]][,'pvals']})
+    res.teststat <- sapply(seq(no.splits),function(i){res[[i]][,'teststat']})
+    res.teststat.bic <- sapply(seq(no.splits),function(i){res[[i]][,'teststat.bic']})
+    res.teststat.aic <- sapply(seq(no.splits),function(i){res[[i]][,'teststat.aic']})
+    res.rel.edgeinter <- sapply(seq(no.splits),function(i){res[[i]][,'rel.edgeinter']})
+    res.dfu <- sapply(seq(no.splits),function(i){res[[i]][,'dfu']})
+    res.dfv <- sapply(seq(no.splits),function(i){res[[i]][,'dfv']})
+    res.dfuv <- sapply(seq(no.splits),function(i){res[[i]][,'dfuv']})
 
-  if(order.adj.agg=='agg-adj'){
-    pvalagg <- my.p.adjust(apply(res.pval,1,aggpval),method=method.p.adjust)
-    pvalmed <- my.p.adjust(apply(res.pval,1,median,na.rm=TRUE),method=method.p.adjust)
-  }
-  if(order.adj.agg=='adj-agg'){
-    pvalagg <- apply(apply(res.pval,2,my.p.adjust,method=method.p.adjust),1,aggpval)
-    pvalmed <- apply(apply(res.pval,2,my.p.adjust,method=method.p.adjust),1,median)
-  }
+    if(order.adj.agg=='agg-adj'){
+        pvalagg <- my.p.adjust(apply(res.pval,1,aggpval),method=method.p.adjust)
+        pvalmed <- my.p.adjust(apply(res.pval,1,median,na.rm=TRUE),method=method.p.adjust)
+    }
+    if(order.adj.agg=='adj-agg'){
+        pvalagg <- apply(apply(res.pval,2,my.p.adjust,method=method.p.adjust),1,aggpval)
+        pvalmed <- apply(apply(res.pval,2,my.p.adjust,method=method.p.adjust),1,median)
+    }
 
-  if(is.null(gs.names)){
-    return(list(pvalmed=pvalmed,pvalagg=pvalagg,
-                pval=res.pval,
-                teststatmed=apply(res.teststat,1,median,na.rm=TRUE),
-                teststatmed.bic=apply(res.teststat.bic,1,median,na.rm=TRUE),
-                teststatmed.aic=apply(res.teststat.aic,1,median,na.rm=TRUE),
-                teststat=res.teststat,teststat.aic=res.teststat.aic,rel.edgeinter=res.rel.edgeinter,dfu=res.dfu,dfv=res.dfv,dfuv=res.dfuv))
+    if(is.null(gs.names)){
+        out <- list(medagg.pval=pvalmed,meinshagg.pval=pvalagg,
+                    pval=res.pval,
+                    teststatmed=apply(res.teststat,1,median,na.rm=TRUE),
+                    teststatmed.bic=apply(res.teststat.bic,1,median,na.rm=TRUE),
+                    teststatmed.aic=apply(res.teststat.aic,1,median,na.rm=TRUE),
+                    teststat=res.teststat,teststat.aic=res.teststat.aic,
+                    rel.edgeinter=res.rel.edgeinter,df1=res.dfu,df2=res.dfv,df12=res.dfuv)
+        return(out)
   }else{
-    return(list(pvalmed=pvalmed,pvalagg=pvalagg,
-                pval=res.pval,
-                teststatmed=apply(res.teststat,1,median,na.rm=TRUE),
-                teststatmed.bic=apply(res.teststat.bic,1,median,na.rm=TRUE),
-                teststatmed.aic=apply(res.teststat.aic,1,median,na.rm=TRUE),
-                teststat=res.teststat,teststat.aic=res.teststat.aic,rel.edgeinter=res.rel.edgeinter,dfu=res.dfu,dfv=res.dfv,dfuv=res.dfuv,
-                gs.names=gs.names))
+      out <- list(medagg.pval=pvalmed,meinshagg.pval=pvalagg,
+                  pval=res.pval,
+                  teststatmed=apply(res.teststat,1,median,na.rm=TRUE),
+                  teststatmed.bic=apply(res.teststat.bic,1,median,na.rm=TRUE),
+                  teststatmed.aic=apply(res.teststat.aic,1,median,na.rm=TRUE),
+                  teststat=res.teststat,teststat.aic=res.teststat.aic,
+                  rel.edgeinter=res.rel.edgeinter,df1=res.dfu,df2=res.dfv,df12=res.dfuv,
+                  gs.names=gs.names)
+      return(out)
   }
 }
 

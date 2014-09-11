@@ -47,7 +47,7 @@ generate.2networks<- function(p,graph='random',
   
     if(graph=='hub'){
         B.list <- list()
-        theta.hub <- as.matrix(huge.generator(d = p, graph = "hub",g=n.hub)$theta)##mk hub-network
+        theta.hub <- as.matrix(huge.generator(d = p, graph = "hub",g=n.hub,verbose=FALSE)$theta)##mk hub-network
         B1 <- B2 <- matrix(0,p,p)
         indhub.diff <- 1:floor(p/n.hub)##identify variables involved in 1st hub
         if(length(indhub.diff)==1){stop('1st hub has only 1 variable; choose smaller number of hubs')}
