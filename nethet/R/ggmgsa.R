@@ -666,12 +666,16 @@ ggmgsa_singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust='fdr',
 ggmgsa_multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,
                               method.p.adjust='fdr',order.adj.agg='agg-adj',...){
 
+    if(is.null(gs.names)){
+        gs.names <- paste('gs',1:length(gene.sets),sep='')
+    }
+    
     res <- lapply(seq(no.splits),
                   function(i){
                       cat('split:',i,'\n')
                       res <- ggmgsa_singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
                                                 method.p.adjust='none',...)
-                      cat('pvals: ',res$pvals,'\n')
+                      cat(' pvals: ',res$pvals,'\n')
                       mat <- cbind(res$pvals,res$teststat,res$teststat.bic,res$teststat.aic,res$rel.edgeinter,res$dfu,res$dfv,res$dfuv)
                       colnames(mat) <- c('pvals','teststat','teststat.bic','teststat.aic','rel.edgeinter','dfu','dfv','dfuv')
                       return(mat)
@@ -695,26 +699,17 @@ ggmgsa_multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=N
         pvalmed <- apply(apply(res.pval,2,my.p.adjust,method=method.p.adjust),1,median)
     }
 
-    if(is.null(gs.names)){
-        out <- list(medagg.pval=pvalmed,meinshagg.pval=pvalagg,
-                    pval=res.pval,
-                    teststatmed=apply(res.teststat,1,median,na.rm=TRUE),
-                    teststatmed.bic=apply(res.teststat.bic,1,median,na.rm=TRUE),
-                    teststatmed.aic=apply(res.teststat.aic,1,median,na.rm=TRUE),
-                    teststat=res.teststat,teststat.aic=res.teststat.aic,
-                    rel.edgeinter=res.rel.edgeinter,df1=res.dfu,df2=res.dfv,df12=res.dfuv)
-        return(out)
-    }else{
-        out <- list(medagg.pval=pvalmed,meinshagg.pval=pvalagg,
-                    pval=res.pval,
-                    teststatmed=apply(res.teststat,1,median,na.rm=TRUE),
-                    teststatmed.bic=apply(res.teststat.bic,1,median,na.rm=TRUE),
-                    teststatmed.aic=apply(res.teststat.aic,1,median,na.rm=TRUE),
-                    teststat=res.teststat,teststat.aic=res.teststat.aic,
-                    rel.edgeinter=res.rel.edgeinter,df1=res.dfu,df2=res.dfv,df12=res.dfuv,
-                    gs.names=gs.names)
-        return(out)
-    }
+    out <- list(medagg.pval=pvalmed,meinshagg.pval=pvalagg,
+                pval=res.pval,
+                teststatmed=apply(res.teststat,1,median,na.rm=TRUE),
+                teststatmed.bic=apply(res.teststat.bic,1,median,na.rm=TRUE),
+                teststatmed.aic=apply(res.teststat.aic,1,median,na.rm=TRUE),
+                teststat=res.teststat,teststat.aic=res.teststat.aic,
+                rel.edgeinter=res.rel.edgeinter,df1=res.dfu,df2=res.dfv,df12=res.dfuv,
+                gs.names=gs.names)
+    class(out) <- 'ggmgsa'
+    return(out)
+
 }
 
 ##' Multi-split GGMGSA (parallelized computation)
@@ -751,13 +746,17 @@ ggmgsa_multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=N
 ggmgsa_multisplit_par<- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,
                                  method.p.adjust='fdr',order.adj.agg='agg-adj',...){
 
+    if(is.null(gs.names)){
+        gs.names <- paste('gs',1:length(gene.sets),sep='')
+    }
+    
     res <- mclapply(seq(no.splits),
                     function(i){
                         cat('split:',i,'\n')
                         res <- ggmgsa_singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
                                                   method.p.adjust='none',...)
 
-                        cat('pvals: ',res$pvals,'\n')
+                        cat(' pvals: ',res$pvals,'\n')
                         mat <- cbind(res$pvals,res$teststat,res$teststat.bic,res$teststat.aic,res$rel.edgeinter,res$dfu,res$dfv,res$dfuv)
                         colnames(mat) <- c('pvals','teststat','teststat.bic','teststat.aic','rel.edgeinter','dfu','dfv','dfuv')
                         return(mat)
@@ -780,25 +779,27 @@ ggmgsa_multisplit_par<- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.name
         pvalmed <- apply(apply(res.pval,2,my.p.adjust,method=method.p.adjust),1,median)
     }
 
-    if(is.null(gs.names)){
-        out <- list(medagg.pval=pvalmed,meinshagg.pval=pvalagg,
-                    pval=res.pval,
-                    teststatmed=apply(res.teststat,1,median,na.rm=TRUE),
-                    teststatmed.bic=apply(res.teststat.bic,1,median,na.rm=TRUE),
-                    teststatmed.aic=apply(res.teststat.aic,1,median,na.rm=TRUE),
-                    teststat=res.teststat,teststat.aic=res.teststat.aic,
-                    rel.edgeinter=res.rel.edgeinter,df1=res.dfu,df2=res.dfv,df12=res.dfuv)
-        return(out)
-  }else{
-      out <- list(medagg.pval=pvalmed,meinshagg.pval=pvalagg,
-                  pval=res.pval,
-                  teststatmed=apply(res.teststat,1,median,na.rm=TRUE),
-                  teststatmed.bic=apply(res.teststat.bic,1,median,na.rm=TRUE),
-                  teststatmed.aic=apply(res.teststat.aic,1,median,na.rm=TRUE),
-                  teststat=res.teststat,teststat.aic=res.teststat.aic,
-                  rel.edgeinter=res.rel.edgeinter,df1=res.dfu,df2=res.dfv,df12=res.dfuv,
-                  gs.names=gs.names)
-      return(out)
-  }
+    out <- list(medagg.pval=pvalmed,meinshagg.pval=pvalagg,
+                pval=res.pval,
+                teststatmed=apply(res.teststat,1,median,na.rm=TRUE),
+                teststatmed.bic=apply(res.teststat.bic,1,median,na.rm=TRUE),
+                teststatmed.aic=apply(res.teststat.aic,1,median,na.rm=TRUE),
+                teststat=res.teststat,teststat.aic=res.teststat.aic,
+                rel.edgeinter=res.rel.edgeinter,df1=res.dfu,df2=res.dfv,df12=res.dfuv,
+                gs.names=gs.names)
+    class(out) <- 'ggmgsa'
+    return(out)
+  
 }
 
+
+plot.ggmgsa <- function(x,...){
+    boxplot(t(x$pval),names=x$gs.names,xlab='gene-sets',ylab='single-split p-values (uncorrected)',...)
+}
+
+summary.ggmgsa <- function(x){
+    out <- data.frame(medagg.pval=x$medagg.pval,meinshagg.pval=x$meinshagg.pval)
+    rownames(out) <- x$gs.names
+    return(out)
+    print(out)
+}

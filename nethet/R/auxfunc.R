@@ -15,13 +15,15 @@ library(network)
 ##' @param magn.nz.common default=0.9
 ##' @param magn.diag default=0
 ##' @param emin default=0.1 (see ?huge.generator)
+##' @param verbose If verbose=FALSE then tracing output is disabled.
 ##' @export
 ##' @return 
 generate.2networks<- function(p,graph='random',
                               n.nz=rep(p,2),n.nz.common=p,
-                              n.hub=2,
+                              n.hub=2,n.hub.diff=1,
                               magn.nz.diff=0.8,
-                              magn.nz.common=0.9,magn.diag=0,emin=0.1){
+                              magn.nz.common=0.9,magn.diag=0,emin=0.1,
+                              verbose=FALSE){
 
     if(graph=='random'){
       
@@ -46,17 +48,42 @@ generate.2networks<- function(p,graph='random',
     }
   
     if(graph=='hub'){
+
+        if(n.hub<n.hub.diff){stop("n.hub less than n.hub.diff: choose smaller n.hub.diff")}
+        
+        ##generate hub network (see library(huge); huge.generator)
+        theta.hub <- matrix(0,p,p)
+        g.large = p%%n.hub#number of large hubs
+        g.small = n.hub - g.large#number of small hubs
+        n.small = floor(p/n.hub)#size small hub
+        if(n.small<=1){
+            stop('hub with less than 2 nodes: choose a smaller n.hub')
+        }
+        n.large = n.small + 1#size large hub
+        g.list = c(rep(n.small, g.small), rep(n.large, g.large))
+        g.ind = rep(c(1:n.hub), g.list)
+         for (i in 1:n.hub) {
+            tmp = which(g.ind == i)
+            theta.hub[tmp[1], tmp] = 1
+            theta.hub[tmp, tmp[1]] = 1
+            rm(tmp)
+            gc()
+        }
+        
         B.list <- list()
-        theta.hub <- as.matrix(huge.generator(d = p, graph = "hub",g=n.hub,verbose=FALSE)$theta)##mk hub-network
-        B1 <- B2 <- matrix(0,p,p)
-        indhub.diff <- 1:floor(p/n.hub)##identify variables involved in 1st hub
-        if(length(indhub.diff)==1){stop('1st hub has only 1 variable; choose smaller number of hubs')}
-        B1[-indhub.diff,-indhub.diff] <- theta.hub[-indhub.diff,-indhub.diff]*magn.nz.common
-        B.list[[1]] <- B1
+        if(n.hub.diff==0){
+            B.list[[1]] <- B.list[[2]] <- theta.hub*magn.nz.common
+        }else{
+            B1 <- B2 <- matrix(0,p,p)
+            tmp <- which(g.ind%in%1:n.hub.diff)
+            
+            B1[-tmp,-tmp] <- theta.hub[-tmp,-tmp]*magn.nz.common
+            B.list[[1]] <- B1
     
-        B2[-indhub.diff,-indhub.diff] <- theta.hub[-indhub.diff,-indhub.diff]*magn.nz.common
-        B2[indhub.diff,indhub.diff] <- theta.hub[indhub.diff,indhub.diff]*magn.nz.diff
-        B.list[[2]] <- B2
+            B2[-tmp,-tmp] <- theta.hub[-tmp,-tmp]*magn.nz.common
+            B2[tmp,tmp] <- theta.hub[tmp,tmp]*magn.nz.diff
+            B.list[[2]] <- B2
+        }
     
     }
   
@@ -67,36 +94,42 @@ generate.2networks<- function(p,graph='random',
         e.min <- min(eigen(siginv)$values)
         siginv <- siginv+diag(abs(e.min)+emin+magn.diag,p)
         SigInv[[k]] <- siginv
-        cat('ev.min: ',min(eigen(siginv)$values),'\n')
-        cat('condnum: ',max(abs(eigen(siginv)$values))/min(abs(eigen(siginv)$values)),'\n')
+        if(verbose){
+            cat('ev.min: ',min(eigen(siginv)$values),'\n')
+            cat('condnum: ',max(abs(eigen(siginv)$values))/min(abs(eigen(siginv)$values)),'\n')
+        }
     }
     return(list(invcov1=SigInv[[1]],invcov2=SigInv[[2]]))
 }
 
-plot.2networks <- function(invcov1,invcov2){
-    par(mfrow=c(1,2))
+##' Plot two networks (GGMs)
+##'
+##' 
+##' @title Plot two networks (GGMs)
+##' @param invcov1 Inverse covariance matrix of GGM1.
+##' @param invcov2 Inverse covariance matrix of GGM2.
+##' @param node.label Names of nodes.
+##' @param main Vector (two elements) with network names.
+##' @param ... Other arguments (see plot.network).
+##' @return Figure with two panels (for each network).
+##' @author nicolas
+plot.2networks <- function(invcov1,invcov2,
+                           node.label=paste('X',1:nrow(invcov1),sep=''),
+                           main=c('Network 1','Network 2'),...){
+    par(mfrow=c(1,2),mar=c(1,1,1,1))
     adj1 <- invcov1!=0
     adj2 <- invcov2!=0
-    coord <- plot.network(network(adj1),
-                          main="invcov1",
-                          vertex.col="orange", 
-                          vertex.border=grey(0.8),
+    adj <- list(adj1,adj2)
+    nonzeros <- sapply(adj,sum)
+    coord <- plot.network(network(adj[[which.max(nonzeros)]]),
+                          main=main[which.max(nonzeros)],
                           displaylabels=TRUE,
-                          boxed.labels=FALSE,
-                          label=paste('X',1:nrow(invcov1),sep=''),
-                          label.cex=0.7,
-                          usearrows=FALSE, 
-                          pad=0.02)
-    plot.network(network(adj2),
+                          label=node.label,
+                          usearrows=FALSE,...)
+    plot.network(network(adj[[which.min(nonzeros)]]),
                  coord=coord,
-                 main="invcov2",
-                 vertex.col="orange", 
-                 vertex.border=grey(0.8),
+                 main=main[which.min(nonzeros)],
                  displaylabels=TRUE,
-                 boxed.labels=FALSE,
-                 label=paste('X',1:nrow(invcov2),sep=''),
-                 label.cex=0.7,
-                 usearrows=FALSE, 
-                 pad=0.02)
+                 label=node.label,
+                 usearrows=FALSE,...)
 }
-
