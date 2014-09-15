@@ -1,6 +1,5 @@
-# Code for creating a dot plot of the strongest edges from mixglasso output
+# Code for creating plotting networks
 require(ggplot2)
-
 
 
 #' Build up dataframe for plotting dot plot with ggplot2
@@ -74,13 +73,6 @@ buildDotPlotDataFrame <- function(net.clustering, cluster.names, node.names) {
 #' @export
 #' @return Returns a ggplot2 object. If display=TRUE, additionally displays the 
 #' plot.
-#' The variables Sig and SigInv are arrays of size dim.samples by dim.samples 
-#' by num.groups, where the first two dimensions contain the (inverse)
-#' covariance matrix for the network obtained by running glasso on group k. Variables 
-#' Mu and Sigma.diag contain the mean and variance of the input data,
-#' and group.names and var.names contains the names for the groups and
-#' variables in the data (if specified as colnames of the input data matrix).
-#' 
 dotPlot <- function(net.clustering, pcor.cutoff=0.25, hard.limit=50,
 										display=TRUE, node.names=rownames(net.clustering$Mu),
 										cluster.names=sort(unique(net.clustering$comp)),
@@ -136,4 +128,91 @@ dotPlot <- function(net.clustering, pcor.cutoff=0.25, hard.limit=50,
   }
 }
 
+
+#' Create a scatterplot showing correlation between specific nodes in the network
+#' for each pre-specified group.
+#' 
+#' This function takes the output of {\link{screen_cv.glasso} or 
+#' {\link{mixglasso} and creates a plot showing the correlation between specified
+#' node pairs in the network for all groups. The subplots for each node pair are 
+#' arranged in a numPairs by numGroups grid. Partial correlations associated 
+#' with each node pair are also displayed.
+#'
+#' @param net.clustering A network clustering object as returned by {\link{screen_cv.glasso} or 
+#' {\link{mixglasso}.
+#' @param data Observed data for the nodes, a numObs by numNodes matrix. Note 
+#' that nodes need to be in the same ordering as in node.names.
+#' @param nodes.pairs A matrix of size numPairs by 2, where each row contains a 
+#' pair of nodes to display. If node.names is specified, names in node.pairs
+#' must correspond to elements of node.names.
+#' @param display If TRUE, print the plot to the current output device.
+#' @param node.names Names for the nodes in the network. If NULL, names from 
+#' net.clustering will be used.
+#' @param group.names Names for the clusters or groups. If NULL, names from 
+#' net.clustering will be used (by default these are integets 1:numClusters).
+#' @export
+#' @return Returns a ggplot2 object. If display=TRUE, additionally displays the 
+#' plot.
+#' 
+scatterPlot <- function(net.clustering, data, node.pairs, display=TRUE, 
+												node.names=rownames(net.clustering$Mu),
+												group.names=net.clustering$group.names) {
 	
+	if(class(net.clustering) != 'nethetclustering') 
+		 stop('net.clustering needs to be an object of class nethetclustering')
+	
+	if(is.null(node.names)) node.names = 1:dim(data)[2]
+	
+	# Prepare data frame for plotting
+	plotting.frame = data.frame()
+	corr.frame = data.frame()
+	
+	num.samples = dim(data)[1]
+	
+	# Obtain partial correlations from graphical lasso output
+	pcorrs = sapply(1:length(group.names), 
+				 function(i) invcov2parcor(net.clustering$SigInv[,,i]), simplify='array')
+	
+	# Cycle over node pairs/edges
+	for(edge.i in 1:dim(node.pairs)[1]) {
+		node.1 = node.pairs[edge.i, 1]
+		node.2 = node.pairs[edge.i, 2]
+		edge.name = paste(node.1, node.2, sep='\n')
+					
+		# Partial correlation
+		pcorrs.values = pcorrs[node.names == node.1, 
+												   node.names == node.2,]
+		
+		names(pcorrs.values) = group.names
+		
+		# Spearman correlation
+		corrs = sapply(group.names, 
+									 function(x) cor(data[net.clustering$comp == x,node.names==node.1],
+		 														   data[net.clustering$comp == x,node.names==node.2]))
+		
+		corr.frame = rbind(corr.frame,
+											 data.frame(Edge.Name=rep(edge.name, length(group.names)), 
+											 					 Group=factor(group.names),
+											 					 Corr=round(corrs, digits=2),
+											 					 P.Corr=round(pcorrs.values, digits=2)))
+		
+		temp.frame = data.frame(Edge.Name=rep(edge.name, num.samples), 
+														Node.1=data[,node.1], 
+														Node.2=data[,node.2], 
+														Group=factor(net.clustering$comp))
+		
+		plotting.frame = rbind(temp.frame, plotting.frame)
+	}
+	
+	p <- ggplot(plotting.frame, aes(Node.1, Node.2)) +
+		geom_point(aes(colour=Group)) +		
+		geom_abline(linetype=3) + 
+		facet_grid(Edge.Name ~ Group) +
+		geom_text(data=corr.frame, aes(x=Inf, y=Inf, label=paste('PCorr: ', P.Corr, '\n', 'Corr: ', Corr, sep='')), size=6, family='Times', hjust=1, vjust=1) +
+		theme(strip.text.y = element_text(size=15), strip.text.x = element_text(size=20),
+					axis.text=element_text(size=18), axis.title=element_text(size=24,face="bold"))
+	
+	if(display) print(p)
+	
+	return(p)
+}

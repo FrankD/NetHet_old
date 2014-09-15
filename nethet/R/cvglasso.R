@@ -108,6 +108,7 @@ het.cv.glasso <- function(data, grouping=rep(1, dim(data)[1]), mc.flag=FALSE,
   results.all$Sigma.diag = Sigma.diag
   results.all$group.names = group.names
   results.all$proteins = colnames(data)
+  results.all$comp = grouping # For consistency with mixglasso
   
   class(results.all) = 'nethetclustering'
   
