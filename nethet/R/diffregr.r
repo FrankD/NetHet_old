@@ -1,4 +1,12 @@
-###TwoSampleTest for HighDim Regression: assumes that mu1=mu2=mu0=0, therefore center input data (y1,y2,x1,x2)
+##########################################################################################
+# Differential Regression: Two-sample testing for high-dimensional regression
+#-------------------------------------------------------------------------------
+# * Intercepts are assumed to be zero in log-likelihood (mu1=mu2).
+#   Therefore, center input data (y1,y2,x1,x2).
+#
+#
+#
+##########################################################################################
 
 
 #####################
@@ -13,16 +21,16 @@ library(CompQuadForm)
 ##-----Screening-----##
 #######################
 
-##' Screening using cross-validation
+##' Cross-validated Lasso screening (lambda.min-rule)
 ##'
-##' 'lambda.min'-rule
-##' @title Screening using cross-validation
-##' @param x predictor matrix
-##' @param y response 
-##' @return active-set
+##' 
+##' @title Cross-validation lasso screening (lambda.min-rule)
+##' @param x Predictor matrix
+##' @param y Response vector
+##' @return Active-set
 ##' @author n.stadler
 ##' @export
-lasso.cvmin <- function(x,y){
+screen_cvmin.lasso <- function(x,y){
   fit.cv <- cv.glmnet(x,y)
   beta <- as.numeric(coef(fit.cv,s='lambda.min')[-1])
   p <- length(beta)
@@ -31,16 +39,16 @@ lasso.cvmin <- function(x,y){
   return(which(beta!=0))
 }
 
-##' Screening using cross-validation 
+##' Cross-validated Lasso screening (lambda.1se-rule)
 ##'
-##' 'lambda.1se'-rule
-##' @title Screening using cross-validation
-##' @param x predictor matrix
-##' @param y response 
-##' @return active-set
+##' 
+##' @title Cross-validated Lasso screening (lambda.1se-rule)
+##' @param x Predictor matrix
+##' @param y Response vector 
+##' @return Active-set
 ##' @author n.stadler
 ##' @export
-lasso.cv1se <- function(x,y){
+screen_cv1se.lasso <- function(x,y){
   fit.cv <- cv.glmnet(x,y)
   beta <- as.numeric(coef(fit.cv,s='lambda.1se')[-1])
   p <- length(beta)
@@ -50,18 +58,20 @@ lasso.cv1se <- function(x,y){
   return(which(beta!=0))
 }
 
-##' Screening using cross-validation & n/k-truncation
+##' Cross-validated Lasso screening and additional truncation.
 ##'
-##' Computes cross-validated regression coefficients
-##' if more nonzeros than n/k, then truncate the smallest coefficients
-##' @title Screening using cross-validation & n/k-truncation
-##' @param x predictor matrix
-##' @param y response 
-##' @param k.trunc "number of samples per predictor" (default=5)
-##' @return active-set
+##' Computes Lasso coefficients (cross-validation optimal lambda). Truncates
+##' smallest coefficients to zero, such that there are no more than n/k.trunc
+##' non-zero coefficients.
+##' 
+##' @title Cross-validated Lasso screening and additional truncation.
+##' @param x Predictor matrix.
+##' @param y Response vector.
+##' @param k.trunc Truncation constant="number of samples per predictor" (default=5).
+##' @return Active-set.
 ##' @author n.stadler
 ##' @export
-lasso.cvtrunc <- function(x,y,k.trunc=5){
+screen_cvtrunc.lasso <- function(x,y,k.trunc=5){
   n <- nrow(x)
   fit.cv <- cv.glmnet(x,y)
   beta <- as.numeric(coef(fit.cv,s='lambda.min')[-1])
@@ -71,16 +81,19 @@ lasso.cvtrunc <- function(x,y,k.trunc=5){
   return(which(beta!=0))
 }
 
-##' Screening using cross-validation & sqrt-truncation 
+##' Cross-validated Lasso screening and sqrt-truncation. 
 ##'
+##' Computes Lasso coefficients (cross-validation optimal lambda). Truncates
+##' smallest coefficients to zero, such that there are no more than sqrt(n)
+##' non-zero coefficients.
 ##' 
-##' @title Screening using cross-validation & sqrt-truncation
-##' @param x predictor matrix
-##' @param y response 
-##' @return active-set
+##' @title Cross-validated Lasso screening and sqrt-truncation.
+##' @param x Predictor matrix.
+##' @param y Response vector. 
+##' @return Active-set.
 ##' @author n.stadler
 ##' @export
-lasso.cvsqrt <- function(x,y){
+screen_cvsqrt.lasso <- function(x,y){
   n <- nrow(x)
   fit.cv <- cv.glmnet(x,y)
   beta <- as.numeric(coef(fit.cv,s='lambda.min')[-1])
@@ -90,17 +103,20 @@ lasso.cvsqrt <- function(x,y){
   return(which(beta!=0))
 }
 
-##' Screening using cross-validation & fixed number of predictors
+##' Cross-validated Lasso screening and upper bound on number of predictors
 ##'
+##' Computes Lasso coefficients (cross-validation optimal lambda). Truncates
+##' smalles coefficients to zero such that there are no more than no.predictors
+##' non-zero coefficients
 ##' 
-##' @title Screening using cross-validation & fixed number of predictors
-##' @param x predictor matrix
-##' @param y response 
-##' @param no.predictors size of active-set
-##' @return active-set
+##' @title Cross-validated Lasso screening and upper bound on number of predictors.
+##' @param x Predictor matrix.
+##' @param y Response vector. 
+##' @param no.predictors Upper bound on number of active predictors,
+##' @return Active-set.
 ##' @author n.stadler
 ##' @export
-lasso.cvfix <- function(x,y,no.predictors=10){
+screen_cvfix.lasso <- function(x,y,no.predictors=10){
   n <- nrow(x)
   fit.cv <- cv.glmnet(x,y)
   beta <- as.numeric(coef(fit.cv,s='lambda.min')[-1])
@@ -113,20 +129,21 @@ lasso.cvfix <- function(x,y,no.predictors=10){
 ##############################
 ##--------P-VALUES----------##
 ##############################
-##' LR statistic
+
+##' Log-likelihood ratio statistics for Differential Regression.
 ##'
 ##' 
-##' @title LR statistic
-##' @param y1 no descr
-##' @param y2 no descr
-##' @param y no descr
-##' @param xx1 no descr
-##' @param xx2 no descr
-##' @param xx no descr
-##' @param beta1 no descr
-##' @param beta2 no descr
-##' @param beta no descr
-##' @return no descr
+##' @title Log-likelihood ratio statistics for Differential Regression.
+##' @param y1 Response vector condition 1.
+##' @param y2 Response vector condition 2.
+##' @param y Pooled response vector.
+##' @param xx1 Predictor matrix condition 1.
+##' @param xx2 Predictor matrix condition 2.
+##' @param xx Pooled predictor matrix
+##' @param beta1 Regression coefficients condition 1.
+##' @param beta2 Regression coefficients condition 2.
+##' @param beta Pooled regression coefficients.
+##' @return 2 times log-likelihood ratio statistics.
 ##' @author n.stadler
 logratio.diffregr <- function(y1,y2,y,xx1,xx2,xx,beta1,beta2,beta){
   ##Compute 2*log-likelihood ratio
@@ -800,28 +817,28 @@ est2.my.ev3.diffregr <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
   return(list(eval=eval,ev.aux.complex=ev.aux.complex))
 }
 
-##' Computation "split-asym" p-values
+##' Computation "split-asym"/"split-perm" p-values.
 ##'
 ##' 
-##' @title Computation "split-asym" p-values
-##' @param y1 no descr
-##' @param y2 no descr
-##' @param x1 no descr
-##' @param x2 no descr
-##' @param beta1 no descr
-##' @param beta2 no descr
-##' @param beta no descr
-##' @param act1 no descr
-##' @param act2 no descr
-##' @param act no descr
-##' @param compute.evals no descr
-##' @param method.compquadform no descr
-##' @param acc no descr
-##' @param epsabs no descr
-##' @param epsrel no descr
-##' @param verbose no descr
-##' @param n.perm no descr
-##' @return no descr
+##' @title Computation "split-asym" p-values.
+##' @param y1 Response vector condition 1.
+##' @param y2 Response vector condition 2.
+##' @param x1 Predictor matrix condition 1.
+##' @param x2 Predictor matrix condition 2.
+##' @param beta1 Regression coefficients condition 1.
+##' @param beta2 Regression coefficients condition 2.
+##' @param beta Pooled regression coefficients.
+##' @param act1 Active-set condition 1.
+##' @param act2 Active-set condition 2.
+##' @param act Pooled active-set.
+##' @param compute.evals Method for computation of weights.
+##' @param method.compquadform Method to compute distribution function of w-sum-of-chi2.
+##' @param acc Accuracy of p-value. See ?davies
+##' @param epsabs See ?imhof.
+##' @param epsrel See ?imhof.
+##' @param verbose Show warnings?
+##' @param n.perm Number of permutations.
+##' @return P-value, test statistic, estimated weights.
 ##' @author n.stadler
 diffregr_pval <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act,compute.evals,method.compquadform,acc,epsabs,epsrel,verbose,n.perm){
 
@@ -856,17 +873,17 @@ diffregr_pval <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act,compute.eva
   }
 }
 
-##' Help function for "split-perm"
+##' Auxiliary function for computation of "split-perm" p-value.
 ##'
 ##' 
-##' @title Help function for "split-perm"
-##' @param y1 no descr
-##' @param y2 no descr
-##' @param y12 no descr
-##' @param x1 no descr
-##' @param x2 no descr
-##' @param x12 no descr
-##' @return no descr
+##' @title Auxiliary function for computation of "split-perm" p-value.
+##' @param y1 Response vector condition 1.
+##' @param y2 Response vector condition 2.
+##' @param y12 Pooled response vector.
+##' @param x1 Predictor matrix condition 1.
+##' @param x2 Predictor matrix condition 2.
+##' @param x12 Pooled predictor matrix
+##' @return Test statistic (log-likelihood-ratio statistic).
 ##' @author n.stadler
 perm.diffregr_teststat <- function(y1,y2,y12,x1,x2,x12){
   p1 <- ncol(x1)
@@ -891,19 +908,19 @@ perm.diffregr_teststat <- function(y1,y2,y12,x1,x2,x12){
   return(logratio.diffregr(y1,y2,y12,x1,x2,x12,beta1,beta2,beta))
 }
 
-##' Computation "split-perm" p-values
+##' Computation "split-perm" p-value.
 ##'
 ##' 
-##' @title Computation "split-perm" p-values
-##' @param y1 no descr
-##' @param y2 no descr
-##' @param x1 no descr
-##' @param x2 no descr
-##' @param act1 no descr
-##' @param act2 no descr
-##' @param act no descr
-##' @param n.perm no descr
-##' @return no descr
+##' @title Computation "split-perm" p-value.
+##' @param y1 Response vector condition 1.
+##' @param y2 Response vector condition 2.
+##' @param x1 Predictor matrix condition 1.
+##' @param x2 Predictor matrix condition 2.
+##' @param act1 Active-set condition 1.
+##' @param act2 Active-set condition 2.
+##' @param act Pooled active-set.
+##' @param n.perm Number of permutations.
+##' @return Permutation based p-value.
 ##' @author n.stadler
 perm.diffregr_pval <- function(y1,y2,x1,x2,act1,act2,act,n.perm){
   n1 <- nrow(x1);n2 <- nrow(x2)
@@ -929,51 +946,44 @@ perm.diffregr_pval <- function(y1,y2,x1,x2,act1,act2,act,n.perm){
   return(list(pval.onesided=pval,pval.twosided=pval,weights.nulldistr=NULL,teststat=tobs))
 }
               
-##' Diffregr (single-split)
+##' Differential Regression (single-split version).
 ##'
+##' Intercepts in regression models are assumed to be zero (mu1=mu2=0).
+##' You might need to center the input data prior to running
+##' Differential Regression.
 ##' 
-##' @title Diffregr (single-split)
-##' @param y1 response 1
-##' @param y2 response 2
-##' @param x1 predictor matrix 1
-##' @param x2 predictor matrix 2
-##' @param split1 samples (from condition 1) used for screening
-##' @param split2 samples (from condition 2) used for screening
-##' @param screen.meth screening method (default='lasso.cvtrunc')
-##' @param compute.evals algorithm for computation of weights (default='est2.my.ev3.diffregr')
-##' @param method.compquadform algorithm for computing weighted-sum-of-chi2 (default='imhof')
-##' @param acc accuracy method.compquadform
-##' @param epsabs accuracy method.compquadform
-##' @param epsrel accuracy method.compquadform
-##' @param verbose TRUE or FALSE (show some output of algorithm)
-##' @param n.perm number of permutation for "split-perm" p-value
-##' @param ... other arguments for screening method
-##' @return list consisting of
-##' \item{pval.onesided}{p-value}
-##' \item{pval.twosided}{ignore all "*.twosided results}
-##' \item{teststat}{LR statistic}
-##' \item{weights.nulldistr}{estimated weights of asymptotic weighted-sum-of-chi2}
-##' \item{active}{active-sets obtained in screening step}
-##' \item{beta}{regression coefficients (MLE) obtaind from 2nd half of the data}
+##' @title Differential Regression (single-split version).
+##' @param y1 Response vector condition 1.
+##' @param y2 Response vector condition 2.
+##' @param x1 Predictor matrix condition 1.
+##' @param x2 Predictor matrix condition 2.
+##' @param split1 Samples condition 1 used in screening-step.
+##' @param split2 Samples condition 2 used in screening-step.
+##' @param screen.meth Screening method (default='screen_cvtrunc.lasso').
+##' @param compute.evals Method for computation of weights (default='est2.my.ev3.diffregr').
+##' @param method.compquadform Algorithm for computing distribution function
+##'                            of weighted-sum-of-chi2 (default='imhof').
+##' @param acc See ?davies (default=1e-4).
+##' @param epsabs See ?imhof (default=1e-10).
+##' @param epsrel See ?imhof (default=1e-10).
+##' @param verbose Show warnings (default=FALSE)? 
+##' @param n.perm Number of permutation for "split-perm" p-value (default=NULL).
+##' @param ... Other arguments specific to screen.meth.
+##' @return List consisting of
+##' \item{pval.onesided}{"One-sided" p-value.}
+##' \item{pval.twosided}{"Two-sided" p-value. Ignore all "*.twosided results.}
+##' \item{teststat}{2 times Log-likelihood-ratio statistics}
+##' \item{weights.nulldistr}{Estimated weights of weighted-sum-of-chi2s.}
+##' \item{active}{List of active-sets obtained in screening step.}
+##' \item{beta}{Regression coefficients (MLE) obtaind in cleaning-step.}
 ##' @author n.stadler
 ##' @export
-##' @example ../diffregr-pkg_test.r
-diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='lasso.cvtrunc',
+##' @example ../diffregr_ex.R
+diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='screen_cvtrunc.lasso',
                                 compute.evals='est2.my.ev3.diffregr',method.compquadform='imhof',acc=1e-04,
                                 epsabs=1e-10,epsrel=1e-10,
                                 verbose=FALSE,n.perm=NULL,...){
   
-  ##Multisplit Pvalues
-  ##
-  ##Input:
-  ##
-  ## -Data:y1,y2,x1,x2 (centered)
-  ## -b.splits: number of splits
-  ## -frac.split: fraction train-data (for model selection) / test-data (for pval calculations)
-  ## -screen.meth={lasso.cvmin,lasso.cv1se}
-  ## -gamma.min: see Meinshausen&Meier&Buehlmann
-  ## -compute.evals: 'est2.my.ev2.diffregr'
-
   n1 <- nrow(x1)
   n2 <- nrow(x2)
  
@@ -1032,40 +1042,45 @@ diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='lasso.cvt
               active=active,beta=est.beta))
 }
 
-##' Diffregr (multi-split)
+##' Differential Regression (multi-split version).
+##'
+##' Intercepts in regression models are assumed to be zero (mu1=mu2=0).
+##' You might need to center the input data prior to running
+##' Differential Regression.
 ##'
 ##' 
-##' @title Diffregr (single-split)
-##' @param y1 response 1 
-##' @param y2 response 2
-##' @param x1 predictor matrix 1
-##' @param x2 predictor matrix 2
-##' @param b.splits number of random splits (default=50)
-##' @param frac.split fraction of data used for screening (default=0.5)
-##' @param screen.meth screening method (default='lasso.cvtrunc')
-##' @param gamma.min see agg.pval (default=0.05)
-##' @param compute.evals algorithm for computation of weights (default='est2.my.ev3.diffregr')
-##' @param method.compquadform algorithm for computing weighted-sum-of-chi2 (default='imhof')
-##' @param acc accuracy method.compquadform
-##' @param epsabs accuracy method.compquadform
-##' @param epsrel accuracy method.compquadform
-##' @param verbose TRUE or FALSE (show some output of algorithm ?)
-##' @param n.perm number of permutation for "split-perm" p-value
-##' @param ... other arguments for screening method
-##' @return list consisting of
-##' \item{pval.onesided}{p-values for all B splits}
-##' \item{pval.twosided}{ignore all "*.twosided" results}
-##' \item{sspval.onesided}{single-split p-value}
-##' \item{medpval.onesided}{median aggregated p-value}
-##' \item{aggpval.onesided}{MB-aggregated p-value}
-##' \item{teststat}{LR statistics for all B splits}
-##' \item{weights.nulldistr}{estimated weights of asymptotic weighted-sum-of-chi2}
-##' \item{active.last}{active-sets obtained in last sample split}
-##' \item{beta.last}{regression coefficients obtained in last sample split}
+##' @title Differential Regression (multi-split version).
+##' @param y1 Response vector condition 1.
+##' @param y2 Response vector condition 2.
+##' @param x1 Predictor matrix condition 1.
+##' @param x2 Predictor matrix condition 2.
+##' @param b.splits Number of splits (default=50).
+##' @param frac.split Fraction train-data (screening) / test-data (cleaning) (default=0.5).
+##' @param screen.meth Screening method (default='screen_cvtrunc.lasso').
+##' @param gamma.min Tuning parameter in p-value aggregation of Meinshausen et al (2009) (default=0.05).
+##' @param compute.evals Method for computation of weights (default='est2.my.ev3.diffregr').
+##' @param method.compquadform Algorithm for computing distribution function
+##'                            of weighted-sum-of-chi2 (default='imhof').
+##' @param acc See ?davies (default=1e-4).
+##' @param epsabs See ?imhof (default=1e-10).
+##' @param epsrel See ?imhof (default=1e-10).
+##' @param verbose Show warnings (default=FALSE)?
+##' @param n.perm Number of permutation for "split-perm" p-value. Default=NULL which means
+##'               that the asymptotic approximation is used.
+##' @param ... Other arguments specific to screen.meth.
+##' @return List consisting of
+##' \item{ms.pval}{p-values for all b.splits}
+##' \item{ss.pval}{single-split p-value}
+##' \item{medagg.pval}{median aggregated p-value}
+##' \item{meinshagg.pval}{meinshausen aggregated p-value (meinshausen et al 2009)}
+##' \item{teststat}{test statistics for b.splits}
+##' \item{weights.nulldistr}{estimated weights}
+##' \item{active.last}{active-sets obtained in last screening-step}
+##' \item{beta.last}{constrained mle (regression coefficients) obtained in last cleaning-step}
 ##' @author n.stadler
 ##' @export
-##' @example ../diffregr-pkg_test.r
-diffregr_multisplit<- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,screen.meth='lasso.cvtrunc',
+##' @example ../diffregr-ex.R
+diffregr_multisplit<- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,screen.meth='screen_cvtrunc.lasso',
                               gamma.min=0.05,compute.evals='est2.my.ev3.diffregr',
                                method.compquadform='imhof',acc=1e-04,epsabs=1e-10,epsrel=1e-10,
                                verbose=FALSE,n.perm=NULL,...){
@@ -1087,16 +1102,20 @@ diffregr_multisplit<- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,screen.met
   weights.nulldistr <- sapply(res.multisplit,function(x){x[['weights.nulldistr']]},simplify='array')
   aggpval.onesided <- min(1,(1-log(gamma.min))*optimize(f=agg.pval,interval=c(gamma.min,1),maximum=FALSE,pval=pval.onesided[!is.na(pval.onesided)])$objective)
   aggpval.twosided <- min(1,(1-log(gamma.min))*optimize(f=agg.pval,interval=c(gamma.min,1),maximum=FALSE,pval=pval.twosided[!is.na(pval.twosided)])$objective)
-    
-  return(list(pval.onesided=pval.onesided,pval.twosided=pval.twosided,
-              sspval.onesided=pval.onesided[1],sspval.twosided=pval.twosided[1],
-              medpval.onesided=median(pval.onesided,na.rm=TRUE),medpval.twosided=median(pval.twosided,na.rm=TRUE),
-              aggpval.onesided=aggpval.onesided,aggpval.twosided=aggpval.twosided,
-              teststat=teststat,weights.nulldistr=weights.nulldistr,
-              active.last=res.multisplit[[b.splits]]$active,beta.last=res.multisplit[[b.splits]]$beta))
-}
 
-##' old single-split function for diffregr
+  result <- list(ms.pval=pval.onesided,
+                 ss.pval=pval.onesided[1],
+                 medagg.pval=median(pval.onesided,na.rm=TRUE),
+                 meinshagg.pval=aggpval.onesided,
+                 teststat=teststat,weights.nulldistr=weights.nulldistr,
+                 active.last=res.multisplit[[b.splits]]$active,
+                 beta.last=res.multisplit[[b.splits]]$beta)
+  class(result) <- 'diffregr'
+  return(result)
+}
+    
+
+##' Old single-split function for diffregr
 ##'
 ##' 
 ##' @title old single-split function for diffregr
@@ -1110,7 +1129,7 @@ diffregr_multisplit<- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,screen.met
 ##' @param compute.evals no descr
 ##' @return no descr
 ##' @author n.stadler
-twosample_single_regr <- function(y1,y2,x1,x2,n.screen.pop1=100,n.screen.pop2=100,screen.meth=lasso.cvmin,compute.evals='est2.my.ev3.diffregr'){
+twosample_single_regr <- function(y1,y2,x1,x2,n.screen.pop1=100,n.screen.pop2=100,screen.meth='screen_cvmin.lasso',compute.evals='est2.my.ev3.diffregr'){
 
   ##Single-Split Pvalues
   ##
