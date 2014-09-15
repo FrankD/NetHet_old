@@ -140,7 +140,7 @@ sim.mix.networks <- function(n, p, n.comp, sparsity=0.7,
 														 Mu=NULL, Sig=NULL, ...) {
 	
 	if(is.null(Mu)) {
-	  Mu = sapply(1:n.comp, function(n.comp) rnorm(p))
+	  Mu = sapply(1:n.comp, function(n.comp) rnorm(p,0,3))
 	}
 	
 	if(is.null(Sig)) {
