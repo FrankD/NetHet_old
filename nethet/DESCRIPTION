@@ -22,4 +22,8 @@ Imports:
     multtest,
     ICSNP,
     glmnet
+Suggests: 
+  ggplot2,
+  knitr
+VignetteBuilder: knitr
 License: GPL-2

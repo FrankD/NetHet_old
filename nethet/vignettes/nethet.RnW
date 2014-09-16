@@ -12,17 +12,20 @@ BiocStyle::latex()
 
 \maketitle
 
-<<echo=FALSE, include=TRUE>>=
+<<echo=FALSE, include=TRUE, warning=FALSE>>=
 # Load package
 #library(nethet)
 
 library(ggplot2)
+library(xtable)
 
 # For now, load only needed source files
 source('../R/simMix.R')
 source('../R/mixglasso.R')
 source('../R/cvglasso.R')
 source('../R/diffnet.r')
+
+set.seed(1)
 @
 
 \section{Introduction}
@@ -76,7 +79,7 @@ plotting and outputting the results in a sensible way.
 
 \section{Simulate data}
 
-In order to demonstrate the functionalities of the package, we will first simulate data from a Gaussian mixture model with a known covariance structure. The \textit{nethet} package includes code for generating random covariance matrices with a given sparsity, and for simulating from a Gaussian mixture model with given means and covariances. The function \texttt{sim.mix.networks} provides a convenient wrapper for both:
+In order to demonstrate the functionalities of the package, we will first simulate data from a Gaussian mixture model with a known covariance structure. The \textit{nethet} package includes code for generating random covariance matrices with a given sparsity, and for simulating from a Gaussian mixture model with given means and covariances. The function \texttt{sim\_mix\_networks} provides a convenient wrapper for both:
 
 <<echo=TRUE, include=TRUE>>=
 # Specify number of simulated samples and dimensionality
@@ -85,7 +88,7 @@ p = 25
 
 # Specify number of components of the mixture model and mixture probabilities
 n.comp = 4
-mix.prob = c(0.2, 0.4, 0.3, 0.1)
+mix.prob = c(0.2, 0.4, 0.3, 0.2)
 
 # Specify sparsity in [0,1], indicating fraction of off-diagonal zero entries.
 s = 0.9
@@ -94,7 +97,7 @@ s = 0.9
 # Generate networks with random means and covariances. Means will be drawn from 
 # a standard Gaussian distribution, non-zero covariance values from a 
 # Beta(1,1) distribution.
-sim.result = sim.mix.networks(n, p, n.comp, s, mix.prob)
+sim.result = sim_mix_networks(n, p, n.comp, s, mix.prob)
 @
 
 The data is contained in \texttt{sim.result\$data}, and the components that each 
@@ -117,11 +120,11 @@ qplot(x=sim.result$data[,1], y=sim.result$data[,2],
 
 The means and covariances of the data are contained in \texttt{sim.result\$Mu} 
 and \texttt{sim.result\$Sig}. If desired, they can also be specified when calling
-\texttt{sim.mix.networks}.
+\texttt{sim\_mix\_networks}.
 
 <<echo=TRUE, include=TRUE>>=
 # Generate new dataset with the same covariances, but different means
-sim.result.new = sim.mix.networks(n, p, n.comp, s, mix.prob, Sig=sim.result$Sig)
+sim.result.new = sim_mix_networks(n, p, n.comp, s, mix.prob, Sig=sim.result$Sig)
 
 component = as.factor(sim.result.new$comp)
 
@@ -132,7 +135,7 @@ qplot(x=sim.result.new$data[,1], y=sim.result.new$data[,2],
 @
 
 When the covariance matrices for the components are not specified in advance, 
-the \texttt{sim.mix.networks} function implicitly assumes that they are 
+the \texttt{sim\_mix\_networks} function implicitly assumes that they are 
 generated independently of each other. In order to test the \texttt{diffnet} 
 functions, we also want to be able to generate simulated data from pairs of 
 networks that present some common edges. The \texttt{generate.2networks}
@@ -154,7 +157,7 @@ way as in the previous section:
 
 <<echo=TRUE, include=TRUE>>=
 # Generate networks with random means and covariances. 
-sim.result = sim.mix.networks(n, p, n.comp, s, mix.prob)
+sim.result = sim_mix_networks(n, p, n.comp, s, mix.prob)
 
 test.data = sim.result$data
 test.labels = sim.result$comp
@@ -190,7 +193,115 @@ should just be mentioned as an extension of diffnet within this section.}
 
 \section{Network reconstruction with unknown components using \texttt{mixglasso}}
 
-...
+Often we do not know a priori which component each sample belongs to. For example 
+in the case of samples corresponding to protein measurements in breast cancer 
+patients, the particular subtype of breast cancer that a patient suffers from
+may be unknown. In these cases, our package allows for network-based clustering
+of the samples using the mixture graphical lasso (mixglasso), which jointly 
+clusters the samples and reconstructs the networks for each group or cluster.
+
+To demonstrate the \texttt{mixglasso} function, let us first generate some data 
+in the same way as before, but with means defined to ensure separability 
+of the groups:
+
+<<echo=TRUE, include=TRUE>>=
+# Generate networks with random means and covariances. 
+n = 1000
+p = 10
+s = 0.9
+n.comp = 3
+
+# Create different mean vectors
+Mu = matrix(0,p,n.comp)
+
+# Define non-zero means in each group (non-overlapping)
+nonzero.mean = split(sample(1:p),rep(1:n.comp,length=p))
+
+# Set non-zero means to fixed value
+for(k in 1:n.comp){
+  Mu[nonzero.mean[[k]],k] = -2/sqrt(ceiling(p/n.comp))
+}
+
+# Generate data
+sim.result = sim_mix_networks(n, p, n.comp, s, Mu=Mu)
+@
+
+Now we will run mixglasso on this dataset to retrieve the original clustering
+and reconstruct the underlying networks.
+
+<<echo=TRUE, include=TRUE>>=
+test.data = sim.result$data
+
+# Run mixglasso
+mixglasso.result = mixglasso(sim.result$data, n.comp=3)
+
+# Calculate adjusted rand index to judge how accurate the clustering is
+# Values > 0.7 indicate good agreement.
+adj.rand = adjustedRandIndex(mixglasso.result$comp, sim.result$comp)
+cat('Adjusted Rand Index', round(adj.rand, digits=2), '\n')
+@
+
+Table \ref{table:crosstab} shows the cross-tabulation of the number of samples
+in predicted versus true groups.
+
+<<echo=FALSE, include=TRUE, cache=FALSE, results='asis'>>=
+crosstab <- function(class1,class2){
+  tab <- matrix(NA,length(levels(class1)),length(levels(class2)))
+  colnames(tab) <- levels(class2)
+  rownames(tab) <- levels(class1)
+  for (i in levels(class1)){
+    tab[i,] <- table(class2[which(class1==i)])
+  }
+  return(tab)
+}
+
+# Relabel true groupings to avoid confusion
+sim.grouping = c('A', 'B', 'C')[sim.result$comp]
+
+cross.table = crosstab(factor(mixglasso.result$comp), factor(sim.grouping))
+
+latex.table = xtable(cross.table, caption=
+										 	paste('Cross-tabulation of mixglasso clusters (rows) with',
+                    'true group assignments (columns).'),
+										 label='table:crosstab')
+
+print(latex.table)
+@
+
+
+What if we don't know the true number groups? Luckily, \texttt{mixglasso} supports
+model comparison using BIC \cite{BIC} and minimum description length \cite{MMDL}. 
+In the following example we will use BIC to find the correct number of components:
+
+<<echo=TRUE, include=TRUE>>=
+
+# Run mixglasso over a range of numbers of components
+mixglasso.result = mixglasso(sim.result$data, n.comp=1:6)
+
+# Repeat with lambda=0 and lambda=Inf for comparison
+mixglasso.result.0 = mixglasso(sim.result$data, n.comp=1:6, lambda=0)
+mixglasso.result.Inf = mixglasso(sim.result$data, n.comp=1:6, lambda=Inf)
+
+# Aggregate BIC results for plotting
+BIC.vals = c(mixglasso.result$bic, mixglasso.result.0$bic,
+						 mixglasso.result.Inf$bic)
+
+# Plot to verify that minimum BIC value corresponds with true 
+plotting.frame <- data.frame(BIC=BIC.vals, Num.Comps=rep(1:6, 3), 
+														 Lambda=rep(c('Default', 
+														 						  'Lambda = 0',
+														 							'Lambda = Inf'),
+														 						each=6))
+
+p <- ggplot(plotting.frame) + 
+	geom_line(aes(x=Num.Comps, y=BIC, colour=Lambda)) + 
+	geom_vline(xintercept=3, linetype='dotted')
+
+print(p)
+@
+
+Note that in this simplified example, $\lambda=0$ performs well because the 
+true inverse covariance matrices are not particularly sparse and $n >> p$.
 
 \section{Plotting and Exporting Results}
 

@@ -123,7 +123,7 @@ getinvcov<- function(p,s, a.diff=5,b.diff=5,magn.diag=0,emin=0.1){
 ##' @param n Number of data points to simulate.
 ##' @param p Dimensionality of the data.
 ##' @param n.comp Number of components of the mixture model.
-##' @param sparsity Determined the proportion of non-zero off-diagonal entries.
+##' @param sparsity Determines the proportion of non-zero off-diagonal entries.
 ##' @param mix.prob Mixture probabilities for the components; defaults to uniform distribution.
 ##' @param Mu Means for the mixture components, a p by n.comp matrix. If NULL, 
 ##' sampled from a standard Gaussian.
