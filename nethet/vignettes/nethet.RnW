@@ -12,6 +12,7 @@ BiocStyle::latex()
 
 \maketitle
 
+
 <<echo=FALSE, include=FALSE, warning=FALSE>>=
 # Load package
 #library(nethet)
@@ -88,6 +89,7 @@ p = 25
 
 # Specify number of components of the mixture model and mixture probabilities
 n.comp = 4
+
 mix.prob = c(0.2, 0.3, 0.3, 0.2)
 
 # Specify sparsity in [0,1], indicating fraction of off-diagonal zero entries.
@@ -285,6 +287,7 @@ mixglasso.result.Inf = mixglasso(sim.result$data, n.comp=1:6, lambda=Inf)
 # Aggregate BIC results for plotting
 BIC.vals = c(mixglasso.result$bic, mixglasso.result.0$bic,
 						 mixglasso.result.Inf$bic)
+
 lambda.labels = rep(c('Default', 'Lambda = 0', 'Lambda = Inf'), each=6)
 
 # Plot to verify that minimum BIC value corresponds with true 
