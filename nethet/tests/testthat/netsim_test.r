@@ -50,7 +50,7 @@ test_that("Inverting inverse covariance",
 test_that("Sparsity of inverse covariance",
           expect_equal((sum(test.covariance != 0) - 10)/(10*9), 0.2))
 
-test.data = sim.mix.networks(1e4, p, n.comps)
+test.data = sim_mix_networks(1e4, p, n.comps)
 emp.mean = sapply(1:4, function(x) colMeans(test.data$data[test.data$comp==x,]))
 emp.cov = sapply(1:4, function(x) var(test.data$data[test.data$comp==x,]), simplify='array')
 

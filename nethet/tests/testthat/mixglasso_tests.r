@@ -29,7 +29,7 @@ context('Running mixglasso on heterogeneous dataset with unknown grouping')
 
 # Generate heterogeneous dataset
 Mu = sapply(1:n.comps, function(n.comp) rnorm(p,0,5))
-test.data = sim.mix.networks(1000, p, n.comps, Mu=Mu)
+test.data = sim_mix_networks(1000, p, n.comps, Mu=Mu)
 
 # Try single n.comp
 mixglasso.single = mixglasso(test.data$data, n.comps)

@@ -119,7 +119,7 @@ getinvcov<- function(p,s, a.diff=5,b.diff=5,magn.diag=0,emin=0.1){
 ##' 
 ##' Means Mu and covariance matrices Sig can also be supplied by the user.
 ##' 
-##' @title sim.mix.networks
+##' @title sim_mix_networks
 ##' @param n Number of data points to simulate.
 ##' @param p Dimensionality of the data.
 ##' @param n.comp Number of components of the mixture model.
@@ -135,7 +135,7 @@ getinvcov<- function(p,s, a.diff=5,b.diff=5,magn.diag=0,emin=0.1){
 ##' \item{data} Simulated data, a n by p matrix.
 ##' \item{S} Component assignments, a vector of length n.
 ##' @export
-sim.mix.networks <- function(n, p, n.comp, sparsity=0.7, 
+sim_mix_networks <- function(n, p, n.comp, sparsity=0.7, 
 														 mix.prob=rep(1/n.comp, n.comp),
 														 Mu=NULL, Sig=NULL, ...) {
 	

@@ -730,10 +730,11 @@ mixglasso <- function(x,n.comp,
                           pen='glasso.parcor',
                           init='kmeans.hc',my.cl=NULL,modelname.hc="VVV",nstart.kmeans=1,iter.max.kmeans=10,
                           term=10^{-3},min.compsize=5,
-                          save.allfits=FALSE,filename=NULL,
+                          save.allfits=FALSE,filename=NULL, mc.flag=FALSE,
                           mc.set.seed=FALSE, mc.preschedule = FALSE,...){
                   
-  res <- mclapply(1:length(n.comp),
+	if(mc.flag) {
+    res <- mclapply(1:length(n.comp),
                   FUN=function(k){
                     fit.mixgl <-mixglasso_ncomp_fixed(x,n.comp[k],lambda=lambda,pen=pen,
                                           init=init,my.cl=my.cl,modelname.hc=modelname.hc,
@@ -744,6 +745,18 @@ mixglasso <- function(x,n.comp,
                     }
                     return(list(mmdl=fit.mixgl$mmdl,bic=fit.mixgl$bic,comp=fit.mixgl$comp,iter=fit.mixgl$iter,warn=fit.mixgl$warn))},
                   mc.set.seed=mc.set.seed, mc.preschedule = mc.preschedule)
+	} else {
+		res <- lapply(1:length(n.comp),
+										FUN=function(k){
+											fit.mixgl <-mixglasso_ncomp_fixed(x,n.comp[k],lambda=lambda,pen=pen,
+																												init=init,my.cl=my.cl,modelname.hc=modelname.hc,
+																												nstart.kmeans=nstart.kmeans,iter.max.kmeans=iter.max.kmeans,
+																												term=term,min.compsize=min.compsize,...)
+											if (save.allfits){
+												save(fit.mixgl,file=paste(filename,'_','fit.mixgl_k',n.comp[k],'.rda',sep=''))
+											}
+											return(list(mmdl=fit.mixgl$mmdl,bic=fit.mixgl$bic,comp=fit.mixgl$comp,iter=fit.mixgl$iter,warn=fit.mixgl$warn))})
+	}
 
   res.mmdl <- sapply(res,function(x){x[['mmdl']]})
   res.bic <- sapply(res,function(x){x[['bic']]})
