@@ -250,7 +250,7 @@ cv.glasso <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se
 ##' @param plot.it TRUE / FALSE (default)
 ##' @param se default=FALSE.
 ##' @param use.package 'glasso' or 'huge' (default).
-##' @param verbose If TRUE, output progress.
+##' @param verbose If TRUE, output la.min, la.max and la.opt (default=FALSE).
 ##' @return  Returns a list with named elements 'rho.opt', 'wi', 'wi.orig', 'mu', 
 ##'          Variable rho.opt is the optimal (scaled) penalization parameter (rho.opt=2*la.opt/n). 
 ##'          The variables wi and wi.orig are matrices of size dim.samples by dim.samples 
@@ -260,7 +260,7 @@ cv.glasso <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se
 ##' @export
 screen_cv.glasso <- function(x,include.mean=FALSE,
                              folds=10,length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,
-                             trunc.method='linear.growth',trunc.k=5,plot.it=FALSE,se=FALSE,use.package='huge',verbose=TRUE)
+                             trunc.method='linear.growth',trunc.k=5,plot.it=FALSE,se=FALSE,use.package='huge',verbose=FALSE)
 { 
   gridmax <- lambda.max(x)
   gridmin <- lambdamin.ratio*gridmax
@@ -459,7 +459,7 @@ aic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package
 ##' @param trunc.method None / linear.growth (default) / sqrt.growth
 ##' @param trunc.k truncation constant, number of samples per predictor (default=5)
 ##' @param use.package 'glasso' or 'huge' (default).
-##' @param verbose If TRUE, output progress.
+##' @param verbose If TRUE, output la.min, la.max and la.opt (default=FALSE).
 ##' @return  Returns a list with named elements 'rho.opt', 'wi', 'wi.orig', 
 ##'          Variable rho.opt is the optimal (scaled) penalization parameter (rho.opt=2*la.opt/n). 
 ##'          The variables wi and wi.orig are matrices of size dim.samples by dim.samples 
@@ -468,7 +468,7 @@ aic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package
 ##' @export
 screen_bic.glasso <- function(x,include.mean=TRUE,
                               length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,
-                              plot.it=FALSE,trunc.method='linear.growth',trunc.k=5,use.package='huge',verbose=TRUE){
+                              plot.it=FALSE,trunc.method='linear.growth',trunc.k=5,use.package='huge',verbose=FALSE){
 
   gridmax <- lambda.max(x)
   gridmin <- gridmax*lambdamin.ratio
@@ -500,7 +500,7 @@ screen_bic.glasso <- function(x,include.mean=TRUE,
 ##' @param trunc.method None / linear.growth (default) / sqrt.growth
 ##' @param trunc.k truncation constant, number of samples per predictor (default=5)
 ##' @param use.package 'glasso' or 'huge' (default).
-##' @param verbose If TRUE, output progress.
+##' @param verbose If TRUE, output la.min, la.max and la.opt (default=FALSE).
 ##' @return  Returns a list with named elements 'rho.opt', 'wi', 'wi.orig'.
 ##'          Variable rho.opt is the optimal (scaled) penalization parameter (rho.opt=2*la.opt/n). 
 ##'          The variables wi and wi.orig are matrices of size dim.samples by dim.samples 
@@ -509,7 +509,7 @@ screen_bic.glasso <- function(x,include.mean=TRUE,
 ##' @export
 screen_aic.glasso <- function(x,include.mean=TRUE,length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),
                               penalize.diagonal=FALSE,plot.it=FALSE,
-                              trunc.method='linear.growth',trunc.k=5,use.package='huge',verbose=TRUE){
+                              trunc.method='linear.growth',trunc.k=5,use.package='huge',verbose=FALSE){
 
   gridmax <- lambda.max(x)
   gridmin <- gridmax*lambdamin.ratio
@@ -584,7 +584,7 @@ screen_shrink <- function(x,include.mean=NULL,
 ##' @param trunc.k truncation constant, number of samples per predictor (default=5)
 ##' @param plot.it TRUE / FALSE (default)
 ##' @param se default=FALSE.
-##' @param verbose If TRUE, output progress.
+##' @param verbose If TRUE, output la.min, la.max and la.opt (default=FALSE).
 ##' @return  Returns a list with named elements 'rho.opt', 'wi'.
 ##'          Variable rho.opt is the optimal (scaled) penalization parameter (rho.opt=2*la.opt/n). 
 ##'          The variables wi is a matrix of size dim.samples by dim.samples 
@@ -595,7 +595,7 @@ screen_shrink <- function(x,include.mean=NULL,
 screen_mb <- function(x,include.mean=NULL,
                       folds=10,length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),
                       penalize.diagonal=FALSE,trunc.method='linear.growth',trunc.k=5,
-                      plot.it=FALSE,se=FALSE,verbose=TRUE)
+                      plot.it=FALSE,se=FALSE,verbose=FALSE)
 {
   p <- ncol(x)
   gridmax <- lambda.max(x)
@@ -1137,22 +1137,26 @@ est2.my.ev2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
   return(list(eval=eval,ev.aux.complex=ev.aux.complex))
 }
 
-##' Compute weights of sum-w-chi2 (2nd order simplification)
-##' 
-##' *expansion of W in one directions ("dimf>dimg direction") 
+##' Compute weights of sum-of-weighted-chi2s
+##'
+##' *'2nd order simplification':
+##'   1) Factor out (1-vi)^(d1+d2) "expansion in dimf>dimg direction (old terminology)"
+##'   2) Factor out (1-mu)^d0 
 ##' *simplified computation of weights is obtained without further invoking H0, or assuming X_u~X_v
-##' @title Weights of sum-w-chi2
-##' @param sig1 no descr
-##' @param sig2 no descr
-##' @param sig no descr
-##' @param act1 no descr
-##' @param act2 no descr
-##' @param act no descr
-##' @param include.mean no descr
-##' @return no descr
+##' 
+##' @title Compute weights of sum-of-weighted-chi2s
+##' @param sig1 MLE (covariance matrix) sample 1
+##' @param sig2 MLE (covariance matrix) sample 2
+##' @param sig Pooled MLE (covariance matrix)
+##' @param act1 Active-set sample 1
+##' @param act2 Active-set sample 2
+##' @param act Pooled active-set
+##' @param include.mean Should the mean be in cluded in the likelihood?
+##' @return Eigenvalues of M, respectively the weights.
 ##' @author n.stadler
 est2.my.ev3 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
 
+  show.warn <- FALSE
   k <- nrow(sig1)
 
   #######################
@@ -1171,7 +1175,7 @@ est2.my.ev3 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
   ##########################
   ss <- intersect(act,intersect(act1,act2))
   
-  if(length(ss)==0){warning('no intersection between models')}
+  if((length(ss)==0)&show.warn){warning('no intersection between models')}
   
   aa <- setdiff(act1,ss)
   bb <- setdiff(act2,ss)
@@ -1247,10 +1251,10 @@ agg.pval <- function(gamma,pval){
 ##' @param acc no descr
 ##' @param epsabs no descr
 ##' @param epsrel no descr
-##' @param show.trace no descr
+##' @param show.warn no descr
 ##' @return no descr
 ##' @author n.stadler
-diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.evals,include.mean,method.compquadform,acc,epsabs,epsrel,show.trace){
+diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.evals,include.mean,method.compquadform,acc,epsabs,epsrel,show.warn){
   ##########################
   ##compute test-statistic##
   ##########################
@@ -1265,7 +1269,7 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
     pval.onesided <- pval.twosided <- NA
   }else{
     if(method.compquadform=='davies'){
-      pval.onesided <- davies(teststat,lambda=weights.nulldistr,acc=acc)$Qq;if(show.trace){cat('ifault(davies):',davies(teststat,lambda=weights.nulldistr,acc=acc)$ifault,'\n')}
+      pval.onesided <- davies(teststat,lambda=weights.nulldistr,acc=acc)$Qq;if(show.warn){cat('ifault(davies):',davies(teststat,lambda=weights.nulldistr,acc=acc)$ifault,'\n')}
     }
     if(method.compquadform=='imhof'){
       pval.onesided <-imhof(teststat, lambda=weights.nulldistr,epsabs = epsabs, epsrel = epsrel, limit = 10000)$Qq
@@ -1279,27 +1283,42 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
 
 ##' Differential Network for user specified data splits
 ##'
-##' If include.mean=FALSE then x1 and x2 have zero mean.
-##' We recommend to set include.mean=FALSE and to center&scale x1 and x2.
+##' Remark:
+##' 
+##' * If include.mean=FALSE, then x1 and x2 have mean zero and DiffNet tests
+##'   the hypothesis H0: \Omega_1=\Omega_2. You might need to center x1 and x2.
+##' * If include.mean=TRUE, then DiffNet tests the hypothesis
+##'   H0: \mu_1=\mu_2 & \Omega_1=\Omega_2
+##' * However, we recommend to set include.mean=FALSE and to test equality of the means
+##'   separately. 
+##' * You might also want to scale x1 and x2, if you are only interested in 
+##'   differences due to (partial) correlations.
+##'   
 ##' 
 ##' @title Differential Network for user specified data splits
-##' @param x1 If include.mean=FALSE: scale data (var=1,mean=0).
-##' @param x2 If include.mean=FALSE: scale data (var=1,mean=0).
+##' @param x1 Data-matrix sample 1.
+##'           You might need to center and scale your data-matrix.
+##' @param x2 Data-matrix sample 2.
+##'           You might need to center and scale your data-matrix.
 ##' @param split1 Samples (condition 1) used in screening step. 
 ##' @param split2 Samples (condition 2) used in screening step. 
 ##' @param screen.meth Screening procedure. Options: 'screen_bic.glasso' (default),
 ##'                    'screen_cv.glasso', 'screen_shrink' (not recommended), 'screen_mb'.
-##' @param compute.evals Method to estimate weights in w-chi2 distribution. 
-##'                      Use 'est2.my.ev3' (default).
-##' @param algorithm.mleggm Algorithm to compute MLE of GGM. Use 'glasso_rho' (default).
-##' @param include.mean Should mean be included in test? Use include.mean=FALSE (default and recommended).
-##'                     include.mean=FALSE assumes mu1=mu2=0, therefore, x1 and x2 should have mean 0.
-##' @param method.compquadform Method to compute distribution function of w-sum-of-chi2 (default='imhof').
-##' @param acc Accuracy of p-value. See ?davies. (default 1e-04).
-##' @param epsabs See ?imhof.
-##' @param epsrel See ?imhof.
-##' @param show.trace Should warnings be showed (default=FALSE)?
-##' @param save.mle Should MLEs be in the output (default=FALSE)?
+##' @param compute.evals Method to estimate the weights in the weighted-sum-of-chi2s distribution.
+##'                      The default and (currently) the only available option 
+##'                      is the method 'est2.my.ev3'.
+##' @param algorithm.mleggm Algorithm to compute MLE of GGM. The algorithm 'glasso_rho' is the
+##'                         default and (currently) the only available option.
+##' @param include.mean Should sample specific means be included in hypothesis?
+##'                     Use include.mean=FALSE (default and recommended) which assumes mu1=mu2=0
+##'                     and tests the hypothesis H0: \Omega_1=\Omega_2.
+##' @param method.compquadform Method to compute distribution function of weighted-sum-of-chi2s
+##'                            (default='imhof').
+##' @param acc See ?davies (default 1e-04).
+##' @param epsabs See ?imhof (default 1e-10).
+##' @param epsrel See ?imhof (default 1e-10).
+##' @param show.warn Should warnings be showed (default=FALSE)?
+##' @param save.mle Should MLEs be in the output list (default=FALSE)?
 ##' @param ... Additional arguments for screen.meth.
 ##' @return list consisting of
 ##' \item{pval.onesided}{p-value}
@@ -1315,7 +1334,7 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
 diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glasso',
                                compute.evals='est2.my.ev3',algorithm.mleggm='glasso_rho0',include.mean=FALSE,
                                method.compquadform='imhof',acc=1e-04,epsabs=1e-10,epsrel=1e-10,
-                               show.trace=FALSE,save.mle=FALSE,...){
+                               show.warn=FALSE,save.mle=FALSE,...){
   
   n1 <- nrow(x1)
   n2 <- nrow(x2)
@@ -1383,8 +1402,8 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
   l.act <- lapply(active,length)
   n1.valid <- nrow(x1[-split1,])
   n2.valid <- nrow(x2[-split2,])
-  if (any(l.act==0)){ if(show.trace){cat('warning:at least one active-set is empty','\n')}}
-  if (all(l.act>= c(n1.valid+n2.valid,n1.valid,n2.valid))){if(show.trace){cat('warning:dim(model) > n-1','\n')}}
+  if (any(l.act==0)){ if(show.warn){cat('warning:at least one active-set is empty','\n')}}
+  if (all(l.act>= c(n1.valid+n2.valid,n1.valid,n2.valid))){if(show.warn){cat('warning:dim(model) > n-1','\n')}}
 
   ###########
   ##Pvalue ##
@@ -1393,7 +1412,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
                            sig1=est.sig[['modIpop1']],sig2=est.sig[['modIpop2']],sig=est.sig[['modJ']],
                            mu1=est.mu[['modIpop1']],mu2=est.mu[['modIpop2']],mu=est.mu[['modJ']],
                            active[['modIpop1']],active[['modIpop2']],active[['modJ']],
-                           compute.evals,include.mean,method.compquadform,acc,epsabs,epsrel,show.trace)
+                           compute.evals,include.mean,method.compquadform,acc,epsabs,epsrel,show.warn)
   
   if(save.mle==FALSE){
     est.sig <- est.wi <- est.mu <- NULL
@@ -1405,28 +1424,45 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
 
 ##' Differential Network 
 ##'
-##' If include.mean=FALSE then x1 and x2 have zero mean.
-##' We recommend to set include.mean=FALSE and to center&scale x1 and x2.
+##' Remark:
+##' 
+##' * If include.mean=FALSE, then x1 and x2 have mean zero and DiffNet tests
+##'   the hypothesis H0: \Omega_1=\Omega_2. You might need to center x1 and x2.
+##' * If include.mean=TRUE, then DiffNet tests the hypothesis
+##'   H0: \mu_1=\mu_2 & \Omega_1=\Omega_2
+##' * However, we recommend to set include.mean=FALSE and to test equality of the means
+##'   separately. 
+##' * You might also want to scale x1 and x2, if you are only interested in 
+##'   differences due to (partial) correlations.
+##' 
 ##' 
 ##' @title Differential Network 
-##' @param x1 If include.mean=FALSE: scale data (var=1,mean=0).
-##' @param x2 If include.mean=FALSE: scale data (var=1,mean=0).
+##' @param x1 Data-matrix sample 1.
+##'           You might need to center and scale your data-matrix.
+##' @param x2 Data-matrix sample 1.
+##'           You might need to center and scale your data-matrix.
 ##' @param b.splits Number of splits (default=50).
 ##' @param frac.split Fraction train-data (screening) / test-data (cleaning) (default=0.5).
 ##' @param screen.meth Screening procedure. Options: 'screen_bic.glasso' (default),
 ##'                    'screen_cv.glasso', 'screen_shrink' (not recommended), 'screen_mb'.
-##' @param include.mean Should mean be included in test? Use include.mean=FALSE (default and recommended).
-##'                     include.mean=FALSE assumes mu1=mu2=0, therefore, x1 and x2 should have mean 0.
+##' @param include.mean Should sample specific means be included in hypothesis?
+##'                     Use include.mean=FALSE (default and recommended) which assumes mu1=mu2=0
+##'                     and tests the hypothesis H0: \Omega_1=\Omega_2.
 ##' @param gamma.min Tuning parameter in p-value aggregation of Meinshausen et al (2009). (Default=0.05).
-##' @param compute.evals Method to estimate weights in w-chi2 distribution. 
-##'                      Use 'est2.my.ev3' (default).
-##' @param algorithm.mleggm Algorithm to compute MLE of GGM. Use 'glasso_rho' (default).
-##' @param method.compquadform Method to compute distribution function of w-sum-of-chi2 (default='imhof').
-##' @param acc Accuracy of p-value. See ?davies. (default 1e-04).
-##' @param epsabs See ?imhof.
-##' @param epsrel See ?imhof.
-##' @param show.trace Should warnings be showed (default=FALSE)?
-##' @param save.mle Should MLEs be in the output (default=FALSE)?
+##' @param compute.evals Method to estimate the weights in the weighted-sum-of-chi2s distribution.
+##'                      The default and (currently) the only available option 
+##'                      is the method 'est2.my.ev3'.
+##' @param algorithm.mleggm Algorithm to compute MLE of GGM. The algorithm 'glasso_rho' is the
+##'                         default and (currently) the only available option.
+##' @param method.compquadform Method to compute distribution function of weighted-sum-of-chi2s
+##'                            (default='imhof').
+##' @param acc See ?davies (default 1e-04).
+##' @param epsabs See ?imhof (default 1e-10).
+##' @param epsrel See ?imhof (default 1e-10).
+##' @param show.warn Should warnings be showed (default=FALSE)?
+##' @param save.mle If TRUE, MLEs (inverse covariance matrices for samples 1 and 2)
+##'                 are saved for all b.splits. The median aggregated inverse covariance matrix
+##'                 is provided in the output as 'medwi'. The default is save.mle=FALSE.
 ##' @param ... Additional arguments for screen.meth.
 ##' @return list consisting of
 ##' \item{ms.pval}{p-values for all b.splits}
@@ -1441,11 +1477,11 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
 ##' \item{wi.last}{constrained mle (inverse covariance matrix) obtained in last cleaning-step}
 ##' @author n.stadler
 ##' @export
-##' @example ../diffnet_ex.R
+##' @example ../../diffnet_ex.R
 diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='screen_bic.glasso',include.mean=FALSE,
                               gamma.min=0.05,compute.evals='est2.my.ev3',algorithm.mleggm='glasso_rho0',
                               method.compquadform='imhof',acc=1e-04,epsabs=1e-10,epsrel=1e-10,
-                              show.trace=FALSE,save.mle=FALSE,...){
+                              show.warn=FALSE,save.mle=FALSE,...){
 
   ##????Important Notes: Pval can be NA, because...
   ##????
@@ -1455,14 +1491,15 @@ diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='scre
   n2 <- nrow(x2)
   
   res.multisplit <- lapply(seq(b.splits),
-                          function(i){
-                            split1 <- sample(1:n1,round(n1*frac.split),replace=FALSE)
-                            split2 <- sample(1:n2,round(n2*frac.split),replace=FALSE)
-                            res.singlesplit <- diffnet_singlesplit(x1,x2,split1,split2,screen.meth,
-                                                                   compute.evals,algorithm.mleggm,include.mean,
-                                                                   method.compquadform,acc,epsabs,epsrel,show.trace,save.mle,...)
-                            
-                          })
+                           function(i){
+                               cat(' split: ',i,'\n\n')
+                               split1 <- sample(1:n1,round(n1*frac.split),replace=FALSE)
+                               split2 <- sample(1:n2,round(n2*frac.split),replace=FALSE)
+                               res.singlesplit <- diffnet_singlesplit(x1,x2,split1,split2,screen.meth,
+                                                                      compute.evals,algorithm.mleggm,include.mean,
+                                                                      method.compquadform,acc,epsabs,epsrel,show.warn,save.mle,...)
+                               
+                           })
   pval.onesided <- sapply(res.multisplit,function(x){x[['pval.onesided']]},simplify='array')
   pval.twosided <- sapply(res.multisplit,function(x){x[['pval.twosided']]},simplify='array')
   teststat <- sapply(res.multisplit,function(x){x[['teststat']]},simplify='array')
