@@ -16,7 +16,7 @@ gen.net <- generate.2networks(p,graph='random',n.nz=rep(p,2),
                               n.nz.common=ceiling(p*0.8))
 invcov1 <- gen.net[[1]]
 invcov2 <- gen.net[[2]]
-plot.2networks(invcov1,invcov2)
+plot.2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)
 
 ##get corresponding correlation matrices
 cor1 <- cov2cor(solve(invcov1))

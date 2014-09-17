@@ -121,15 +121,32 @@ plot.2networks <- function(invcov1,invcov2,
     adj2 <- invcov2!=0
     adj <- list(adj1,adj2)
     nonzeros <- sapply(adj,sum)
-    coord <- plot.network(network(adj[[which.max(nonzeros)]]),
-                          main=main[which.max(nonzeros)],
-                          displaylabels=TRUE,
-                          label=node.label,
-                          usearrows=FALSE,...)
-    plot.network(network(adj[[which.min(nonzeros)]]),
-                 coord=coord,
-                 main=main[which.min(nonzeros)],
-                 displaylabels=TRUE,
-                 label=node.label,
-                 usearrows=FALSE,...)
+
+    if(nonzeros[1]!=nonzeros[2]){
+        coord <- plot.network(network(adj[[which.max(nonzeros)]]),
+                              main=main[which.max(nonzeros)],
+                              displaylabels=TRUE,
+                              label=node.label,
+                              usearrows=FALSE,...)
+        plot.network(network(adj[[which.min(nonzeros)]]),
+                     coord=coord,
+                     main=main[which.min(nonzeros)],
+                     displaylabels=TRUE,
+                     label=node.label,
+                     usearrows=FALSE,...)
+    }
+
+    if(nonzeros[1]==nonzeros[2]){
+        coord <- plot.network(network(adj[[1]]),
+                              main=main[1],
+                              displaylabels=TRUE,
+                              label=node.label,
+                              usearrows=FALSE,...)
+        plot.network(network(adj[[2]]),
+                     coord=coord,
+                     main=main[2],
+                     displaylabels=TRUE,
+                     label=node.label,
+                     usearrows=FALSE,...)
+    }
 }
