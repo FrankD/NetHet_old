@@ -119,11 +119,11 @@ getinvcov<- function(p,s, a.diff=5,b.diff=5,magn.diag=0,emin=0.1){
 ##' 
 ##' Means Mu and covariance matrices Sig can also be supplied by the user.
 ##' 
-##' @title sim.mix.networks
+##' @title sim_mix_networks
 ##' @param n Number of data points to simulate.
 ##' @param p Dimensionality of the data.
 ##' @param n.comp Number of components of the mixture model.
-##' @param sparsity Determined the proportion of non-zero off-diagonal entries.
+##' @param sparsity Determines the proportion of non-zero off-diagonal entries.
 ##' @param mix.prob Mixture probabilities for the components; defaults to uniform distribution.
 ##' @param Mu Means for the mixture components, a p by n.comp matrix. If NULL, 
 ##' sampled from a standard Gaussian.
@@ -135,12 +135,12 @@ getinvcov<- function(p,s, a.diff=5,b.diff=5,magn.diag=0,emin=0.1){
 ##' \item{data} Simulated data, a n by p matrix.
 ##' \item{S} Component assignments, a vector of length n.
 ##' @export
-sim.mix.networks <- function(n, p, n.comp, sparsity=0.7, 
+sim_mix_networks <- function(n, p, n.comp, sparsity=0.7, 
 														 mix.prob=rep(1/n.comp, n.comp),
 														 Mu=NULL, Sig=NULL, ...) {
 	
 	if(is.null(Mu)) {
-	  Mu = sapply(1:n.comp, function(n.comp) rnorm(p))
+	  Mu = sapply(1:n.comp, function(n.comp) rnorm(p,0,3))
 	}
 	
 	if(is.null(Sig)) {

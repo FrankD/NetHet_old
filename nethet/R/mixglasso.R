@@ -45,7 +45,7 @@
 library('glasso')
 library(mvtnorm)
 library(mclust)
-library(multicore)
+library(parallel)
 
 
 
@@ -423,10 +423,10 @@ MStepGlasso <- function(x,chromosome=NULL,u,v=NULL,lambda,gamma,pen,penalize.dia
   }
 }
 
-##' mixglasso 
+##' mixglasso_ncomp_fixed
 ##'
 ##' This function runs mixglasso
-##' @title mixglasso
+##' @title mixglasso_ncomp_fixed
 ##' @param x Input data matrix
 ##' @param n.comp Number of mixture components
 ##' @param lambda Regularization parameter. Default=sqrt(2*n*log(p))/2
@@ -456,7 +456,7 @@ MStepGlasso <- function(x,chromosome=NULL,u,v=NULL,lambda,gamma,pen,penalize.dia
 ##' \item{pi.comps}{}
 ##' \item{warn}{warnings during optimization}
 ##' @author n.stadler
-mixglasso <- function(x,n.comp,
+mixglasso_ncomp_fixed <- function(x,n.comp,
                       lambda=sqrt(2*nrow(x)*log(ncol(x)))/2,
                       pen='glasso.parcor',init='kmeans.hc',my.cl=NULL,modelname.hc="VVV",nstart.kmeans=1,iter.max.kmeans=10,
                       term=10^{-3},min.compsize=5,...){
@@ -487,6 +487,8 @@ mixglasso <- function(x,n.comp,
   fit.mixgl <-  mixglasso_init(x=x,n.comp=n.comp,lambda=lambda,
                                pen=pen,u.init=u,mix.prob.init=mix.prob,
                                min.compsize=min.compsize,term=term,...)
+  
+  class(fit.mixgl) <- 'nethetclustering'
   return(fit.mixgl)
 }
 
@@ -677,14 +679,22 @@ mixglasso_init<- function(x,n.comp,lambda,
 
 
 
-##' mixglasso_path
+##' mixglasso
 ##'
-##' Runs mixglasso (in parallel) with various number of mixture components 
-##' @title mixglasso_path
+##' Runs mixture of graphical lasso network clustering with one or several
+##' numbers of mixture components.
+##' 
+##' @title mixglasso
 ##' @param x Input data matrix
-##' @param n.comp Number of mixture components
+##' @param n.comp Number of mixture components. If n.comp is a vector, 
+##' \code{mixglasso} will estimate a model for each number of mixture components,
+##' and return a list of models, as well as their BIC and MMDL scores and the index of the
+##' best model according to each score.
 ##' @param lambda Regularization parameter. Default=sqrt(2*n*log(p))/2
-##' @param pen Determines form of penalty: glasso.parcor (default), glasso.invcov, glasso.invcor
+##' @param pen Determines form of penalty: glasso.parcor (default) to penalise the
+##' partial correlation matrix, glasso.invcov to penalise the inverse covariance 
+##' matrix (this corresponds to classical graphical lasso), glasso.invcor to 
+##' penalise the inverse correlation matrix.
 ##' @param init Initialization. Method used for initialization
 ##' init={'cl.init','r.means','random','kmeans','kmeans.hc','hc'}. Default='kmeans'
 ##' @param my.cl Initial cluster assignments;
@@ -694,30 +704,39 @@ mixglasso_init<- function(x,n.comp,lambda,
 ##' @param iter.max.kmeans Maximal number of iteration in kmeans; default=10
 ##' @param term Termination criterion of EM algorithm. Default=10^-3
 ##' @param min.compsize Stop EM if any(compsize)<min.compsize; Default=5
-##' @param save.allfits Save output of mixglasso for all k's ?
-##' @param filename Output of mixglasso with filename_fit.mixgl_k.rda
+##' @param save.allfits If TRUE, save output of mixglasso for all k's.
+##' @param filename If \code{save.allfits} is TRUE, output of mixglasso will be
+##' saved as \code{paste(filename, _fit.mixgl_k.rda, sep='')}.
+##' @param mc.flag If \code{TRUE} use parallel execution for each n.comp via function 
+##' \code{mclapply} of package \code{parallel}.
 ##' @param mc.set.seed See mclapply. Default=FALSE
 ##' @param mc.preschedule See mclapply. Default=FALSE
 ##' @param ... Other arguments. See mixglasso_init
-##' @return list consisting of
-##' \item{bic}{Bic for all fits}
-##' \item{comp}{Components assignments for all fits}
-##' \item{iter}{Number of iteration of EM for all fits}
-##' \item{warn}{Warning infos for all fits}
+##' @return A list with elements:
+##' \item{models}{List with each element i containing an S3 object of class 
+##' 'nethetclustering' that contains the result of fitting the mixture 
+##' graphical lasso model with n.comps[i] components. See the documentation of
+##' mixglasso_ncomp_fixed for the description of this object.}
+##' \item{bic}{BIC for all fits.}
+##' \item{mmdl}{Minimum description length score for all fits.}
+##' \item{comp}{Component assignments for all fits.}
+##' \item{bix.opt}{Index of model with optimal BIC score.}
+##' \item{mmdl.opt}{Index of model with optimal MMDL score.}
 ##' @author n.stadler
 ##' @export
 ##' @example ../mixglasso-pkg_test.R
-mixglasso_path <- function(x,n.comp,
+mixglasso <- function(x,n.comp,
                           lambda=sqrt(2*nrow(x)*log(ncol(x)))/2,
                           pen='glasso.parcor',
                           init='kmeans.hc',my.cl=NULL,modelname.hc="VVV",nstart.kmeans=1,iter.max.kmeans=10,
                           term=10^{-3},min.compsize=5,
-                          save.allfits=TRUE,filename=NULL,
+                          save.allfits=FALSE,filename=NULL, mc.flag=FALSE,
                           mc.set.seed=FALSE, mc.preschedule = FALSE,...){
                   
-  res <- mclapply(1:length(n.comp),
+	if(mc.flag) {
+    res <- mclapply(1:length(n.comp),
                   FUN=function(k){
-                    fit.mixgl <-mixglasso(x,n.comp[k],lambda=lambda,pen=pen,
+                    fit.mixgl <-mixglasso_ncomp_fixed(x,n.comp[k],lambda=lambda,pen=pen,
                                           init=init,my.cl=my.cl,modelname.hc=modelname.hc,
                                           nstart.kmeans=nstart.kmeans,iter.max.kmeans=iter.max.kmeans,
                                           term=term,min.compsize=min.compsize,...)
@@ -726,13 +745,26 @@ mixglasso_path <- function(x,n.comp,
                     }
                     return(list(mmdl=fit.mixgl$mmdl,bic=fit.mixgl$bic,comp=fit.mixgl$comp,iter=fit.mixgl$iter,warn=fit.mixgl$warn))},
                   mc.set.seed=mc.set.seed, mc.preschedule = mc.preschedule)
+	} else {
+		res <- lapply(1:length(n.comp),
+										FUN=function(k){
+											fit.mixgl <-mixglasso_ncomp_fixed(x,n.comp[k],lambda=lambda,pen=pen,
+																												init=init,my.cl=my.cl,modelname.hc=modelname.hc,
+																												nstart.kmeans=nstart.kmeans,iter.max.kmeans=iter.max.kmeans,
+																												term=term,min.compsize=min.compsize,...)
+											if (save.allfits){
+												save(fit.mixgl,file=paste(filename,'_','fit.mixgl_k',n.comp[k],'.rda',sep=''))
+											}
+											return(list(mmdl=fit.mixgl$mmdl,bic=fit.mixgl$bic,comp=fit.mixgl$comp,iter=fit.mixgl$iter,warn=fit.mixgl$warn))})
+	}
 
   res.mmdl <- sapply(res,function(x){x[['mmdl']]})
   res.bic <- sapply(res,function(x){x[['bic']]})
   res.comp <- sapply(res,function(x){x[['comp']]})
-  res.iter <- sapply(res,function(x){x[['iter']]})
-  res.warn <- sapply(res,function(x){x[['warn']]})
-  return(list(bic=res.bic,mmdl=res.mmdl,comp=res.comp,iter=res.iter,warn=res.warn))
+  #res.iter <- sapply(res,function(x){x[['iter']]})
+  #res.warn <- sapply(res,function(x){x[['warn']]})
+  return(list(models=res, n.comp=n.comp, bic=res.bic, mmdl=res.mmdl, comp=res.comp, 
+  						bic.opt=which.min(res.bic), mmdl.opt=which.min(res.mmdl)))
 }
 
 ##' Mixglasso with backward pruning

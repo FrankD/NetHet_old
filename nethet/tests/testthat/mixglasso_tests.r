@@ -25,3 +25,20 @@ test_that("Correct variances",
 test_that("Correct covariances", 
            expect_less_than(sum(abs(full.result$Sig-Sigma)), 0.1*p*p*n.comps))
 
+context('Running mixglasso on heterogeneous dataset with unknown grouping')
+
+# Generate heterogeneous dataset
+Mu = sapply(1:n.comps, function(n.comp) rnorm(p,0,5))
+test.data = sim_mix_networks(1000, p, n.comps, Mu=Mu)
+
+# Try single n.comp
+mixglasso.single = mixglasso(test.data$data, n.comps)
+
+test_that("Rand index on inferred components with mixglasso is > 0.7", 
+					expect_more_than(adjustedRandIndex(test.data$comp, mixglasso.single$comp), 0.7))
+
+# Try multiple n.comp
+mixglasso.mult = mixglasso(test.data$data, 2:6)
+
+test_that("Correct BIC is selected", 
+					expect_equal(mixglasso.mult$n.comp[mixglasso.mult$bic.opt], n.comps))
