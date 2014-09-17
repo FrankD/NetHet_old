@@ -1535,10 +1535,10 @@ diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='scre
 ##' @return Histogram over multi-split p-values.
 ##' @author nicolas
 ##' @export
-plot.diffnet <- function(x){
+plot.diffnet <- function(x,...){
     #if(is.null(x$medwi)){
-        hh <- hist(x$ms.pval,breaks=10,
-                   main='histogram single-split p-values',xlab='p-values',ylab='frequency')
+        hh <- hist(x$ms.pval,
+                   main='histogram single-split p-values',xlab='p-values',ylab='frequency',...)
         abline(v=x$medagg.pval,lty=2,col='red')
         abline(v=x$meinshagg.pval,lty=2,col='green')
         legend(x=min(hh$mids),y=max(hh$counts),lty=c(2,2),col=c('red','green'),legend=c('median aggregated','meinshausen aggregated'))
@@ -1555,3 +1555,9 @@ plot.diffnet <- function(x){
 }
 
 
+summary.diffnet <- function(x){
+    out <- data.frame(medagg.pval=x$medagg.pval,meinshagg.pval=x$meinshagg.pval)
+    rownames(out) <- 'aggregated p-values'
+    return(out)
+    print(out)
+}

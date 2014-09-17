@@ -1,13 +1,12 @@
-#########################################
-##This an example of how to use DiffNet##
-#########################################
+###############################################################
+##This example illustrates the use of Differential Regression##
+###############################################################
 
 
-#####clear workspace
-rm(list=ls())
+##set seed
 set.seed(1)
 
-#####generate data
+##generate data
 p <- 100
 n <- 60
 x1 <- matrix(rnorm(n*p),n,p)

@@ -617,7 +617,7 @@ ggmgsa_singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust='fdr',
   res<- sapply(seq(length(gene.sets)),
                  function(i){
                    y <- gene.sets[[i]]
-                   cat('gene set:',i,'\n')
+                   cat('  gene set:',i,'\n')
                    ind.genes <- which(gene.names%in%y)
                    fit <- diffnet_singlesplit(x1[,ind.genes],x2[,ind.genes],split1,split2,...)
                    dfu <- length(fit$active[['modIpop1']])
@@ -662,7 +662,7 @@ ggmgsa_singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust='fdr',
 ##' \item{df12}{degrees of freedom of GGM obtained from pooled data (condition 1 and 2)}
 ##' @author n.stadler
 ##' @export
-##' @example ../ggmgsa_ex.R
+##' @example ../../ggmgsa_ex.R
 ggmgsa_multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,
                               method.p.adjust='fdr',order.adj.agg='agg-adj',...){
 
@@ -672,10 +672,10 @@ ggmgsa_multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=N
     
     res <- lapply(seq(no.splits),
                   function(i){
-                      cat('split:',i,'\n')
+                      cat('\n split: ',i,'\n\n')
                       res <- ggmgsa_singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
                                                 method.p.adjust='none',...)
-                      cat(' pvals: ',res$pvals,'\n')
+                      cat('  p-values: ',res$pvals,'\n\n')
                       mat <- cbind(res$pvals,res$teststat,res$teststat.bic,res$teststat.aic,res$rel.edgeinter,res$dfu,res$dfv,res$dfuv)
                       colnames(mat) <- c('pvals','teststat','teststat.bic','teststat.aic','rel.edgeinter','dfu','dfv','dfuv')
                       return(mat)
@@ -742,7 +742,7 @@ ggmgsa_multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=N
 ##' \item{df12}{degrees of freedom of GGM obtained from pooled data (condition 1 and 2)}
 ##' @author n.stadler
 ##' @export
-##' @example ../ggmgsa_ex.R
+##' @example ../../ggmgsa_ex.R
 ggmgsa_multisplit_par<- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,
                                  method.p.adjust='fdr',order.adj.agg='agg-adj',...){
 

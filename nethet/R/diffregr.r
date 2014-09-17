@@ -715,33 +715,29 @@ est2.my.ev2.diffregr <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
   return(list(eval=eval,ev.aux.complex=ev.aux.complex))
 }
 
-##' Compute weights of sum-w-chi2 (2nd order simplification)
+##' Compute weights of sum-of-weighted-chi2s
 ##'
-##' 
-##' *expansion of W in one directions ("dimf>dimg direction") 
+##' *'2nd order simplification':
+##'   1) Factor out (1-vi)^(d1+d2) "expansion in dimf>dimg direction (old terminology)"
+##'   2) Factor out (1-mu)^d0 
 ##' *simplified computation of weights is obtained without further invoking H0, or assuming X_u~X_v
-##' @param y1 no descr
-##' @param y2 no descr
-##' @param x1 no descr
-##' @param x2 no descr
-##' @param beta1 no descr
-##' @param beta2 no descr
-##' @param beta no descr
-##' @param act1 no descr
-##' @param act2 no descr
-##' @param act no descr
-##' @return no descr
+##' 
+##' @title Compute weights of sum-of-weighted-chi2s
+##' @param y1 Response vector sample 1.
+##' @param y2 Response vector sample 2.
+##' @param x1 Predictor matrix sample 1.
+##' @param x2 Predictor matrix sample 2.
+##' @param beta1 MLE (regression coefficients) sample 1.
+##' @param beta2 MLE (regression coefficients) sample 2.
+##' @param beta Pooled MLE (regression coefficients).
+##' @param act1 Active-set sample 1
+##' @param act2 Active-set sample 2
+##' @param act Pooled active-set
+##' @return Eigenvalues of M, respectively the weights.
 ##' @author n.stadler
 est2.my.ev3.diffregr <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
 
-  ##Estimate Evals ('2nd order' simplification of W)
-  ##
-  ##Input:
-  ##  data: y1,y2,x1,x2
-  ##  beta: estimate for joint model
-  ##  beta1,beta2: estimates for individual model
-  ##  act: active beta's for joint model
-  ##  act1,act2: active beta's for individual models
+  show.warn <- FALSE
 
   n1 <- length(y1)
   n2 <- length(y2)
@@ -779,7 +775,7 @@ est2.my.ev3.diffregr <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
   
   ##intersection of models
   ss <- intersect(act,intersect(act1,act2))
-  if(length(ss)==0){cat('warning! no intersection between models','\n')}
+  if((length(ss)==0)&show.warn){cat('warning! no intersection between models','\n')}
   aa <- setdiff(act1,ss)
   bb <- setdiff(act2,ss)
   cc <- setdiff(act,ss)
@@ -833,14 +829,14 @@ est2.my.ev3.diffregr <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
 ##' @param act Pooled active-set.
 ##' @param compute.evals Method for computation of weights.
 ##' @param method.compquadform Method to compute distribution function of w-sum-of-chi2.
-##' @param acc Accuracy of p-value. See ?davies
+##' @param acc See ?davies.
 ##' @param epsabs See ?imhof.
 ##' @param epsrel See ?imhof.
-##' @param verbose Show warnings?
+##' @param show.warn Show warnings?
 ##' @param n.perm Number of permutations.
 ##' @return P-value, test statistic, estimated weights.
 ##' @author n.stadler
-diffregr_pval <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act,compute.evals,method.compquadform,acc,epsabs,epsrel,verbose,n.perm){
+diffregr_pval <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act,compute.evals,method.compquadform,acc,epsabs,epsrel,show.warn,n.perm){
 
   if(is.null(n.perm)){
     ##########################
@@ -857,7 +853,7 @@ diffregr_pval <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act,compute.eva
       pval.onesided <- pval.twosided <- NA
     }else{
       if(method.compquadform=='davies'){
-        pval.onesided <- davies(teststat,lambda=weights.nulldistr,acc=acc)$Qq;if(verbose){cat('ifault(davies):',davies(teststat,lambda=weights.nulldistr,acc=acc)$ifault,'\n')}
+        pval.onesided <- davies(teststat,lambda=weights.nulldistr,acc=acc)$Qq;if(show.warn){cat('ifault(davies):',davies(teststat,lambda=weights.nulldistr,acc=acc)$ifault,'\n')}
       }
       if(method.compquadform=='imhof'){
         pval.onesided <-imhof(teststat, lambda=weights.nulldistr,epsabs = epsabs, epsrel = epsrel, limit = 10000)$Qq
@@ -966,7 +962,7 @@ perm.diffregr_pval <- function(y1,y2,x1,x2,act1,act2,act,n.perm){
 ##' @param acc See ?davies (default=1e-4).
 ##' @param epsabs See ?imhof (default=1e-10).
 ##' @param epsrel See ?imhof (default=1e-10).
-##' @param verbose Show warnings (default=FALSE)? 
+##' @param show.warn Show warnings (default=FALSE)? 
 ##' @param n.perm Number of permutation for "split-perm" p-value (default=NULL).
 ##' @param ... Other arguments specific to screen.meth.
 ##' @return List consisting of
@@ -978,11 +974,10 @@ perm.diffregr_pval <- function(y1,y2,x1,x2,act1,act2,act,n.perm){
 ##' \item{beta}{Regression coefficients (MLE) obtaind in cleaning-step.}
 ##' @author n.stadler
 ##' @export
-##' @example ../diffregr_ex.R
 diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='screen_cvtrunc.lasso',
                                 compute.evals='est2.my.ev3.diffregr',method.compquadform='imhof',acc=1e-04,
                                 epsabs=1e-10,epsrel=1e-10,
-                                verbose=FALSE,n.perm=NULL,...){
+                                show.warn=FALSE,n.perm=NULL,...){
   
   n1 <- nrow(x1)
   n2 <- nrow(x2)
@@ -1025,15 +1020,15 @@ diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='screen_cv
   l.act <- lapply(active,length)
   n1.valid <- nrow(x1[-split1,])
   n2.valid <- nrow(x2[-split2,])
-  if (any(l.act==0)){ cat('warning: at least one active-set is empty','\n')}
+  if (any(l.act==0)){ if(show.warn){cat('warning: at least one active-set is empty','\n')}}
   if (all(l.act<c(n1.valid+n2.valid,n1.valid,n2.valid))){
     res.pval <- diffregr_pval(y1=y1[-split1],y2=y2[-split2],
                               x1=x1[-split1,,drop=FALSE],x2=x2[-split2,,drop=FALSE],
                               beta1=est.beta[['modIpop1']],beta2=est.beta[['modIpop2']],beta=est.beta[['modJ']],
                               active[['modIpop1']],active[['modIpop2']],active[['modJ']],
-                              compute.evals,method.compquadform,acc,epsabs,epsrel,verbose,n.perm)
+                              compute.evals,method.compquadform,acc,epsabs,epsrel,show.warn,n.perm)
   }else{
-    cat('warning: dim(model) > n: pval=NA','\n')
+    if(show.warn){cat('warning: dim(model) > n: pval=NA','\n')}
     res.pval <- list(pval.onesided=NA,pval.twosided=NA,weights.nulldistr=NA,teststat=NA)
   }
   
@@ -1064,7 +1059,7 @@ diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='screen_cv
 ##' @param acc See ?davies (default=1e-4).
 ##' @param epsabs See ?imhof (default=1e-10).
 ##' @param epsrel See ?imhof (default=1e-10).
-##' @param verbose Show warnings (default=FALSE)?
+##' @param show.warn Show warnings (default=FALSE)?
 ##' @param n.perm Number of permutation for "split-perm" p-value. Default=NULL which means
 ##'               that the asymptotic approximation is used.
 ##' @param ... Other arguments specific to screen.meth.
@@ -1081,9 +1076,9 @@ diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='screen_cv
 ##' @export
 ##' @example ../diffregr-ex.R
 diffregr_multisplit<- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,screen.meth='screen_cvtrunc.lasso',
-                              gamma.min=0.05,compute.evals='est2.my.ev3.diffregr',
+                               gamma.min=0.05,compute.evals='est2.my.ev3.diffregr',
                                method.compquadform='imhof',acc=1e-04,epsabs=1e-10,epsrel=1e-10,
-                               verbose=FALSE,n.perm=NULL,...){
+                               show.warn=FALSE,n.perm=NULL,...){
 
   n1 <- nrow(x1)
   n2 <- nrow(x2)
@@ -1094,7 +1089,7 @@ diffregr_multisplit<- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,screen.met
                             split2 <- sample(1:n2,floor((n2-1)*frac.split),replace=FALSE)
                             res.singlesplit <- diffregr_singlesplit(y1,y2,x1,x2,split1,split2,screen.meth,
                                                                     compute.evals,method.compquadform,
-                                                                    acc,epsabs,epsrel,verbose,n.perm,...)                      
+                                                                    acc,epsabs,epsrel,show.warn,n.perm,...)                      
                           })
   pval.onesided <- sapply(res.multisplit,function(x){x[['pval.onesided']]},simplify='array')
   pval.twosided <- sapply(res.multisplit,function(x){x[['pval.twosided']]},simplify='array')
