@@ -27,10 +27,9 @@ x1 <- rmvnorm(n,mean = rep(0,p), sigma = cor1)
 x2 <- rmvnorm(n,mean = rep(0,p), sigma = cor1)
 
 ##run diffnet (under null)
-dn.null <- diffnet_multisplit(x1,x2,b.splits=10)
+dn.null <- diffnet_multisplit(x1,x2,b.splits=10,verbose=FALSE)
 
 plot(dn.null)#histogram of multi-split p-values
-dn.null$ms.pval#multi-split p-values
 dn.null$medagg.pval#pvalue aggregated using median
 dn.null$meinshagg.pval#pvalue aggregated using approach of Meinshausen et al (2009)
 
@@ -40,10 +39,9 @@ x1 <- rmvnorm(n,mean = rep(0,p), sigma = cor1)
 x2 <- rmvnorm(n,mean = rep(0,p), sigma = cor2)
 
 ##run diffnet (under alternative)
-dn.altn <- diffnet_multisplit(x1,x2,b.splits=10)
+dn.altn <- diffnet_multisplit(x1,x2,b.splits=10,verbose=FALSE)
 
 plot(dn.altn)#histogram of multi-split p-values
-dn.altn$ms.pval#multi-split p-values
 dn.altn$medagg.pval#pvalue aggregated using median
 dn.altn$meinshagg.pval#pvalue aggregated using approach of Meinshausen et al (2009)
 

@@ -115,7 +115,8 @@ generate.2networks<- function(p,graph='random',
 ##' @author nicolas
 plot.2networks <- function(invcov1,invcov2,
                            node.label=paste('X',1:nrow(invcov1),sep=''),
-                           main=c('Network 1','Network 2'),...){
+                           main=c('',''),...){
+    par.orig <- par(no.readonly=TRUE)
     par(mfrow=c(1,2),mar=c(1,1,1,1))
     adj1 <- invcov1!=0
     adj2 <- invcov2!=0
@@ -149,4 +150,5 @@ plot.2networks <- function(invcov1,invcov2,
                      label=node.label,
                      usearrows=FALSE,...)
     }
+    par(par.orig)
 }

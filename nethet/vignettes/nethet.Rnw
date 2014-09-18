@@ -19,12 +19,17 @@ BiocStyle::latex()
 
 library(ggplot2)
 library(xtable)
+library(devtools)
 
 # For now, load only needed source files
-source('../R/simMix.R')
-source('../R/mixglasso.R')
-source('../R/cvglasso.R')
-source('../R/diffnet.r')
+load_all('../../nethet')
+#source('../R/simMix.R')
+#source('../R/mixglasso.R')
+#source('../R/cvglasso.R')
+#source('../R/diffnet.r')
+#source('../R/diffregr.r')
+#source('../R/ggmgsa.R')
+#source('../R/auxfunc.R')
 
 set.seed(1)
 @
@@ -145,7 +150,7 @@ function is used to generate pairs of networks with an arbitrary overlap.
 
 \textbf{Nic: Insert generate.2networks example here.}
 
-\section{Network reconstruction with known components using \texttt{het.cv.glasso}}
+\section{Network estimation with known group labels}
 
 If it is known a priori to which component each sample belongs, then the problem
 of reconstructing the network reduces to a simple application of the graphical 
@@ -183,15 +188,88 @@ qplot(x=c(networks$Sig), y=c(sim.result$Sig),
   
 @
 
-\section{Testing whether two networks are statistically significantly different
-(with \texttt{diffnet})}
+\section{High-dimensional hypothesis testing}
 
-\textbf{Nic: Can you do this section and the following one? I think diffregr 
-should just be mentioned as an extension of diffnet within this section.}
+\subsection{Differential Network}
+<<echo=TRUE, include=TRUE, warning=FALSE, results="asis">>=
+##set seed
+set.seed(1)
 
-\section{Gene set testing (with \texttt{GGMGSA})}
+##sample size and number of nodes
+n <- 70
+p <- 30
 
-...
+##specifiy sparse inverse covariance matrices
+gen.net <- generate.2networks(p,graph='random',n.nz=rep(p,2),
+                              n.nz.common=ceiling(p*0.8))
+invcov1 <- gen.net[[1]]
+invcov2 <- gen.net[[2]]
+plot.2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)
+
+##get corresponding correlation matrices
+cor1 <- cov2cor(solve(invcov1))
+cor2 <- cov2cor(solve(invcov2))
+
+##generate data under null-hypothesis
+x1 <- rmvnorm(n,mean = rep(0,p), sigma = cor1)
+x2 <- rmvnorm(n,mean = rep(0,p), sigma = cor1)
+
+##run diffnet (under null)
+dn.null <- diffnet_multisplit(x1,x2,b.splits=10,verbose=FALSE)
+
+plot(dn.null)#histogram of multi-split p-values
+dn.null$medagg.pval#pvalue aggregated using median
+dn.null$meinshagg.pval#pvalue aggregated using approach of Meinshausen et al (2009)
+
+
+##generate data under alternative
+x1 <- rmvnorm(n,mean = rep(0,p), sigma = cor1)
+x2 <- rmvnorm(n,mean = rep(0,p), sigma = cor2)
+
+##run diffnet (under alternative)
+dn.altn <- diffnet_multisplit(x1,x2,b.splits=10,verbose=FALSE)
+
+plot(dn.altn)#histogram of multi-split p-values
+dn.altn$medagg.pval#pvalue aggregated using median
+dn.altn$meinshagg.pval#pvalue aggregated using approach of Meinshausen et al (2009)
+
+@
+
+
+
+\subsection{GGM-GSA}
+
+<<echo=TRUE, include=TRUE, warning=FALSE, results="asis">>=
+##genereta data
+set.seed(1)
+p <- 50#network with p nodes
+n <- 50
+hub.net <- generate.2networks(p,graph='hub',n.hub=5,n.hub.diff=2)#generate hub networks
+invcov1 <- hub.net[[1]]
+invcov2 <- hub.net[[2]]
+plot.2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)
+
+##generate data
+x1 <- rmvnorm(n,mean = rep(0,p), sigma = cov2cor(solve(invcov1)))
+x2 <- rmvnorm(n,mean = rep(0,p), sigma = cov2cor(solve(invcov2)))
+
+##run DiffNet
+fit.dn <- diffnet_multisplit(x1,x2,b.splits=10,verbose=FALSE)
+fit.dn$medagg.pval
+
+##identify hubs with 'gene-sets'
+gene.names <- paste('G',1:p,sep='')
+gsets <- split(gene.names,rep(1:5,each=10))
+
+##run GGM-GSA
+fit.ggmgsa <- ggmgsa_multisplit(x1,x2,no.splits=10,gsets,gene.names,verbose=FALSE)
+plot(fit.ggmgsa)
+fit.ggmgsa$medagg.pval
+p.adjust(apply(fit.ggmgsa$pval,1,median),method='fdr')
+
+@
+
+\subsection{Differential Regression}
 
 \section{Network reconstruction with unknown components using \texttt{mixglasso}}
 

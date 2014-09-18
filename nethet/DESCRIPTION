@@ -16,7 +16,7 @@ Imports:
     CompQuadForm,
     ggm,
     mclust,
-    multicore,
+    parallel,
     GSA,
     limma,
     multtest,

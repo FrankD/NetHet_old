@@ -20,17 +20,16 @@ x1 <- rmvnorm(n,mean = rep(0,p), sigma = cov2cor(solve(invcov1)))
 x2 <- rmvnorm(n,mean = rep(0,p), sigma = cov2cor(solve(invcov2)))
 
 ##run DiffNet
-fit.dn <- diffnet_multisplit(x1,x2,b.splits=10)
-plot(fit.dn)
+fit.dn <- diffnet_multisplit(x1,x2,b.splits=10,verbose=FALSE)
+fit.dn$medagg.pval
 
 ##identify hubs with 'gene-sets'
 gene.names <- paste('G',1:p,sep='')
 gsets <- split(gene.names,rep(1:5,each=10))
 
-##run GGMGSA
-fit.ggmgsa <- ggmgsa_multisplit(x1,x2,no.splits=10,gsets,gene.names)
+##run GGM-GSA
+fit.ggmgsa <- ggmgsa_multisplit(x1,x2,no.splits=10,gsets,gene.names,verbose=FALSE)
 plot(fit.ggmgsa)
-summary(fit.ggmgsa)
 fit.ggmgsa$medagg.pval
 p.adjust(apply(fit.ggmgsa$pval,1,median),method='fdr')
 

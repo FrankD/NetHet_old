@@ -1463,6 +1463,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
 ##' @param save.mle If TRUE, MLEs (inverse covariance matrices for samples 1 and 2)
 ##'                 are saved for all b.splits. The median aggregated inverse covariance matrix
 ##'                 is provided in the output as 'medwi'. The default is save.mle=FALSE.
+##' @param verbose If TRUE, show output progress.
 ##' @param ... Additional arguments for screen.meth.
 ##' @return list consisting of
 ##' \item{ms.pval}{p-values for all b.splits}
@@ -1481,7 +1482,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
 diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='screen_bic.glasso',include.mean=FALSE,
                               gamma.min=0.05,compute.evals='est2.my.ev3',algorithm.mleggm='glasso_rho0',
                               method.compquadform='imhof',acc=1e-04,epsabs=1e-10,epsrel=1e-10,
-                              show.warn=FALSE,save.mle=FALSE,...){
+                              show.warn=FALSE,save.mle=FALSE,verbose=TRUE,...){
 
   ##????Important Notes: Pval can be NA, because...
   ##????
@@ -1492,7 +1493,7 @@ diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='scre
   
   res.multisplit <- lapply(seq(b.splits),
                            function(i){
-                               cat(' split: ',i,'\n\n')
+                               if(verbose){cat(' split: ',i,'\n\n')}
                                split1 <- sample(1:n1,round(n1*frac.split),replace=FALSE)
                                split2 <- sample(1:n2,round(n2*frac.split),replace=FALSE)
                                res.singlesplit <- diffnet_singlesplit(x1,x2,split1,split2,screen.meth,
