@@ -711,6 +711,8 @@ mixglasso_init<- function(x,n.comp,lambda,
 ##' \code{mclapply} of package \code{parallel}.
 ##' @param mc.set.seed See mclapply. Default=FALSE
 ##' @param mc.preschedule See mclapply. Default=FALSE
+##' @param mc.cores Number of cores to use in parallel execution. Defaults to
+##' mc.cores option if set, or 2 otherwise.
 ##' @param ... Other arguments. See mixglasso_init
 ##' @return A list with elements:
 ##' \item{models}{List with each element i containing an S3 object of class 
@@ -731,7 +733,8 @@ mixglasso <- function(x,n.comp,
                           init='kmeans.hc',my.cl=NULL,modelname.hc="VVV",nstart.kmeans=1,iter.max.kmeans=10,
                           term=10^{-3},min.compsize=5,
                           save.allfits=FALSE,filename=NULL, mc.flag=FALSE,
-                          mc.set.seed=FALSE, mc.preschedule = FALSE,...){
+                          mc.set.seed=FALSE, mc.preschedule = FALSE, 
+											    mc.cores=getOption("mc.cores", 2L), ...){
                   
 	if(mc.flag) {
     res <- mclapply(1:length(n.comp),
@@ -743,8 +746,8 @@ mixglasso <- function(x,n.comp,
                     if (save.allfits){
                       save(fit.mixgl,file=paste(filename,'_','fit.mixgl_k',n.comp[k],'.rda',sep=''))
                     }
-                    return(list(mmdl=fit.mixgl$mmdl,bic=fit.mixgl$bic,comp=fit.mixgl$comp,iter=fit.mixgl$iter,warn=fit.mixgl$warn))},
-                  mc.set.seed=mc.set.seed, mc.preschedule = mc.preschedule)
+                    return(fit.mixgl)},
+                  mc.set.seed=mc.set.seed, mc.preschedule = mc.preschedule, mc.cores=mc.cores)
 	} else {
 		res <- lapply(1:length(n.comp),
 										FUN=function(k){
@@ -755,7 +758,7 @@ mixglasso <- function(x,n.comp,
 											if (save.allfits){
 												save(fit.mixgl,file=paste(filename,'_','fit.mixgl_k',n.comp[k],'.rda',sep=''))
 											}
-											return(list(mmdl=fit.mixgl$mmdl,bic=fit.mixgl$bic,comp=fit.mixgl$comp,iter=fit.mixgl$iter,warn=fit.mixgl$warn))})
+											return(fit.mixgl)})
 	}
 
   res.mmdl <- sapply(res,function(x){x[['mmdl']]})
