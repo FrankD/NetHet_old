@@ -2,6 +2,8 @@
 ##This example illustrates the use of GGMGSA         ##
 #######################################################
 
+library(devtools)
+load_all('nethet')
 rm(list=ls())
 
 ##genereta data
@@ -18,7 +20,7 @@ x1 <- rmvnorm(n,mean = rep(0,p), sigma = cov2cor(solve(invcov1)))
 x2 <- rmvnorm(n,mean = rep(0,p), sigma = cov2cor(solve(invcov2)))
 
 ##run DiffNet
-fit.dn <- diffnet_multisplit(x1,x2,b.splits=5)
+fit.dn <- diffnet_multisplit(x1,x2,b.splits=10)
 plot(fit.dn)
 
 ##identify hubs with 'gene-sets'
@@ -26,8 +28,7 @@ gene.names <- paste('G',1:p,sep='')
 gsets <- split(gene.names,rep(1:5,each=10))
 
 ##run GGMGSA
-options(cores=5)
-fit.ggmgsa <- ggmgsa_multisplit_par(x1,x2,no.splits=5,gsets,gene.names)
+fit.ggmgsa <- ggmgsa_multisplit(x1,x2,no.splits=10,gsets,gene.names)
 plot(fit.ggmgsa)
 summary(fit.ggmgsa)
 fit.ggmgsa$medagg.pval

@@ -1531,7 +1531,7 @@ diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='scre
 ##'
 ##' 
 ##' @title Plotting function for object of class 'diffnet' 
-##' @param object of class 'diffnet'
+##' @param x object of class 'diffnet'
 ##' @return Histogram over multi-split p-values.
 ##' @author nicolas
 ##' @export
@@ -1554,7 +1554,13 @@ plot.diffnet <- function(x,...){
     #}
 }
 
-
+##' Summary function for object of class 'diffnet'
+##'
+##' 
+##' @title Summary function for object of class 'diffnet'
+##' @param x object of class 'diffnet'
+##' @return aggregated p-values
+##' @author nicolas
 summary.diffnet <- function(x){
     out <- data.frame(medagg.pval=x$medagg.pval,meinshagg.pval=x$meinshagg.pval)
     rownames(out) <- 'aggregated p-values'
