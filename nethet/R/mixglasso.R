@@ -803,7 +803,6 @@ mixglasso <- function(x,n.comp,
 ##' \item{fit.mixgl.selcrit}{Results for model with optimal number of components. List see mixglasso_init}
 ##' @author n.stadler
 ##' @export
-##' @example ../mixglasso-pkg_test.R
 bwprun_mixglasso <- function(x,
                              n.comp.min=1,n.comp.max,
                              lambda=sqrt(2*nrow(x)*log(ncol(x)))/2,

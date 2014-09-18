@@ -14,7 +14,7 @@
 #library('limma')
 #library('multtest')
 #library(ICSNP)
-#library(multicore)
+#library(parallel)
 #library(DiffNet)
 #library(mvtnorm)
 
@@ -633,88 +633,9 @@ ggmgsa_singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust='fdr',
   return(list(pvals=pvals.corrected,teststat=res['teststat',],teststat.bic=res['teststat.bic',],teststat.aic=res['teststat.aic',],rel.edgeinter=res['rel.edgeinter',],dfu=res['dfu',],dfv=res['dfv',],dfuv=res['dfuv',]))
 }
 
-##' Multi-split GGMGSA
-##'
-##' 
-##' @title Multi-split GGMGSA
-##' @param x1 Expression matrix for condition 1 (mean zero is required).
-##' @param x2 Expression matrix for condition 2 (mean zero is required).
-##' @param no.splits Number of random data splits (default=50).
-##' @param gene.sets List of gene-sets.
-##' @param gene.names Gene names. Each column in x1 (and x2) corresponds
-##'                   to a gene. 
-##' @param gs.names Gene-set names (default=NULL).
-##' @param method.p.adjust Method for p-value adjustment (default='fdr').
-##' @param order.adj.agg Order of aggregation and adjustment of p-values.
-##'                      Options: 'agg-adj' (default), 'adj-agg'.
-##' @param ... Other arguments (see diffnet_singlesplit).
-##' @return List consisting of
-##' \item{medagg.pval}{Median aggregated p-values}
-##' \item{meinshagg.pval}{Meinshausen aggregated p-values}
-##' \item{pval}{matrix of p-values before correction and adjustement, dim(pval)=(number of gene-sets)x(number of splits)}
-##' \item{teststatmed}{median aggregated test-statistic}
-##' \item{teststatmed.bic}{median aggregated bic-corrected test-statistic}
-##' \item{teststatmed.aic}{median aggregated aic-corrected test-statistic}
-##' \item{teststat}{matrix of test-statistics, dim(teststat)=(number of gene-sets)x(number of splits)}
-##' \item{rel.edgeinter}{normalized intersection of edges in condition 1 and 2}
-##' \item{df1}{degrees of freedom of GGM obtained from condition 1}
-##' \item{df2}{degrees of freedom of GGM obtained from condition 2}
-##' \item{df12}{degrees of freedom of GGM obtained from pooled data (condition 1 and 2)}
-##' @author n.stadler
-##' @export
-##' @example ../../ggmgsa_ex.R
-ggmgsa_multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,
-                              method.p.adjust='fdr',order.adj.agg='agg-adj',...){
-
-    if(is.null(gs.names)){
-        gs.names <- paste('gs',1:length(gene.sets),sep='')
-    }
-    
-    res <- lapply(seq(no.splits),
-                  function(i){
-                      cat('\n split: ',i,'\n\n')
-                      res <- ggmgsa_singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
-                                                method.p.adjust='none',...)
-                      cat('  p-values: ',res$pvals,'\n\n')
-                      mat <- cbind(res$pvals,res$teststat,res$teststat.bic,res$teststat.aic,res$rel.edgeinter,res$dfu,res$dfv,res$dfuv)
-                      colnames(mat) <- c('pvals','teststat','teststat.bic','teststat.aic','rel.edgeinter','dfu','dfv','dfuv')
-                      return(mat)
-                  }
-                  )
-    res.pval <- sapply(seq(no.splits),function(i){res[[i]][,'pvals']})
-    res.teststat <- sapply(seq(no.splits),function(i){res[[i]][,'teststat']})
-    res.teststat.bic <- sapply(seq(no.splits),function(i){res[[i]][,'teststat.bic']})
-    res.teststat.aic <- sapply(seq(no.splits),function(i){res[[i]][,'teststat.aic']})
-    res.rel.edgeinter <- sapply(seq(no.splits),function(i){res[[i]][,'rel.edgeinter']})
-    res.dfu <- sapply(seq(no.splits),function(i){res[[i]][,'dfu']})
-    res.dfv <- sapply(seq(no.splits),function(i){res[[i]][,'dfv']})
-    res.dfuv <- sapply(seq(no.splits),function(i){res[[i]][,'dfuv']})
-  
-    if(order.adj.agg=='agg-adj'){
-        pvalagg <- my.p.adjust(apply(res.pval,1,aggpval),method=method.p.adjust)
-        pvalmed <- my.p.adjust(apply(res.pval,1,median,na.rm=TRUE),method=method.p.adjust)
-    }
-    if(order.adj.agg=='adj-agg'){
-        pvalagg <- apply(apply(res.pval,2,my.p.adjust,method=method.p.adjust),1,aggpval)
-        pvalmed <- apply(apply(res.pval,2,my.p.adjust,method=method.p.adjust),1,median)
-    }
-
-    out <- list(medagg.pval=pvalmed,meinshagg.pval=pvalagg,
-                pval=res.pval,
-                teststatmed=apply(res.teststat,1,median,na.rm=TRUE),
-                teststatmed.bic=apply(res.teststat.bic,1,median,na.rm=TRUE),
-                teststatmed.aic=apply(res.teststat.aic,1,median,na.rm=TRUE),
-                teststat=res.teststat,teststat.aic=res.teststat.aic,
-                rel.edgeinter=res.rel.edgeinter,df1=res.dfu,df2=res.dfv,df12=res.dfuv,
-                gs.names=gs.names)
-    class(out) <- 'ggmgsa'
-    return(out)
-
-}
-
 ##' Multi-split GGMGSA (parallelized computation)
 ##'
-##' Computation parallelized over many data splits.
+##' Computation can be parallelized over many data splits.
 ##' 
 ##' @title Multi-split GGMGSA (parallelized computation)
 ##' @param x1 Expression matrix for condition 1 (mean zero is required).
@@ -727,6 +648,10 @@ ggmgsa_multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=N
 ##' @param method.p.adjust Method for p-value adjustment (default='fdr').
 ##' @param order.adj.agg Order of aggregation and adjustment of p-values.
 ##'                      Options: 'agg-adj' (default), 'adj-agg'.
+##' @param mc.flag If \code{TRUE} use parallel execution for each no.splits via function 
+##'                \code{mclapply} of package \code{parallel}.
+##' @param mc.set.seed See mclapply. Default=TRUE
+##' @param mc.preschedule See mclapply. Default=TRUE
 ##' @param ... Other arguments (see diffnet_singlesplit).
 ##' @return List consisting of
 ##' \item{medagg.pval}{Median aggregated p-values}
@@ -743,24 +668,41 @@ ggmgsa_multisplit <- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=N
 ##' @author n.stadler
 ##' @export
 ##' @example ../../ggmgsa_ex.R
-ggmgsa_multisplit_par<- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,
-                                 method.p.adjust='fdr',order.adj.agg='agg-adj',...){
+ggmgsa_multisplit<- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,
+                                 method.p.adjust='fdr',order.adj.agg='agg-adj',
+                                 mc.flag=FALSE,mc.set.seed=TRUE,mc.preschedule=TRUE,...){
 
     if(is.null(gs.names)){
         gs.names <- paste('gs',1:length(gene.sets),sep='')
     }
-    
-    res <- mclapply(seq(no.splits),
-                    function(i){
-                        cat('split:',i,'\n')
-                        res <- ggmgsa_singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
-                                                  method.p.adjust='none',...)
 
-                        cat(' pvals: ',res$pvals,'\n')
-                        mat <- cbind(res$pvals,res$teststat,res$teststat.bic,res$teststat.aic,res$rel.edgeinter,res$dfu,res$dfv,res$dfuv)
-                        colnames(mat) <- c('pvals','teststat','teststat.bic','teststat.aic','rel.edgeinter','dfu','dfv','dfuv')
-                        return(mat)
-                    }, mc.set.seed=TRUE, mc.preschedule = TRUE)
+    if(mc.flag==TRUE){
+        res <- mclapply(seq(no.splits),
+                        function(i){
+                            cat('\n split: ',i,'\n\n')
+                            res <- ggmgsa_singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
+                                                      method.p.adjust='none',...)
+
+                            cat('  pvals: ',res$pvals,'\n')
+                            mat <- cbind(res$pvals,res$teststat,res$teststat.bic,res$teststat.aic,res$rel.edgeinter,res$dfu,res$dfv,res$dfuv)
+                            colnames(mat) <- c('pvals','teststat','teststat.bic','teststat.aic','rel.edgeinter','dfu','dfv','dfuv')
+                            return(mat)
+                        }, mc.set.seed=mc.set.seed, mc.preschedule = mc.preschedule)
+    }else{
+
+        res <- lapply(seq(no.splits),
+                      function(i){
+                          cat('\n split: ',i,'\n\n')
+                          res <- ggmgsa_singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
+                                                    method.p.adjust='none',...)
+                          cat('  p-values: ',res$pvals,'\n\n')
+                          mat <- cbind(res$pvals,res$teststat,res$teststat.bic,res$teststat.aic,res$rel.edgeinter,res$dfu,res$dfv,res$dfuv)
+                          colnames(mat) <- c('pvals','teststat','teststat.bic','teststat.aic','rel.edgeinter','dfu','dfv','dfuv')
+                          return(mat)
+                      }
+                      )
+    }
+    
     res.pval <- sapply(seq(no.splits),function(i){res[[i]][,'pvals']})
     res.teststat <- sapply(seq(no.splits),function(i){res[[i]][,'teststat']})
     res.teststat.bic <- sapply(seq(no.splits),function(i){res[[i]][,'teststat.bic']})

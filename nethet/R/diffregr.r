@@ -956,7 +956,9 @@ perm.diffregr_pval <- function(y1,y2,x1,x2,act1,act2,act,n.perm){
 ##' @param split1 Samples condition 1 used in screening-step.
 ##' @param split2 Samples condition 2 used in screening-step.
 ##' @param screen.meth Screening method (default='screen_cvtrunc.lasso').
-##' @param compute.evals Method for computation of weights (default='est2.my.ev3.diffregr').
+##' @param compute.evals Method to estimate the weights in the weighted-sum-of-chi2s distribution.
+##'                      The default and (currently) the only available option 
+##'                      is the method 'est2.my.ev3.diffregr'.
 ##' @param method.compquadform Algorithm for computing distribution function
 ##'                            of weighted-sum-of-chi2 (default='imhof').
 ##' @param acc See ?davies (default=1e-4).
@@ -1053,14 +1055,16 @@ diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='screen_cv
 ##' @param frac.split Fraction train-data (screening) / test-data (cleaning) (default=0.5).
 ##' @param screen.meth Screening method (default='screen_cvtrunc.lasso').
 ##' @param gamma.min Tuning parameter in p-value aggregation of Meinshausen et al (2009) (default=0.05).
-##' @param compute.evals Method for computation of weights (default='est2.my.ev3.diffregr').
+##' @param compute.evals Method to estimate the weights in the weighted-sum-of-chi2s distribution.
+##'                      The default and (currently) the only available option 
+##'                      is the method 'est2.my.ev3.diffregr'.
 ##' @param method.compquadform Algorithm for computing distribution function
 ##'                            of weighted-sum-of-chi2 (default='imhof').
 ##' @param acc See ?davies (default=1e-4).
 ##' @param epsabs See ?imhof (default=1e-10).
 ##' @param epsrel See ?imhof (default=1e-10).
 ##' @param show.warn Show warnings (default=FALSE)?
-##' @param n.perm Number of permutation for "split-perm" p-value. Default=NULL which means
+##' @param n.perm Number of permutation for "split-perm" p-value. Default=NULL, which means
 ##'               that the asymptotic approximation is used.
 ##' @param ... Other arguments specific to screen.meth.
 ##' @return List consisting of
@@ -1074,7 +1078,7 @@ diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='screen_cv
 ##' \item{beta.last}{constrained mle (regression coefficients) obtained in last cleaning-step}
 ##' @author n.stadler
 ##' @export
-##' @example ../diffregr-ex.R
+##' @example ../diffregr_ex.R
 diffregr_multisplit<- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,screen.meth='screen_cvtrunc.lasso',
                                gamma.min=0.05,compute.evals='est2.my.ev3.diffregr',
                                method.compquadform='imhof',acc=1e-04,epsabs=1e-10,epsrel=1e-10,
@@ -1202,3 +1206,33 @@ twosample_single_regr <- function(y1,y2,x1,x2,n.screen.pop1=100,n.screen.pop2=10
 }
 
 
+##' Plotting function for object of class 'diffregr' 
+##'
+##' 
+##' @title Plotting function for object of class 'diffregr' 
+##' @param x object of class 'diffregr'
+##' @return Histogram over multi-split p-values.
+##' @author nicolas
+##' @export
+plot.diffregr <- function(x,...){
+        hh <- hist(x$ms.pval,
+                   main='histogram single-split p-values',xlab='p-values',ylab='frequency',...)
+        abline(v=x$medagg.pval,lty=2,col='red')
+        abline(v=x$meinshagg.pval,lty=2,col='green')
+        legend(x=min(hh$mids),y=max(hh$counts),lty=c(2,2),col=c('red','green'),legend=c('median aggregated','meinshausen aggregated'))
+   
+}
+
+##' Summary function for object of class 'diffregr'
+##'
+##' 
+##' @title Summary function for object of class 'diffregr'
+##' @param x object of class 'diffregr'
+##' @return aggregated p-values
+##' @author nicolas
+summary.diffregr <- function(x){
+    out <- data.frame(medagg.pval=x$medagg.pval,meinshagg.pval=x$meinshagg.pval)
+    rownames(out) <- 'aggregated p-values'
+    return(out)
+    print(out)
+}
