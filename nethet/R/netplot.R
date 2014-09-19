@@ -60,10 +60,10 @@ buildDotPlotDataFrame <- function(net.clustering, cluster.names, node.names) {
 #'
 #' @param net.clustering A network clustering object as returned by {\link{screen_cv.glasso} or 
 #' {\link{mixglasso}.
-#' @param pcor.cutoff Cutoff for the partial correlations; only edges with absolute 
-#' partial correlation > pcor.cutoff (in any cluster) will be displayed. 
+#' @param p.corrs.thresh Cutoff for the partial correlations; only edges with absolute 
+#' partial correlation > p.corrs.thresh (in any cluster) will be displayed. 
 #' @param hard.limit Additional hard limit on the number of edges to display. If 
-#' pcor.cutoff results in more edges than hard.limit, only hard.limit edges with the
+#' p.corrs.thresh results in more edges than hard.limit, only hard.limit edges with the
 #' highest partial correlation are returned. 
 #' @param display If TRUE, print the plot to the current output device.
 #' @param node.names Names for the nodes in the network.
@@ -73,7 +73,7 @@ buildDotPlotDataFrame <- function(net.clustering, cluster.names, node.names) {
 #' @export
 #' @return Returns a ggplot2 object. If display=TRUE, additionally displays the 
 #' plot.
-dotPlot <- function(net.clustering, pcor.cutoff=0.25, hard.limit=50,
+dotPlot <- function(net.clustering, p.corrs.thresh=0.25, hard.limit=50,
 										display=TRUE, node.names=rownames(net.clustering$Mu),
 										group.names=sort(unique(net.clustering$comp)),
 										dot.size.range=c(3,12)) {
@@ -86,7 +86,7 @@ dotPlot <- function(net.clustering, pcor.cutoff=0.25, hard.limit=50,
   																			node.names)
   
   # Determine which edges to include
-	biggest.pcorr = results.frame[abs(results.frame$P.Corr) > pcor.cutoff,]  
+	biggest.pcorr = results.frame[abs(results.frame$P.Corr) > p.corrs.thresh,]  
   
   # If any edges above threshold
   if(dim(biggest.pcorr)[1] > 0) {
@@ -158,7 +158,7 @@ dotPlot <- function(net.clustering, pcor.cutoff=0.25, hard.limit=50,
 #' 
 scatterPlot <- function(net.clustering, data, node.pairs, display=TRUE, 
 												node.names=rownames(net.clustering$Mu),
-												group.names=net.clustering$group.names) {
+												group.names=sort(unique(net.clustering$comp))) {
 	
 	if(class(net.clustering) != 'nethetclustering') 
 		 stop('net.clustering needs to be an object of class nethetclustering')
@@ -230,7 +230,7 @@ scatterPlot <- function(net.clustering, data, node.pairs, display=TRUE,
 #' net.clustering will be used.
 #' @param group.names Names for the clusters or groups. If NULL, names from 
 #' net.clustering will be used (by default these are integets 1:numClusters).
-#' @param p.corr.thresh Threshold applied to the absolute partial correlations. 
+#' @param p.corrs.thresh Threshold applied to the absolute partial correlations. 
 #' Edges that are below the threshold in all of the groups are not displayed.
 #' @param print.pdf If TRUE, save the output as a PDF file.
 #' @param pdf.filename If \code{print.pdf} is TRUE, specifies the file name of

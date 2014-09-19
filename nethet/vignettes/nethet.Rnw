@@ -22,15 +22,7 @@ library(ggplot2)
 library(xtable)
 library(devtools)
 
-# For now, load only needed source files
 load_all('../../nethet')
-#source('../R/simMix.R')
-#source('../R/mixglasso.R')
-#source('../R/cvglasso.R')
-#source('../R/diffnet.r')
-#source('../R/diffregr.r')
-#source('../R/ggmgsa.R')
-#source('../R/auxfunc.R')
 
 set.seed(1)
 @
@@ -428,12 +420,85 @@ true inverse covariance matrices are not particularly sparse and $n >> p$.
 
 \section{Plotting and Exporting Results}
 
-\subsection{Network Plots}
+Our package includes several functions for plotting and exporting the networks
+and results that have been obtained. 
 
-\subsection{Edge Plots}
+\subsection{Plotting Results}
 
-Dot plot and scatter plot
+The output of \texttt{het_cv_glmnet} and \texttt{mixglasso} can be plotted either
+as in network form or as individual edges in the networks. For the network plots,
+we use the \texttt{network} package \cite{network}. This is the default plotting
+when \texttt{plot} is invoked on an object of class \texttt{nethetclustering},
+and produces one global plot showing edges that occur in any group, as well as 
+one plot for each group. For this example we will use the networks and 
+clustering obtained using \texttt{mixglasso} in the previous section.
+
+<<echo=TRUE, include=TRUE>>=
+
+# Retrieve best clustering and networks by BIC
+mixglasso.clustering = mixglasso.result$models[[mixglasso.result$bic.opt]]
+
+# Plot networks, omitting edges with absolute partial correlation < 0.5 in 
+# every group.
+plot(mixglasso.clustering, p.corrs.thresh=0.5)
+@
+
+Usually we are only interested in specific edges, and perhaps we wish to compare
+them among groups. Function \texttt{dotPlot} generates a plot with edges above
+a certain threshold along the y axis, and one circle for each group showing the
+smallest mean of the two nodes that make up the edge. We use the \texttt{ggplot2}
+package to make the plots \cite{ggplot2}.
+
+<<echo=TRUE, include=TRUE>>=
+
+# Plot edges, omitting those with absolute partial correlation < 0.5 in every 
+# group.
+dotPlot(mixglasso.clustering, p.corrs.thresh=0.5)
+@
+
+Finally, we might want to compare the observed values of the nodes linked by
+specific edges across groups. Function scatterPlot will generate plots for
+a specified list of edges.
+
+<<echo=TRUE, include=TRUE>>=
+
+# Specify edges
+node.pairs = rbind(c(1,7), c(5,9),c(7,8))
+
+# Create scatter plots of specified edges
+scatterPlot(mixglasso.clustering, data=sim.result$data,
+						node.pairs=node.pairs)
+@
 
 \subsection{Exporting Results}
+
+Our package offers the option to export the inferred networks as a comma-separated
+values (CSV) text file. Like the plotting functions, function 
+\texttt{export_network} can be invoked on the output of \texttt{het_cv_glmnet} 
+and \texttt{mixglasso}.
+
+<<echo=TRUE, include=TRUE, eval=FALSE>>=
+
+# Save network in CSV format, omitting edges with absolute partial correlation
+# less than 0.25.
+export_network(mixglasso.clustering, file='nethet_network.csv',
+							 p.corrs.thresh=0.25)
+@
+
+This creates a CSV file encoding a table with one row for each edge with partial
+correlation above the threshold, and columns indicating the nodes linked by the
+edge, the absolute partial correlation, the sign of the partial correlation, and
+the group or cluster in which the edge occurred.
+
+If the user wishes to use the Cytoscape \cite{cytoscape} software to analyse 
+the network further, we note that the output of \texttt{export_network} can be
+loaded into Cytoscape, provided the option \texttt{quote=FALSE} is set.
+
+<<echo=TRUE, include=TRUE, eval=FALSE>>=
+
+# Save network in CSV format suitable for Cytoscape import
+export_network(mixglasso.clustering, file='nethet_network.csv',
+							 p.corrs.thresh=0.25, quote=FALSE)
+@
 
 \end{document}

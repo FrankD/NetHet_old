@@ -39,7 +39,7 @@ invcov2parcor_array <- function(invcov.array) {
 ##' net.clustering will be used.
 ##' @param group.names Names for the clusters or groups. If NULL, names from 
 ##' net.clustering will be used (by default these are integets 1:numClusters).
-##' @param p.corr.thresh Threshold applied to the absolute partial correlations. 
+##' @param p.corrs.thresh Threshold applied to the absolute partial correlations. 
 ##' Edges that are below the threshold in all of the groups are not exported. 
 ##' Using a negative value will export all possible edges (including those 
 ##' with zero partial correlation).
