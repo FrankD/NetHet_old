@@ -4,18 +4,6 @@ library(glasso)
 library(huge)
 
 
-#' Convert inverse covariance to partial correlation
-#' 
-#'  
-#' @param invcov Inverse covariance matrix
-#' @export
-#' @return The partial correlation matrix.
-#' 
-invcov2parcor <- function(invcov){
-  return(-invcov*tcrossprod(sqrt(1/diag(invcov))))
-}
-
-
 #' Cross-validated glasso on heterogeneous dataset with grouping
 #' 
 #'

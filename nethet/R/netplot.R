@@ -172,8 +172,7 @@ scatterPlot <- function(net.clustering, data, node.pairs, display=TRUE,
 	num.samples = dim(data)[1]
 	
 	# Obtain partial correlations from graphical lasso output
-	p.corrs = sapply(1:length(group.names), 
-				 function(i) invcov2parcor(net.clustering$SigInv[,,i]), simplify='array')
+	p.corrs = invcov2parcor_array(net.clustering$SigInv)
 	
 	# Cycle over node pairs/edges
 	for(edge.i in 1:dim(node.pairs)[1]) {
@@ -253,9 +252,7 @@ plot.nethetclustering <- function(net.clustering,
   
 	if(is.null(node.names)) node.names = 1:dim(net.clustering$Mu)[1]
 	
-	p.corrs = sapply(1:length(group.names), 
-									function(i) invcov2parcor(net.clustering$SigInv[,,i]), 
-									                          simplify='array')
+	p.corrs = invcov2parcor_array(net.clustering$SigInv)
 	
 	k = ncol(net.clustering$Mu)
 	
@@ -348,4 +345,57 @@ plot.nethetclustering <- function(net.clustering,
 		dev.off() #close PDF
 	}
 	
+}
+
+
+
+##' Plot two networks (GGMs)
+##'
+##' 
+##' @title Plot two networks (GGMs)
+##' @param invcov1 Inverse covariance matrix of GGM1.
+##' @param invcov2 Inverse covariance matrix of GGM2.
+##' @param node.label Names of nodes.
+##' @param main Vector (two elements) with network names.
+##' @param ... Other arguments (see plot.network).
+##' @return Figure with two panels (for each network).
+##' @author nicolas
+plot.2networks <- function(invcov1,invcov2,
+													 node.label=paste('X',1:nrow(invcov1),sep=''),
+													 main=c('',''),...){
+	par.orig <- par(no.readonly=TRUE)
+	par(mfrow=c(1,2),mar=c(1,1,1,1))
+	adj1 <- invcov1!=0
+	adj2 <- invcov2!=0
+	adj <- list(adj1,adj2)
+	nonzeros <- sapply(adj,sum)
+	
+	if(nonzeros[1]!=nonzeros[2]){
+		coord <- plot.network(network(adj[[which.max(nonzeros)]]),
+													main=main[which.max(nonzeros)],
+													displaylabels=TRUE,
+													label=node.label,
+													usearrows=FALSE,...)
+		plot.network(network(adj[[which.min(nonzeros)]]),
+								 coord=coord,
+								 main=main[which.min(nonzeros)],
+								 displaylabels=TRUE,
+								 label=node.label,
+								 usearrows=FALSE,...)
+	}
+	
+	if(nonzeros[1]==nonzeros[2]){
+		coord <- plot.network(network(adj[[1]]),
+													main=main[1],
+													displaylabels=TRUE,
+													label=node.label,
+													usearrows=FALSE,...)
+		plot.network(network(adj[[2]]),
+								 coord=coord,
+								 main=main[2],
+								 displaylabels=TRUE,
+								 label=node.label,
+								 usearrows=FALSE,...)
+	}
+	par(par.orig)
 }
