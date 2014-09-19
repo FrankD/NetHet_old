@@ -196,7 +196,7 @@ ww.mat.diffregr <- function(Sig,act,act1,act2){
   bf[length(act1)+(1:(length(act2))),length(act1)+(1:(length(act2)))] <- Sig[act2,act2]
   bg <- 2*Sig[act,act,drop=FALSE]
   mat <- rbind(cbind(diag(1,length(act1)+length(act2)),bfg%*%solve(bg)),cbind(-t(bfg)%*%solve(bf),diag(-1,length(act))))
-  eval <- as.double(eigen(mat)$values)
+  eval <- Re(eigen(mat)$values)
   eval[abs(eval)<10^{-6}] <- 0
   return(list(ww.mat=mat,eval=eval))
 }
@@ -234,7 +234,7 @@ ww.mat2.diffregr <- function(Sig,act,act1,act2){
     mat <- bfg%*%solve(bg)%*%bgf%*%solve(bf)
     eval<-rep(-1,dimg-dimf)
   }
-  eval.mu <- as.double(eigen(mat)$values)
+  eval.mu <- Re(eigen(mat)$values)
   eval2 <- 1-eval.mu
   eval2[abs(eval2)<10^{-6}] <- 0
   eval <- c(eval,sqrt(eval2),-sqrt(eval2))
@@ -305,7 +305,7 @@ my.ev2.diffregr <- function(Sig,act,act1,act2){
         aux.mat <- aux.mat+(t(qbc)%*%solve(qbb)%*%qbc)%*%solve(qcc)
       }
       ev.aux.complex <- eigen(aux.mat)$values
-      ev.aux <- as.double(ev.aux.complex)
+      ev.aux <- Re(ev.aux.complex)
       ev.aux <-  sqrt(1-ev.aux/2)
     }
     eval<-rep(1,dimf-dimg)
@@ -335,7 +335,7 @@ my.ev2.diffregr <- function(Sig,act,act1,act2){
     }
     if ((length(aa)!=0)|(length(bb)!=0)){##if (length(aa)==0)&(length(bb)==0) 'MI included in MJ; therefore -X^2(dim(MJ)-dim(MI)) distributed'
       ev.aux.complex <- eigen(aux.mat)$values
-      ev.aux <- as.double(ev.aux.complex)
+      ev.aux <- Re(ev.aux.complex)
       ev.aux <-  sqrt(1-ev.aux/2)
     }
     eval<-rep(-1,dimg-dimf)
@@ -493,7 +493,7 @@ est2.ww.mat.diffregr <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
   mat <- rbind(cbind(diag(1,length(act1)+length(act2)),bfg%*%solve(bg)),cbind(-t(bfg)%*%solve(bf),diag(-1,length(act))))
   
   eval.complex<-eigen(mat)$values
-  eval <- as.double(eval.complex)
+  eval <- Re(eval.complex)
   
   return(list(eval=c(1,0,0,eval),eval.complex=eval.complex))## eigenvalues 1,0,0 correspond to sig1, sig2 and sig12
 }
@@ -584,7 +584,7 @@ est2.ww.mat2.diffregr <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
     eval<-rep(-1,dimg-dimf)
   }
   eval.mu.complex<-eigen(mat)$values
-  eval.mu <- as.double(eval.mu.complex)
+  eval.mu <- Re(eval.mu.complex)
   eval <- c(eval,sqrt(1-eval.mu),-sqrt(1-eval.mu))
   
   return(list(eval=eval,eval.mu.complex=eval.mu.complex))
@@ -675,7 +675,7 @@ est2.my.ev2.diffregr <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
         aux.mat <- aux.mat+(t(qbc)%*%solve(qbb)%*%qbc)%*%solve(qcc)
       }
       ev.aux.complex <- eigen(aux.mat)$values
-      ev.aux <- as.double(ev.aux.complex)
+      ev.aux <- Re(ev.aux.complex)
       ev.aux <-  sqrt(1-ev.aux)
     }
     eval<-rep(1,dimf-dimg)
@@ -706,7 +706,7 @@ est2.my.ev2.diffregr <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
     }
     if ((length(aa)!=0)|(length(bb)!=0)){ ##if (length(aa)==0)&(length(bb)==0) 'MI included in MJ; therefore -X^2(dim(MJ)-dim(MI)) distributed'
       ev.aux.complex <- eigen(aux.mat)$values
-      ev.aux <- as.double(ev.aux.complex)
+      ev.aux <- Re(ev.aux.complex)
       ev.aux <-  sqrt(1-ev.aux)
     }
     eval<-rep(-1,dimg-dimf)
@@ -800,7 +800,7 @@ est2.my.ev3.diffregr <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
       aux.mat <- aux.mat+(t(qbc)%*%solve(qbb)%*%qbc)%*%solve(qcc12)
     }
     ev.aux.complex <- eigen(aux.mat)$values
-    ev.aux <- as.double(ev.aux.complex)
+    ev.aux <- Re(ev.aux.complex)
     zero.ev.aux <- abs(ev.aux)<10^{-10}
     no.zero.ev.aux <- sum(zero.ev.aux)
     ev.aux <- ev.aux[!zero.ev.aux]
