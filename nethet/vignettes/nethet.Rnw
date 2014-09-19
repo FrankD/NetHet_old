@@ -6,7 +6,8 @@
 BiocStyle::latex()
 @
 
-\title{Heterogeneous Clustering and Network Inference with the MixGLasso}
+\bioctitle[Nethet]{Heterogeneous Clustering and Network Inference with the MixGLasso}
+\author{Iman Author\footnote{iman@author.org}}
 
 \begin{document}
 
