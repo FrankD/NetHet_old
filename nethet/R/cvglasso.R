@@ -11,7 +11,7 @@ library(huge)
 #' matrices) of the variables in the dataset for each pre-specified group of 
 #' samples.
 #'
-#' This function uses code{\link{screen_cv.lasso}} to run glasso with 
+#' This function uses \code{\link{screen_cv.lasso}} to run glasso with 
 #' cross-validation to determine the best parameter lambda for each group of 
 #' samples. Note that this function defaults to using package huge (rather than
 #' package glasso) unless otherwise specified, as it tends to be more 
@@ -40,7 +40,7 @@ library(huge)
 #' and group.names and var.names contains the names for the groups and
 #' variables in the data (if specified as colnames of the input data matrix).
 #' 
-het.cv.glasso <- function(data, grouping=rep(1, dim(data)[1]), mc.flag=FALSE,
+het_cv_glasso <- function(data, grouping=rep(1, dim(data)[1]), mc.flag=FALSE,
                           use.package='huge', normalise=FALSE, verbose=FALSE, ...) {
   
   group.names = sort(unique(grouping))

@@ -4,3 +4,5 @@
 *.Rproj
 *.log
 *.pdf
+man/
+*.tar.gz

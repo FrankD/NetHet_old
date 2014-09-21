@@ -77,6 +77,7 @@ for simulating data from a pre-defined heterogeneous network model, and for
 plotting and outputting the results in a sensible way.
 
 \section{Simulate data}
+\label{sec:simulation}
 
 In order to demonstrate the functionalities of the package, we will first simulate data from a Gaussian mixture model with a known covariance structure. The \textit{nethet} package includes code for generating random covariance matrices with a given sparsity, and for simulating from a Gaussian mixture model with given means and covariances. The function \texttt{sim\_mix\_networks} provides a convenient wrapper for both:
 
@@ -141,21 +142,38 @@ functions, we also want to be able to generate simulated data from pairs of
 networks that present some common edges. The \texttt{generate.2networks}
 function is used to generate pairs of networks with an arbitrary overlap.
 
-\textbf{Nic: Insert generate.2networks example here.}
+<<echo=TRUE, include=TRUE>>=
+## Sample size and number of nodes
+n <- 70
+p <- 30
+
+## Specifiy sparse inverse covariance matrices,
+## with number of edges in common equal to ~ 0.8*p
+gen.net <- generate.2networks(p,graph='random',n.nz=rep(p,2),
+                              n.nz.common=ceiling(p*0.8))
+
+invcov1 <- gen.net[[1]]
+invcov2 <- gen.net[[2]]
+
+plot.2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)
+@
 
 \section{Network estimation with known group labels}
 
 If it is known a priori to which component each sample belongs, then the problem
 of reconstructing the network reduces to a simple application of the graphical 
 lasso to each component. For convenience, we have included a wrapper function 
-\texttt{het.cv.glasso} in \texttt{nethet} that applies the \texttt{cv.glasso} 
+\texttt{het\_cv\_glasso} in \texttt{nethet} that applies the \texttt{cv.glasso} 
 function (from package \texttt{glasso}) to each component in a heterogeneous 
 dataset with specified component labels.
 
-To demonstrate \texttt{het.cv.glasso}, we will generate some data in the same 
+To demonstrate \texttt{het\_cv\_glasso}, we will generate some data in the same 
 way as in the previous section:
 
 <<echo=TRUE, include=TRUE>>=
+n = 100
+p = 25
+
 # Generate networks with random means and covariances. 
 sim.result = sim_mix_networks(n, p, n.comp, s, mix.prob)
 
@@ -163,7 +181,7 @@ test.data = sim.result$data
 test.labels = sim.result$comp
 
 # Reconstruct networks for each component
-networks = het.cv.glasso(data=test.data, grouping=test.labels)
+networks = het_cv_glasso(data=test.data, grouping=test.labels)
 @
 
 One way of checking if the reconstructed networks are sensible is plotting the
@@ -183,58 +201,74 @@ qplot(x=c(networks$Sig), y=c(sim.result$Sig),
 
 \section{High-dimensional hypothesis testing}
 
+We have demonstrated how to use our package to reconstruct networks from data with
+the graphical lasso. Next, we will show how to use the functions that allow
+for high-dimensional hypothesis testing; in other words, how to compare 
+reconstructed networks (and regression models) and test whether the networks
+that arise from a given dataset are significantly different.
+
 \subsection{Differential Network}
+
+The function \texttt{diffnet\_multisplit} uses repeated pooling and splitting of 
+two datasets to evaluate whether the reconstructed networks are significantly 
+different. We will use the inverse covariance matrices generated in Section
+\ref{sec:simulation} in this example.
+
 <<echo=TRUE, include=TRUE, warning=TRUE, results="asis">>=
 ##set seed
-set.seed(1)
+#set.seed(1)
 
 ##sample size and number of nodes
-n <- 70
-p <- 30
+# n <- 70
+# p <- 30
+# 
+# ##specifiy sparse inverse covariance matrices
+# gen.net <- generate.2networks(p,graph='random',n.nz=rep(p,2),
+#                               n.nz.common=ceiling(p*0.8))
+# invcov1 <- gen.net[[1]]
+# invcov2 <- gen.net[[2]]
+# plot.2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)
 
-##specifiy sparse inverse covariance matrices
-gen.net <- generate.2networks(p,graph='random',n.nz=rep(p,2),
-                              n.nz.common=ceiling(p*0.8))
-invcov1 <- gen.net[[1]]
-invcov2 <- gen.net[[2]]
-plot.2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)
-
-##get corresponding correlation matrices
+## Get corresponding correlation matrices
 cor1 <- cov2cor(solve(invcov1))
 cor2 <- cov2cor(solve(invcov2))
 
-##generate data under null-hypothesis
-x1 <- rmvnorm(n,mean = rep(0,p), sigma = cor1)
-x2 <- rmvnorm(n,mean = rep(0,p), sigma = cor1)
+## Generate data under null-hypothesis (both datasets have the same underlying
+## network)
+x1 <- rmvnorm(n,mean = rep(0,dim(cor1)[1]), sigma = cor1)
+x2 <- rmvnorm(n,mean = rep(0,dim(cor1)[1]), sigma = cor1)
 
-##run diffnet (under null)
+## Run diffnet (under null hypothesis)
 dn.null <- diffnet_multisplit(x1,x2,b.splits=10,verbose=FALSE)
 
-plot(dn.null)#histogram of multi-split p-values
-dn.null$medagg.pval#pvalue aggregated using median
-dn.null$meinshagg.pval#pvalue aggregated using approach of Meinshausen et al (2009)
+plot(dn.null) # histogram of multi-split p-values
+dn.null$medagg.pval # pvalue aggregated using median
+dn.null$meinshagg.pval # pvalue aggregated using approach of Meinshausen et al (2009)
 
 
-##generate data under alternative
-x1 <- rmvnorm(n,mean = rep(0,p), sigma = cor1)
-x2 <- rmvnorm(n,mean = rep(0,p), sigma = cor2)
+## Generate data under alternative hypothesis (datasets have different networks)
+x1 <- rmvnorm(n,mean = rep(0,dim(cor1)[1]), sigma = cor1)
+x2 <- rmvnorm(n,mean = rep(0,dim(cor1)[2]), sigma = cor2)
 
-##run diffnet (under alternative)
+## Run diffnet (under alternative)
 dn.altn <- diffnet_multisplit(x1,x2,b.splits=10,verbose=FALSE)
 
 plot(dn.altn)#histogram of multi-split p-values
 dn.altn$medagg.pval#pvalue aggregated using median
 dn.altn$meinshagg.pval#pvalue aggregated using approach of Meinshausen et al (2009)
-
 @
-
 
 
 \subsection{GGM-GSA}
 
+Next, we present the function \texttt{ggmagsa\_multisplit}, which allows for 
+network-based gene set analysis.
+
 <<echo=TRUE, include=TRUE, warning=TRUE, results="asis">>=
 ##genereta data
-set.seed(1)
+#set.seed(1)
+
+## Generate new networks
 p <- 50#network with p nodes
 n <- 50
 hub.net <- generate.2networks(p,graph='hub',n.hub=5,n.hub.diff=2)#generate hub networks
@@ -242,67 +276,71 @@ invcov1 <- hub.net[[1]]
 invcov2 <- hub.net[[2]]
 plot.2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)
 
-##generate data
+## Generate data
 x1 <- rmvnorm(n,mean = rep(0,p), sigma = cov2cor(solve(invcov1)))
 x2 <- rmvnorm(n,mean = rep(0,p), sigma = cov2cor(solve(invcov2)))
 
-##run DiffNet
+## Run DiffNet
 fit.dn <- diffnet_multisplit(x1,x2,b.splits=10,verbose=FALSE)
 fit.dn$medagg.pval
 
-##identify hubs with 'gene-sets'
+## Identify hubs with 'gene-sets'
 gene.names <- paste('G',1:p,sep='')
 gsets <- split(gene.names,rep(1:5,each=10))
 
-##run GGM-GSA
+## Run GGM-GSA
 fit.ggmgsa <- ggmgsa_multisplit(x1,x2,no.splits=10,gsets,gene.names,verbose=FALSE)
 plot(fit.ggmgsa)
 fit.ggmgsa$medagg.pval
 p.adjust(apply(fit.ggmgsa$pval,1,median),method='fdr')
-
 @
 
 \subsection{Differential Regression}
 
+In addition to network analysis, we have also included the related function
+\texttt{diffregr\_multisplit}, which allows for hypothesis testing of regression
+models. This is an extension of the function described in Section 
+\ref{sec:diffnet}, and works in a similar way.
+
 <<echo=TRUE, include=TRUE, warning=TRUE, results="asis">>=
 ##set seed
-set.seed(1)
+#set.seed(1)
 
-##number of predictors / sample size
+## Number of predictors and sample size
 p <- 200
 n <- 80
 
-##predictor matrices
+## Predictor matrices
 x1 <- matrix(rnorm(n*p),n,p)
 x2 <- matrix(rnorm(n*p),n,p)
 
-##active-sets and regression coefficients
+## Active-sets and regression coefficients
 act1 <- sample(1:p,5)
 act2 <- c(act1[1:3],sample(setdiff(1:p,act1),2))
 beta1 <- beta2 <- rep(0,p)
 beta1[act1] <- 0.5
 beta2[act2] <- 0.5
 
-##response vectors under null-hypothesis
+## Response vectors under null-hypothesis
 y1 <- x1%*%as.matrix(beta1)+rnorm(n,sd=0.5)
 y2 <- x2%*%as.matrix(beta1)+rnorm(n,sd=0.5)
 
-##Diffregr (asymptotic p-values)
+## Diffregr (asymptotic p-values)
 fit.null <- diffregr_multisplit(y1,y2,x1,x2,b.splits=10)
 plot(fit.null)
 summary(fit.null)
 
-##response vectors under alternative-hypothesis
+## Response vectors under alternative-hypothesis
 y1 <- x1%*%as.matrix(beta1)+rnorm(n,sd=0.5)
 y2 <- x2%*%as.matrix(beta2)+rnorm(n,sd=0.5)
 
-##Diffregr (asymptotic p-values)
+## Diffregr (asymptotic p-values)
 fit.alt <- diffregr_multisplit(y1,y2,x1,x2,b.splits=10)
 plot(fit.alt)
 fit.alt$meinshagg.pval
 fit.alt$medagg.pval
 
-##Diffregr (permutation-based p-values; 100 permutations)
+## Diffregr (permutation-based p-values; 100 permutations)
 fit.alt.perm <- diffregr_multisplit(y1,y2,x1,x2,b.splits=10,n.perm=100)
 plot(fit.alt.perm)
 summary(fit.alt.perm)
@@ -425,7 +463,7 @@ and results that have been obtained.
 
 \subsection{Plotting Results}
 
-The output of \texttt{het_cv_glmnet} and \texttt{mixglasso} can be plotted either
+The output of \texttt{het\_cv\_glmnet} and \texttt{mixglasso} can be plotted either
 as in network form or as individual edges in the networks. For the network plots,
 we use the \texttt{network} package \cite{network}. This is the default plotting
 when \texttt{plot} is invoked on an object of class \texttt{nethetclustering},
@@ -444,7 +482,7 @@ plot(mixglasso.clustering, p.corrs.thresh=0.5)
 @
 
 Usually we are only interested in specific edges, and perhaps we wish to compare
-them among groups. Function \texttt{dotPlot} generates a plot with edges above
+them among groups. Function \texttt{dot\_plot} generates a plot with edges above
 a certain threshold along the y axis, and one circle for each group showing the
 smallest mean of the two nodes that make up the edge. We use the \texttt{ggplot2}
 package to make the plots \cite{ggplot2}.
@@ -453,20 +491,20 @@ package to make the plots \cite{ggplot2}.
 
 # Plot edges, omitting those with absolute partial correlation < 0.5 in every 
 # group.
-dotPlot(mixglasso.clustering, p.corrs.thresh=0.5)
+dot_plot(mixglasso.clustering, p.corrs.thresh=0.5)
 @
 
 Finally, we might want to compare the observed values of the nodes linked by
-specific edges across groups. Function scatterPlot will generate plots for
+specific edges across groups. Function \texttt{scatter\_plot} will generate plots for
 a specified list of edges.
 
 <<echo=TRUE, include=TRUE>>=
 
 # Specify edges
-node.pairs = rbind(c(1,7), c(5,9),c(7,8))
+node.pairs = rbind(c(1,3), c(6,9),c(7,8))
 
 # Create scatter plots of specified edges
-scatterPlot(mixglasso.clustering, data=sim.result$data,
+scatter_plot(mixglasso.clustering, data=sim.result$data,
 						node.pairs=node.pairs)
 @
 
@@ -474,15 +512,15 @@ scatterPlot(mixglasso.clustering, data=sim.result$data,
 
 Our package offers the option to export the inferred networks as a comma-separated
 values (CSV) text file. Like the plotting functions, function 
-\texttt{export_network} can be invoked on the output of \texttt{het_cv_glmnet} 
+\texttt{export\_network} can be invoked on the output of \texttt{het\_cv\_glmnet} 
 and \texttt{mixglasso}.
 
 <<echo=TRUE, include=TRUE, eval=FALSE>>=
 
 # Save network in CSV format, omitting edges with absolute partial correlation
 # less than 0.25.
-export_network(mixglasso.clustering, file='nethet_network.csv',
-							 p.corrs.thresh=0.25)
+#export_network(mixglasso.clustering, file='nethet_network.csv',
+#							 p.corrs.thresh=0.25)
 @
 
 This creates a CSV file encoding a table with one row for each edge with partial
@@ -491,7 +529,7 @@ edge, the absolute partial correlation, the sign of the partial correlation, and
 the group or cluster in which the edge occurred.
 
 If the user wishes to use the Cytoscape \cite{cytoscape} software to analyse 
-the network further, we note that the output of \texttt{export_network} can be
+the network further, we note that the output of \texttt{export\_network} can be
 loaded into Cytoscape, provided the option \texttt{quote=FALSE} is set.
 
 <<echo=TRUE, include=TRUE, eval=FALSE>>=
@@ -501,4 +539,5 @@ export_network(mixglasso.clustering, file='nethet_network.csv',
 							 p.corrs.thresh=0.25, quote=FALSE)
 @
 
+\bibliography{nethet}
 \end{document}

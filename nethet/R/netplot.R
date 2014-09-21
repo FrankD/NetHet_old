@@ -52,14 +52,14 @@ buildDotPlotDataFrame <- function(net.clustering, cluster.names, node.names) {
 
 #' Create a plot showing the edges with the highest partial correlation in any cluster.
 #' 
-#' This function takes the output of {\link{screen_cv.glasso} or 
-#' {\link{mixglasso} and creates a plot of the highest scoring edges along the
+#' This function takes the output of \code{\link{het_cv_glasso}} or 
+#' \code{\link{mixglasso}} and creates a plot of the highest scoring edges along the
 #' y axis, where, the edge in each cluster is represented by a circle whose area
 #' is proportional to the smallest mean of the two nodes that make up the edge,
 #' and the position along the y axis shows the partial correlation of the edge.
 #'
-#' @param net.clustering A network clustering object as returned by {\link{screen_cv.glasso} or 
-#' {\link{mixglasso}.
+#' @param net.clustering A network clustering object as returned by 
+#' \code{\link{het_cv_glasso}} or \code{\link{mixglasso}}.
 #' @param p.corrs.thresh Cutoff for the partial correlations; only edges with absolute 
 #' partial correlation > p.corrs.thresh (in any cluster) will be displayed. 
 #' @param hard.limit Additional hard limit on the number of edges to display. If 
@@ -73,7 +73,7 @@ buildDotPlotDataFrame <- function(net.clustering, cluster.names, node.names) {
 #' @export
 #' @return Returns a ggplot2 object. If display=TRUE, additionally displays the 
 #' plot.
-dotPlot <- function(net.clustering, p.corrs.thresh=0.25, hard.limit=50,
+dot_plot <- function(net.clustering, p.corrs.thresh=0.25, hard.limit=50,
 										display=TRUE, node.names=rownames(net.clustering$Mu),
 										group.names=sort(unique(net.clustering$comp)),
 										dot.size.range=c(3,12)) {
@@ -134,14 +134,14 @@ dotPlot <- function(net.clustering, p.corrs.thresh=0.25, hard.limit=50,
 #' Create a scatterplot showing correlation between specific nodes in the network
 #' for each pre-specified group.
 #' 
-#' This function takes the output of {\link{screen_cv.glasso} or 
-#' {\link{mixglasso} and creates a plot showing the correlation between specified
+#' This function takes the output of \code{\link{het_cv_glasso}} or 
+#' \code{\link{mixglasso}} and creates a plot showing the correlation between specified
 #' node pairs in the network for all groups. The subplots for each node pair are 
 #' arranged in a numPairs by numGroups grid. Partial correlations associated 
 #' with each node pair are also displayed.
 #'
-#' @param net.clustering A network clustering object as returned by {\link{screen_cv.glasso} or 
-#' {\link{mixglasso}.
+#' @param net.clustering A network clustering object as returned by 
+#' \code{\link{het_cv_glasso}} or \code{\link{mixglasso}}.
 #' @param data Observed data for the nodes, a numObs by numNodes matrix. Note 
 #' that nodes need to be in the same ordering as in node.names.
 #' @param nodes.pairs A matrix of size numPairs by 2, where each row contains a 
@@ -156,7 +156,7 @@ dotPlot <- function(net.clustering, p.corrs.thresh=0.25, hard.limit=50,
 #' @return Returns a ggplot2 object. If display=TRUE, additionally displays the 
 #' plot.
 #' 
-scatterPlot <- function(net.clustering, data, node.pairs, display=TRUE, 
+scatter_plot <- function(net.clustering, data, node.pairs, display=TRUE, 
 												node.names=rownames(net.clustering$Mu),
 												group.names=sort(unique(net.clustering$comp))) {
 	
@@ -220,12 +220,12 @@ scatterPlot <- function(net.clustering, data, node.pairs, display=TRUE,
 
 #' Plot networks
 #' 
-#' This function takes the output of {\link{screen_cv.glasso} or 
-#' {\link{mixglasso} and creates a network plot using the network library.
+#' This function takes the output of \code{\link{screen_cv.glasso}} or 
+#' \code{\link{mixglasso}} and creates a network plot using the network library.
 #' 
 #'
-#' @param net.clustering A network clustering object as returned by {\link{screen_cv.glasso} or 
-#' {\link{mixglasso}.
+#' @param net.clustering A network clustering object as returned by 
+#' \code{\link{screen_cv.glasso}} or \code{\link{mixglasso}}.
 #' @param node.names Names for the nodes in the network. If NULL, names from 
 #' net.clustering will be used.
 #' @param group.names Names for the clusters or groups. If NULL, names from 
@@ -398,4 +398,52 @@ plot.2networks <- function(invcov1,invcov2,
 								 usearrows=FALSE,...)
 	}
 	par(par.orig)
+}
+
+##' Plotting function for object of class 'diffnet' 
+##'
+##' 
+##' @title Plotting function for object of class 'diffnet' 
+##' @param x object of class 'diffnet'
+##' @return Histogram over multi-split p-values.
+##' @author nicolas
+##' @export
+plot.diffnet <- function(x,...){
+	#if(is.null(x$medwi)){
+	hh <- hist(x$ms.pval,
+						 main='histogram single-split p-values',xlab='p-values',ylab='frequency',...)
+	abline(v=x$medagg.pval,lty=2,col='red')
+	abline(v=x$meinshagg.pval,lty=2,col='green')
+	legend(x=min(hh$mids),y=max(hh$counts),lty=c(2,2),col=c('red','green'),legend=c('median aggregated','meinshausen aggregated'))
+	#}else{
+	#    medwi <- x$medwi
+	#    k <- ncol(x$medwi[[1]])
+	#    par(mfrow=c(2,2))
+	#    image(x=1:k,y=1:k,abs(medwi$modIpop1),xlab='',ylab='',main='median invcov1')
+	#    image(x=1:k,y=1:k,abs(medwi$modIpop2),xlab='',ylab='',main='median invcov2')
+	#    hist(x$ms.pval,breaks=10,
+	#         main='histogram single-split p-values',xlab='p-values',ylab='frequency')
+	#    abline(v=x$medagg.pval,lty=2,col='red')
+	#}
+}
+
+##' Plotting function for object of class 'diffregr' 
+##'
+##' 
+##' @title Plotting function for object of class 'diffregr' 
+##' @param x object of class 'diffregr'
+##' @return Histogram over multi-split p-values.
+##' @author nicolas
+##' @export
+plot.diffregr <- function(x,...){
+	hh <- hist(x$ms.pval,
+						 main='histogram single-split p-values',xlab='p-values',ylab='frequency',...)
+	abline(v=x$medagg.pval,lty=2,col='red')
+	abline(v=x$meinshagg.pval,lty=2,col='green')
+	legend(x=min(hh$mids),y=max(hh$counts),lty=c(2,2),col=c('red','green'),legend=c('median aggregated','meinshausen aggregated'))
+	
+}
+
+plot.ggmgsa <- function(x,...){
+	boxplot(t(x$pval),names=x$gs.names,xlab='gene-sets',ylab='single-split p-values (uncorrected)',...)
 }

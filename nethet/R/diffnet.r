@@ -1478,7 +1478,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
 ##' \item{wi.last}{constrained mle (inverse covariance matrix) obtained in last cleaning-step}
 ##' @author n.stadler
 ##' @export
-##' @example ../../diffnet_ex.R
+##' @example ../diffnet_ex.R
 diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='screen_bic.glasso',include.mean=FALSE,
                               gamma.min=0.05,compute.evals='est2.my.ev3',algorithm.mleggm='glasso_rho0',
                               method.compquadform='imhof',acc=1e-04,epsabs=1e-10,epsrel=1e-10,
@@ -1528,43 +1528,5 @@ diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='scre
   return(result)
 }
 
-##' Plotting function for object of class 'diffnet' 
-##'
-##' 
-##' @title Plotting function for object of class 'diffnet' 
-##' @param x object of class 'diffnet'
-##' @return Histogram over multi-split p-values.
-##' @author nicolas
-##' @export
-plot.diffnet <- function(x,...){
-    #if(is.null(x$medwi)){
-        hh <- hist(x$ms.pval,
-                   main='histogram single-split p-values',xlab='p-values',ylab='frequency',...)
-        abline(v=x$medagg.pval,lty=2,col='red')
-        abline(v=x$meinshagg.pval,lty=2,col='green')
-        legend(x=min(hh$mids),y=max(hh$counts),lty=c(2,2),col=c('red','green'),legend=c('median aggregated','meinshausen aggregated'))
-    #}else{
-    #    medwi <- x$medwi
-    #    k <- ncol(x$medwi[[1]])
-    #    par(mfrow=c(2,2))
-    #    image(x=1:k,y=1:k,abs(medwi$modIpop1),xlab='',ylab='',main='median invcov1')
-    #    image(x=1:k,y=1:k,abs(medwi$modIpop2),xlab='',ylab='',main='median invcov2')
-    #    hist(x$ms.pval,breaks=10,
-    #         main='histogram single-split p-values',xlab='p-values',ylab='frequency')
-    #    abline(v=x$medagg.pval,lty=2,col='red')
-    #}
-}
 
-##' Summary function for object of class 'diffnet'
-##'
-##' 
-##' @title Summary function for object of class 'diffnet'
-##' @param x object of class 'diffnet'
-##' @return aggregated p-values
-##' @author nicolas
-summary.diffnet <- function(x){
-    out <- data.frame(medagg.pval=x$medagg.pval,meinshagg.pval=x$meinshagg.pval)
-    rownames(out) <- 'aggregated p-values'
-    return(out)
-    print(out)
-}
+

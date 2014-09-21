@@ -48,36 +48,6 @@ library(mclust)
 library(parallel)
 
 
-
-##' Simulate from mixture model with MVN components
-##'
-##' 
-##' @title Simulate from mixture model with MVN components
-##' @param n sample size
-##' @param n.comp number of mixture components ("comps")
-##' @param mix.prob mixing probablities
-##' @param Mu matrix of component-specific mean vectors 
-##' @param Sig array of component-specific covariance matrices
-##' @return  a list consisting of
-##' \item{S}{component assignments}
-##' \item{X}{observed data matrix}
-##' @author n.stadler
-##' @export
-simMIX <- function(n,n.comp,mix.prob,Mu,Sig){
-  # mix.prob: mixing probabilities
-  # Mu: means
-  # Sig: covariance matrix
-  # n: nr. of observations
-  K <- n.comp
-  p <- dim(Mu)[1]
-  x <- matrix(0,nrow=n,ncol=p)
-  s <- sample(1:K,n,replace=TRUE,prob=mix.prob)
-  for (i in 1:n){
-    x[i,] <- rmvnorm(1,mean=Mu[,s[i]],sigma=Sig[,,s[i]])
-  }
-  list(S=s,X=x)
-}
-
 ##' Sum of non-diag elements of a matrix
 ##'
 ##'
@@ -726,7 +696,7 @@ mixglasso_init<- function(x,n.comp,lambda,
 ##' \item{mmdl.opt}{Index of model with optimal MMDL score.}
 ##' @author n.stadler
 ##' @export
-##' @example ../../mixglasso_ex.R
+##' @example ../mixglasso_ex.R
 mixglasso <- function(x,n.comp,
                           lambda=sqrt(2*nrow(x)*log(ncol(x)))/2,
                           pen='glasso.parcor',

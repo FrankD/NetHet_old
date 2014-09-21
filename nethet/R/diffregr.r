@@ -1206,33 +1206,4 @@ twosample_single_regr <- function(y1,y2,x1,x2,n.screen.pop1=100,n.screen.pop2=10
 }
 
 
-##' Plotting function for object of class 'diffregr' 
-##'
-##' 
-##' @title Plotting function for object of class 'diffregr' 
-##' @param x object of class 'diffregr'
-##' @return Histogram over multi-split p-values.
-##' @author nicolas
-##' @export
-plot.diffregr <- function(x,...){
-        hh <- hist(x$ms.pval,
-                   main='histogram single-split p-values',xlab='p-values',ylab='frequency',...)
-        abline(v=x$medagg.pval,lty=2,col='red')
-        abline(v=x$meinshagg.pval,lty=2,col='green')
-        legend(x=min(hh$mids),y=max(hh$counts),lty=c(2,2),col=c('red','green'),legend=c('median aggregated','meinshausen aggregated'))
-   
-}
 
-##' Summary function for object of class 'diffregr'
-##'
-##' 
-##' @title Summary function for object of class 'diffregr'
-##' @param x object of class 'diffregr'
-##' @return aggregated p-values
-##' @author nicolas
-summary.diffregr <- function(x){
-    out <- data.frame(medagg.pval=x$medagg.pval,meinshagg.pval=x$meinshagg.pval)
-    rownames(out) <- 'aggregated p-values'
-    return(out)
-    print(out)
-}

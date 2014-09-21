@@ -668,7 +668,7 @@ ggmgsa_singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust='fdr',
 ##' \item{df12}{degrees of freedom of GGM obtained from pooled data (condition 1 and 2)}
 ##' @author n.stadler
 ##' @export
-##' @example ../../ggmgsa_ex.R
+##' @example ../ggmgsa_ex.R
 ggmgsa_multisplit<- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,
                                  method.p.adjust='fdr',order.adj.agg='agg-adj',
                                  mc.flag=FALSE,mc.set.seed=TRUE,mc.preschedule=TRUE,verbose=TRUE,...){
@@ -736,13 +736,6 @@ ggmgsa_multisplit<- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NU
 }
 
 
-plot.ggmgsa <- function(x,...){
-    boxplot(t(x$pval),names=x$gs.names,xlab='gene-sets',ylab='single-split p-values (uncorrected)',...)
-}
 
-summary.ggmgsa <- function(x){
-    out <- data.frame(medagg.pval=x$medagg.pval,meinshagg.pval=x$meinshagg.pval)
-    rownames(out) <- x$gs.names
-    return(out)
-    print(out)
-}
+
+

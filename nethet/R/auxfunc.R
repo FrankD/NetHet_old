@@ -28,12 +28,12 @@ invcov2parcor_array <- function(invcov.array) {
 
 ##' Export networks as a CSV table.
 ##'
-##' This function takes the output of {\link{screen_cv.glasso} or 
-##' {\link{mixglasso} and exports it as a text table in CSV format, where each
+##' This function takes the output of \code{\link{het_cv_glasso}} or 
+##' \code{\link{mixglasso}} and exports it as a text table in CSV format, where each
 ##' entry in the table records an edge in one group and its partial correlation.
 ##' 
 ##' @param net.clustering A network clustering object as returned by 
-##' {\link{screen_cv.glasso} or {\link{mixglasso}.
+##' \code{\link{screen_cv.glasso}} or \code{\link{mixglasso}}.
 ##' @param file Filename to save the network table under.
 ##' @param node.names Names for the nodes in the network. If NULL, names from 
 ##' net.clustering will be used.
@@ -80,4 +80,39 @@ export_network <- function(net.clustering, file='network_table.csv',
 	}
 	
 	write.csv(edge.table, file=file, ...)
+}
+
+##' Summary function for object of class 'diffnet'
+##'
+##' 
+##' @title Summary function for object of class 'diffnet'
+##' @param x object of class 'diffnet'
+##' @return aggregated p-values
+##' @author nicolas
+summary.diffnet <- function(x){
+	out <- data.frame(medagg.pval=x$medagg.pval,meinshagg.pval=x$meinshagg.pval)
+	rownames(out) <- 'aggregated p-values'
+	return(out)
+	print(out)
+}
+
+##' Summary function for object of class 'diffregr'
+##'
+##' 
+##' @title Summary function for object of class 'diffregr'
+##' @param x object of class 'diffregr'
+##' @return aggregated p-values
+##' @author nicolas
+summary.diffregr <- function(x){
+	out <- data.frame(medagg.pval=x$medagg.pval,meinshagg.pval=x$meinshagg.pval)
+	rownames(out) <- 'aggregated p-values'
+	return(out)
+	print(out)
+}
+
+summary.ggmgsa <- function(x){
+	out <- data.frame(medagg.pval=x$medagg.pval,meinshagg.pval=x$meinshagg.pval)
+	rownames(out) <- x$gs.names
+	return(out)
+	print(out)
 }

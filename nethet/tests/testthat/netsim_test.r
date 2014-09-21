@@ -8,22 +8,22 @@ Sigma = array(diag(p), c(p, p, n.comps))
 mix.prob = rep(0.25, n.comps)
 
 test_that("No errors when using one Mu.",
-          expect_true({simMIX(100, n.comps, mix.prob, Mu[,1], Sigma); TRUE}))
+          expect_true({sim_mix(100, n.comps, mix.prob, Mu[,1], Sigma); TRUE}))
 
 test_that("No errors when using one Sigma.",
-          expect_true({simMIX(100, n.comps, mix.prob, Mu, Sigma[,,1]); TRUE}))
+          expect_true({sim_mix(100, n.comps, mix.prob, Mu, Sigma[,,1]); TRUE}))
 
 test_that("Errors when using wrong number of Sigma or Mu.", {
-           expect_error(simMIX(100, n.comps, mix.prob, Mu, Sigma[,,1:3]))
-           expect_error(simMIX(100, n.comps, mix.prob, Mu[,1:3], Sigma))}) 
+           expect_error(sim_mix(100, n.comps, mix.prob, Mu, Sigma[,,1:3]))
+           expect_error(sim_mix(100, n.comps, mix.prob, Mu[,1:3], Sigma))}) 
 
 test_that("Errors with misspecified mix.prob", {
-          expect_error(simMIX(100, n.comps, rep(0.25, 3), Mu, Sigma))
-          expect_error(simMIX(100, n.comps, c(mix.prob[1:3], 1.25) , Mu, Sigma))
-          expect_error(simMIX(100, n.comps, c(mix.prob[1:3], -0.25) , Mu, Sigma))
-          expect_error(simMIX(100, n.comps, c(mix.prob[1:3], 0.26) , Mu, Sigma))})
+          expect_error(sim_mix(100, n.comps, rep(0.25, 3), Mu, Sigma))
+          expect_error(sim_mix(100, n.comps, c(mix.prob[1:3], 1.25) , Mu, Sigma))
+          expect_error(sim_mix(100, n.comps, c(mix.prob[1:3], -0.25) , Mu, Sigma))
+          expect_error(sim_mix(100, n.comps, c(mix.prob[1:3], 0.26) , Mu, Sigma))})
 
-test.data = simMIX(1e4, n.comps, mix.prob, Mu, Sigma)
+test.data = sim_mix(1e4, n.comps, mix.prob, Mu, Sigma)
 emp.mean = sapply(1:4, function(x) colMeans(test.data$X[test.data$S==x,]))
 emp.cov = sapply(1:4, function(x) var(test.data$X[test.data$S==x,]), simplify='array')
 
@@ -37,12 +37,12 @@ test_that("Correct mixture components",
           expect_less_than(sum(abs(emp.mix-mix.prob)), 0.1))
 
 test_that("t-distribution throws no error",
-          expect_true({simMIX(100, n.comps, mix.prob, Mu[,1], Sigma, 
+          expect_true({sim_mix(100, n.comps, mix.prob, Mu[,1], Sigma, 
                                       dist='t', df=2);TRUE}))
 
 context('Simulating means, covariances, and simulating data from Gaussian mixture model')
 
-test.covariance = generateInvCov(10, 0.8)
+test.covariance = generate_inv_cov(10, 0.8)
 
 test_that("Inverting inverse covariance",
           expect_true({solve(test.covariance); TRUE}))

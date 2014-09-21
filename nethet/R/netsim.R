@@ -20,7 +20,7 @@ library(mvtnorm)
 ##' \item{X}{observed data matrix}
 ##' @author n.stadler
 ##' @export
-simMIX <- function(n,n.comp,mix.prob,Mu,Sig, dist='norm', df=2){
+sim_mix <- function(n,n.comp,mix.prob,Mu,Sig, dist='norm', df=2){
 	
   # Only one Mu specified
   if(is.vector(Mu) || dim(Mu)[2] == 1) 
@@ -66,12 +66,12 @@ simMIX <- function(n,n.comp,mix.prob,Mu,Sig, dist='norm', df=2){
 ##' non-zero off-diagonal entries, where the non-zero entries are sampled from a 
 ##' beta distribution.
 ##' 
-##' @title generateInvCov
+##' @title generate_inv_cov
 ##' @param p Dimensionality of the matrix.
 ##' @param sparsity Determined the proportion of non-zero off-diagonal entries.
 ##' @return A p by p positive definite inverse covariance matrix.
 ##' @export
-generateInvCov <- function(p=162, sparsity=0.7) {
+generate_inv_cov <- function(p=162, sparsity=0.7) {
 	num.edges = p*(p-1)/2
 	
 	edge.prop = 1 - sparsity
@@ -114,7 +114,7 @@ getinvcov<- function(p,s, a.diff=5,b.diff=5,magn.diag=0,emin=0.1){
 ##' This function generates n.comp mean vectors from a standard Gaussian and
 ##' n.comp covariance matrices, with at most (1-sparsity)*p(p-1)/2
 ##' non-zero off-diagonal entries, where the non-zero entries are sampled from a 
-##' beta distribution. Then it uses {\link{simMIX}} to simulate from a 
+##' beta distribution. Then it uses \code{\link{sim_mix}} to simulate from a 
 ##' mixture model with these means and covariance matrices.
 ##' 
 ##' Means Mu and covariance matrices Sig can also be supplied by the user.
@@ -128,7 +128,7 @@ getinvcov<- function(p,s, a.diff=5,b.diff=5,magn.diag=0,emin=0.1){
 ##' @param Mu Means for the mixture components, a p by n.comp matrix. If NULL, 
 ##' sampled from a standard Gaussian.
 ##' @param Sig Covariances for the mixture components, a p by p by n.comp array. If NULL,
-##' generated using {\link{generateInvCov}}.
+##' generated using {\link{generate_inv_cov}}.
 ##' @return A list with components:
 ##' \item{Mu} Means of the mixture components.
 ##' \item{Sig} Covariances of the mixture components.
@@ -145,11 +145,11 @@ sim_mix_networks <- function(n, p, n.comp, sparsity=0.7,
 	
 	if(is.null(Sig)) {
 	  Sig = sapply(1:n.comp, 
-												function(n.comp) solve(generateInvCov(p, sparsity)), 
+												function(n.comp) solve(generate_inv_cov(p, sparsity)), 
 												simplify='array')
 	}
 	
-	data = simMIX(n, n.comp, mix.prob, Mu, Sig, ...)
+	data = sim_mix(n, n.comp, mix.prob, Mu, Sig, ...)
 	
 	return(list(Mu=Mu, Sig=Sig, data=data$X, comp=data$S))
 }
@@ -170,7 +170,7 @@ sim_mix_networks <- function(n, p, n.comp, sparsity=0.7,
 ##' @param emin default=0.1 (see ?huge.generator)
 ##' @param verbose If verbose=FALSE then tracing output is disabled.
 ##' @export
-##' @return 
+##' @return Two sparse inverse covariance matrices with overlap
 generate.2networks<- function(p,graph='random',
 															n.nz=rep(p,2),n.nz.common=p,
 															n.hub=2,n.hub.diff=1,
