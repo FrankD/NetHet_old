@@ -1286,9 +1286,9 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
 ##' Remark:
 ##' 
 ##' * If include.mean=FALSE, then x1 and x2 have mean zero and DiffNet tests
-##'   the hypothesis H0: \Omega_1=\Omega_2. You might need to center x1 and x2.
+##'   the hypothesis H0: Omega_1=Omega_2. You might need to center x1 and x2.
 ##' * If include.mean=TRUE, then DiffNet tests the hypothesis
-##'   H0: \mu_1=\mu_2 & \Omega_1=\Omega_2
+##'   H0: mu_1=mu_2 & Omega_1=Omega_2
 ##' * However, we recommend to set include.mean=FALSE and to test equality of the means
 ##'   separately. 
 ##' * You might also want to scale x1 and x2, if you are only interested in 
@@ -1311,7 +1311,7 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
 ##'                         default and (currently) the only available option.
 ##' @param include.mean Should sample specific means be included in hypothesis?
 ##'                     Use include.mean=FALSE (default and recommended) which assumes mu1=mu2=0
-##'                     and tests the hypothesis H0: \Omega_1=\Omega_2.
+##'                     and tests the hypothesis H0: Omega_1=Omega_2.
 ##' @param method.compquadform Method to compute distribution function of weighted-sum-of-chi2s
 ##'                            (default='imhof').
 ##' @param acc See ?davies (default 1e-04).
@@ -1427,9 +1427,9 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
 ##' Remark:
 ##' 
 ##' * If include.mean=FALSE, then x1 and x2 have mean zero and DiffNet tests
-##'   the hypothesis H0: \Omega_1=\Omega_2. You might need to center x1 and x2.
+##'   the hypothesis H0: Omega_1=Omega_2. You might need to center x1 and x2.
 ##' * If include.mean=TRUE, then DiffNet tests the hypothesis
-##'   H0: \mu_1=\mu_2 & \Omega_1=\Omega_2
+##'   H0: mu_1=mu_2 & Omega_1=Omega_2
 ##' * However, we recommend to set include.mean=FALSE and to test equality of the means
 ##'   separately. 
 ##' * You might also want to scale x1 and x2, if you are only interested in 
@@ -1447,7 +1447,7 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
 ##'                    'screen_cv.glasso', 'screen_shrink' (not recommended), 'screen_mb'.
 ##' @param include.mean Should sample specific means be included in hypothesis?
 ##'                     Use include.mean=FALSE (default and recommended) which assumes mu1=mu2=0
-##'                     and tests the hypothesis H0: \Omega_1=\Omega_2.
+##'                     and tests the hypothesis H0: Omega_1=Omega_2.
 ##' @param gamma.min Tuning parameter in p-value aggregation of Meinshausen et al (2009). (Default=0.05).
 ##' @param compute.evals Method to estimate the weights in the weighted-sum-of-chi2s distribution.
 ##'                      The default and (currently) the only available option 

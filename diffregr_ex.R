@@ -48,5 +48,4 @@ fit.alt.perm <- diffregr_multisplit(y1,y2,x1,x2,b.splits=10,n.perm=100)
 plot(fit.alt.perm)
 summary(fit.alt.perm)
 
-##Exit R
-q('no')
+
