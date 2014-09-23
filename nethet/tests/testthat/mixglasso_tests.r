@@ -6,14 +6,14 @@ p = 5
 Mu = matrix(rep(0, p), p, n.comps)
 Sigma = array(diag(p), c(p, p, n.comps))
 
-test.data = simMIX(1000, n.comps, rep(0.25, n.comps), Mu, Sigma)
+test.data = sim_mix(1000, n.comps, rep(0.25, n.comps), Mu, Sigma)
 
-one.group.result = het.cv.glasso(test.data$X[test.data$S==1,])
+one.group.result = het_cv_glasso(test.data$X[test.data$S==1,])
 
 test_that("No errors when running with one group.",
           expect_true(!is.null(one.group.result)))
 
-full.result = het.cv.glasso(test.data$X, test.data$S)
+full.result = het_cv_glasso(test.data$X, test.data$S)
  
 test_that("Correct means", 
            expect_less_than(sum(abs(full.result$Mu-Mu)), 0.1*p*n.comps))

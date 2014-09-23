@@ -93,7 +93,6 @@ summary.diffnet <- function(x){
 	out <- data.frame(medagg.pval=x$medagg.pval,meinshagg.pval=x$meinshagg.pval)
 	rownames(out) <- 'aggregated p-values'
 	return(out)
-	print(out)
 }
 
 ##' Summary function for object of class 'diffregr'
@@ -107,12 +106,47 @@ summary.diffregr <- function(x){
 	out <- data.frame(medagg.pval=x$medagg.pval,meinshagg.pval=x$meinshagg.pval)
 	rownames(out) <- 'aggregated p-values'
 	return(out)
-	print(out)
 }
 
 summary.ggmgsa <- function(x){
 	out <- data.frame(medagg.pval=x$medagg.pval,meinshagg.pval=x$meinshagg.pval)
 	rownames(out) <- x$gs.names
 	return(out)
-	print(out)
+}
+
+##' Summary function for object of class 'nethetclustering'
+##'
+##' 
+##' @title Summary function for object of class 'nethetclustering'
+##' @param x object of class 'nethetclustering'
+##' @return Network statistics (a 'nethetsummary' object)
+##' @author frankd
+##' 
+summary.nethetclustering <- function(x) {
+	
+	out = list(mix.prob=x$mix.prob, p=dim(x$Mu)[1], n.comp=dim(x$Mu)[2],
+			 loglik=x$loglik, bic=x$bic, mmdl=x$mmdl, compsize=x$compsize)
+	
+	class(out) = 'nethetsummary'
+	return(out)
+}
+
+##' Print function for object of class 'nethetsummary'
+##'
+##' 
+##' @title Print function for object of class 'nethetsummmary'
+##' @param x object of class 'nethetsummary'
+##' @return NULL
+##' @author frankd
+##' 
+print.nethetsummary <- function(x) {
+	
+	cat('Heterogeneous network mixture\n',
+			'Number of nodes:', x$p, '\n',
+			'Number of components:', x$n.comp, '\n',
+			'Log Likelihood:', x$loglik, '\n',
+			'BIC Score:', x$bic, 'MMDL Score:', x$mmdl, '\n',
+		  'Mixture.probabilities:\n', x$mix.prob, '\n',
+			'Component size:\n', x$compsize, '\n')
+	
 }
