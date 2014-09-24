@@ -21,10 +21,12 @@ Imports:
     limma,
     multtest,
     ICSNP,
-    glmnet
+    glmnet,
+    network,
+    ggplot2
 Suggests:
-    ggplot2,
     knitr,
-    xtable
+    xtable,
+    BiocStyle
 VignetteBuilder: knitr
 License: GPL-2

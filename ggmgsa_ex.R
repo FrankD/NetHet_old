@@ -2,9 +2,6 @@
 ##This example illustrates the use of GGMGSA         ##
 #######################################################
 
-library(devtools)
-load_all('nethet')
-rm(list=ls())
 
 ##genereta data
 set.seed(1)
@@ -13,9 +10,10 @@ n <- 50
 hub.net <- generate.2networks(p,graph='hub',n.hub=5,n.hub.diff=2)#generate hub networks
 invcov1 <- hub.net[[1]]
 invcov2 <- hub.net[[2]]
-plot.2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)
+plot_2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)
 
 ##generate data
+library('mvtnorm')
 x1 <- rmvnorm(n,mean = rep(0,p), sigma = cov2cor(solve(invcov1)))
 x2 <- rmvnorm(n,mean = rep(0,p), sigma = cov2cor(solve(invcov2)))
 

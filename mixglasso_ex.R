@@ -1,12 +1,8 @@
 
-library('devtools')
-load_all('nethet/')
 
 ###########################################
 ##This an example of how to use MixGLasso##
 ###########################################
-
-rm(list=ls())
 
 ##generate data
 set.seed(1)
@@ -26,19 +22,20 @@ sim <- sim_mix_networks(n, p, n.comp, Mu=Mu)
 
 ##run mixglasso
 set.seed(1)
-fit1 <-  mixglasso(sim$data,n.comp=1:6,save.allfits=FALSE,show.trace=TRUE)
+fit1 <-  mixglasso(sim$data,n.comp=1:6)
 fit1$bic
 set.seed(1)
-fit2 <-  mixglasso(sim$data,n.comp=6,save.allfits=FALSE,show.trace=TRUE)
+fit2 <-  mixglasso(sim$data,n.comp=6)
 fit2$bic
 set.seed(1)
-fit3 <-  mixglasso(sim$data,n.comp=1:6,lambda=0,save.allfits=FALSE,show.trace=TRUE)
+fit3 <-  mixglasso(sim$data,n.comp=1:6,lambda=0)
 set.seed(1)
-fit4 <-  mixglasso(sim$data,n.comp=1:6,lambda=Inf,save.allfits=FALSE,show.trace=TRUE)
+fit4 <-  mixglasso(sim$data,n.comp=1:6,lambda=Inf)
 #set.seed(1)
 #fit5 <-  bwprun_mixglasso(dat$X,n.comp=1,n.comp.max=6,selection.crit='bic')
 
 ##compare bic
+library('ggplot2')
 plotting.frame <- data.frame(BIC= c(fit1$bic, fit3$bic, fit4$bic), 
 														 Num.Comps=rep(1:6, 3), Lambda=rep( 
 														 	                        c('Default', 

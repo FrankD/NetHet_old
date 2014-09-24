@@ -11,7 +11,7 @@ library(huge)
 #' matrices) of the variables in the dataset for each pre-specified group of 
 #' samples.
 #'
-#' This function uses \code{\link{screen_cv.lasso}} to run glasso with 
+#' This function runs the graphical lasso with 
 #' cross-validation to determine the best parameter lambda for each group of 
 #' samples. Note that this function defaults to using package huge (rather than
 #' package glasso) unless otherwise specified, as it tends to be more 
@@ -29,7 +29,7 @@ library(huge)
 #' @param normalise If TRUE, normalise the columns of the data matrix before 
 #' running glasso.
 #' @param verbose If TRUE, output progress.
-#' @param ... Further parameters to be passed to code{\link{screen_cv.lasso}}.
+#' @param ... Further parameters to be passed to \code{screen_cv.lasso}.
 #' @export
 #' @return Returns a list with named elements 'Sig', 'SigInv', 'Mu', 'Sigma.diag', 
 #' 'group.names' and 'var.names. 

@@ -4,5 +4,7 @@
 *.Rproj
 *.log
 *.pdf
-man/
 *.tar.gz
+nethet/man/
+*.tex
+*.out
