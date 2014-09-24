@@ -1,11 +1,23 @@
 # Code for plotting networks
-require(ggplot2)
-require(network)
+library(ggplot2)
+library(network)
+library(mclust)
+library(mvtnorm)
+
+
+# Suppress check warning
+if(getRversion() >= '2.15.1')  
+	utils::globalVariables(c('P.Corr', 'Edge', 'Mean', 'Type', 'Node.1', 
+													 'Node.2', 'Group', 'Edge.Name', 'Corr'))
+
 
 #' Build up dataframe for plotting dot plot with ggplot2
 #' 
-#'
 #' Internal function
+#' 
+#' @param net.clustering Clustering
+#' @param cluster.names Cluster names
+#' @param node.names Node names
 #' 
 buildDotPlotDataFrame <- function(net.clustering, cluster.names, node.names) {
 	results.frame = data.frame()
@@ -71,6 +83,7 @@ buildDotPlotDataFrame <- function(net.clustering, cluster.names, node.names) {
 #' @param dot.size.range Graphical parameter for scaling the size of the circles (dots)
 #' representing an edge in each cluster.
 #' @export
+#' @import ggplot2
 #' @return Returns a ggplot2 object. If display=TRUE, additionally displays the 
 #' plot.
 dot_plot <- function(net.clustering, p.corrs.thresh=0.25, hard.limit=50,
@@ -114,7 +127,7 @@ dot_plot <- function(net.clustering, p.corrs.thresh=0.25, hard.limit=50,
 	
     # Ensure right order
 	  results.frame.reduced$Edge = factor(results.frame.reduced$Edge, levels=interesting.edges$Edge)
-
+  	
 	  g <-  ggplot(results.frame.reduced, aes(x=P.Corr, y=Edge, size=Mean, colour=Type)) +
 		  geom_point() +
   		scale_size(range=dot.size.range) +
@@ -144,7 +157,7 @@ dot_plot <- function(net.clustering, p.corrs.thresh=0.25, hard.limit=50,
 #' \code{\link{het_cv_glasso}} or \code{\link{mixglasso}}.
 #' @param data Observed data for the nodes, a numObs by numNodes matrix. Note 
 #' that nodes need to be in the same ordering as in node.names.
-#' @param nodes.pairs A matrix of size numPairs by 2, where each row contains a 
+#' @param node.pairs A matrix of size numPairs by 2, where each row contains a 
 #' pair of nodes to display. If node.names is specified, names in node.pairs
 #' must correspond to elements of node.names.
 #' @param display If TRUE, print the plot to the current output device.
@@ -153,6 +166,7 @@ dot_plot <- function(net.clustering, p.corrs.thresh=0.25, hard.limit=50,
 #' @param group.names Names for the clusters or groups. If NULL, names from 
 #' net.clustering will be used (by default these are integets 1:numClusters).
 #' @export
+#' @import ggplot2
 #' @return Returns a ggplot2 object. If display=TRUE, additionally displays the 
 #' plot.
 #' 
@@ -224,7 +238,7 @@ scatter_plot <- function(net.clustering, data, node.pairs, display=TRUE,
 #' \code{\link{mixglasso}} and creates a network plot using the network library.
 #' 
 #'
-#' @param net.clustering A network clustering object as returned by 
+#' @param x A network clustering object as returned by 
 #' \code{\link{screen_cv.glasso}} or \code{\link{mixglasso}}.
 #' @param node.names Names for the nodes in the network. If NULL, names from 
 #' net.clustering will be used.
@@ -235,7 +249,7 @@ scatter_plot <- function(net.clustering, data, node.pairs, display=TRUE,
 #' @param print.pdf If TRUE, save the output as a PDF file.
 #' @param pdf.filename If \code{print.pdf} is TRUE, specifies the file name of
 #' the output PDF file.
-#' @export
+#' @param ... Further arguments
 #' @return Returns NULL and prints out the networks (or saves them to pdf if
 #' \code{print.pdf} is TRUE. The networks are displayed as a series of nComps+1
 #' plots, where in the first plot edge widths are shown according to 
@@ -243,13 +257,17 @@ scatter_plot <- function(net.clustering, data, node.pairs, display=TRUE,
 #' show the edges for each group. Positive partial correlation edges are shown in
 #' black, negative ones in blue. If an edge is below the threshold on the absolute
 #' partial correlation, it is displayed in gray or light blue respectively.
-#' 
-plot.nethetclustering <- function(net.clustering, 
+#' @method plot nethetclustering
+#' @export 
+#' @import network
+plot.nethetclustering <- function(x, 
 																	node.names=rownames(net.clustering$Mu),
 																	group.names=sort(unique(net.clustering$comp)),
 																	p.corrs.thresh=0.2, print.pdf=FALSE, 
-																	pdf.filename='networks'){
+																	pdf.filename='networks', ...){
   
+	net.clustering = x
+	
 	if(is.null(node.names)) node.names = 1:dim(net.clustering$Mu)[1]
 	
 	p.corrs = invcov2parcor_array(net.clustering$SigInv)
@@ -360,7 +378,8 @@ plot.nethetclustering <- function(net.clustering,
 ##' @param ... Other arguments (see plot.network).
 ##' @return Figure with two panels (for each network).
 ##' @author nicolas
-plot.2networks <- function(invcov1,invcov2,
+##' @export
+plot_2networks <- function(invcov1,invcov2,
 													 node.label=paste('X',1:nrow(invcov1),sep=''),
 													 main=c('',''),...){
 	par.orig <- par(no.readonly=TRUE)
@@ -405,9 +424,11 @@ plot.2networks <- function(invcov1,invcov2,
 ##' 
 ##' @title Plotting function for object of class 'diffnet' 
 ##' @param x object of class 'diffnet'
+##' @param ... Further arguments.
 ##' @return Histogram over multi-split p-values.
 ##' @author nicolas
-##' @export
+##' @method plot diffnet
+##' @export 
 plot.diffnet <- function(x,...){
 	#if(is.null(x$medwi)){
 	hh <- hist(x$ms.pval,
@@ -432,8 +453,10 @@ plot.diffnet <- function(x,...){
 ##' 
 ##' @title Plotting function for object of class 'diffregr' 
 ##' @param x object of class 'diffregr'
+##' @param ... Further arguments.
 ##' @return Histogram over multi-split p-values.
 ##' @author nicolas
+##' @method plot diffregr
 ##' @export
 plot.diffregr <- function(x,...){
 	hh <- hist(x$ms.pval,
@@ -444,6 +467,16 @@ plot.diffregr <- function(x,...){
 	
 }
 
+##' Plotting function for object of class 'ggmgsa' 
+##'
+##' 
+##' @title Plotting function for object of class 'ggmgmsa' 
+##' @param x object of class 'ggmgsa'
+##' @param ... Further arguments.
+##' @return Boxplot of single-split p-values.
+##' @author nicolas
+##' @method plot ggmgsa
+##' @export 
 plot.ggmgsa <- function(x,...){
 	boxplot(t(x$pval),names=x$gs.names,xlab='gene-sets',ylab='single-split p-values (uncorrected)',...)
 }

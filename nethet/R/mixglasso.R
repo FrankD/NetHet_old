@@ -702,7 +702,7 @@ mixglasso <- function(x,n.comp,
                           pen='glasso.parcor',
                           init='kmeans.hc',my.cl=NULL,modelname.hc="VVV",nstart.kmeans=1,iter.max.kmeans=10,
                           term=10^{-3},min.compsize=5,
-                          save.allfits=FALSE,filename=NULL, mc.flag=FALSE,
+                          save.allfits=FALSE,filename='mixglasso_fit.rda', mc.flag=FALSE,
                           mc.set.seed=FALSE, mc.preschedule = FALSE, 
 											    mc.cores=getOption("mc.cores", 2L), ...){
                   
@@ -713,9 +713,6 @@ mixglasso <- function(x,n.comp,
                                           init=init,my.cl=my.cl,modelname.hc=modelname.hc,
                                           nstart.kmeans=nstart.kmeans,iter.max.kmeans=iter.max.kmeans,
                                           term=term,min.compsize=min.compsize,...)
-                    if (save.allfits){
-                      save(fit.mixgl,file=paste(filename,'_','fit.mixgl_k',n.comp[k],'.rda',sep=''))
-                    }
                     return(fit.mixgl)},
                   mc.set.seed=mc.set.seed, mc.preschedule = mc.preschedule, mc.cores=mc.cores)
 	} else {
@@ -725,12 +722,11 @@ mixglasso <- function(x,n.comp,
 																												init=init,my.cl=my.cl,modelname.hc=modelname.hc,
 																												nstart.kmeans=nstart.kmeans,iter.max.kmeans=iter.max.kmeans,
 																												term=term,min.compsize=min.compsize,...)
-											if (save.allfits){
-												save(fit.mixgl,file=paste(filename,'_','fit.mixgl_k',n.comp[k],'.rda',sep=''))
-											}
 											return(fit.mixgl)})
 	}
 
+	if(save.allfits) save(res,file=filename)
+	
   res.mmdl <- sapply(res,function(x){x[['mmdl']]})
   res.bic <- sapply(res,function(x){x[['bic']]})
   res.comp <- sapply(res,function(x){x[['comp']]})

@@ -20,6 +20,7 @@ library(mvtnorm)
 ##' \item{X}{observed data matrix}
 ##' @author n.stadler
 ##' @export
+##' @import mvtnorm
 sim_mix <- function(n,n.comp,mix.prob,Mu,Sig, dist='norm', df=2){
 	
   # Only one Mu specified
@@ -82,6 +83,12 @@ generate_inv_cov <- function(p=162, sparsity=0.7) {
 
 ##' Generate an inverse covariance matrix with a given sparsity and dimensionality
 ##'
+##' @param p Dimensionality
+##' @param s Sparsity
+##' @param a.diff binomial parameter
+##' @param b.diff binomial parameter
+##' @param magn.diag Magnitude
+##' @param emin e min
 ##' Internal function
 getinvcov<- function(p,s, a.diff=5,b.diff=5,magn.diag=0,emin=0.1){
 	#####8!!! act1 are the indices of the upper-diagonal non-zero entries of a pxp matrix 
@@ -128,12 +135,13 @@ getinvcov<- function(p,s, a.diff=5,b.diff=5,magn.diag=0,emin=0.1){
 ##' @param Mu Means for the mixture components, a p by n.comp matrix. If NULL, 
 ##' sampled from a standard Gaussian.
 ##' @param Sig Covariances for the mixture components, a p by p by n.comp array. If NULL,
-##' generated using {\link{generate_inv_cov}}.
+##' generated using \code{\link{generate_inv_cov}}.
+##' @param ... Further arguments passed to \code{\link{sim_mix}}.
 ##' @return A list with components:
-##' \item{Mu} Means of the mixture components.
-##' \item{Sig} Covariances of the mixture components.
-##' \item{data} Simulated data, a n by p matrix.
-##' \item{S} Component assignments, a vector of length n.
+##' \code{Mu} Means of the mixture components.
+##' \code{Sig} Covariances of the mixture components.
+##' \code{data} Simulated data, a n by p matrix.
+##' \code{S} Component assignments, a vector of length n.
 ##' @export
 sim_mix_networks <- function(n, p, n.comp, sparsity=0.7, 
 														 mix.prob=rep(1/n.comp, n.comp),
@@ -160,8 +168,8 @@ sim_mix_networks <- function(n, p, n.comp, sparsity=0.7,
 ##' @title Generate sparse invcov with overlap
 ##' @param p number of nodes
 ##' @param graph 'random' or 'hub'
-##' @param K K=1 (null hypothesis) or K=2 (alternative hypothesis)
 ##' @param n.hub number of hubs (only for graph='hub')
+##' @param n.hub.diff number of different hubs
 ##' @param n.nz number of edges per graph (only for graph='random')
 ##' @param n.nz.common number of edges incommon between graphs (only for graph='random')
 ##' @param magn.nz.diff default=0.9

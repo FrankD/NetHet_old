@@ -1,13 +1,14 @@
 \documentclass{article}
 
 %\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{nethet}
 
 <<style-knitr, eval=TRUE, echo=FALSE, results="asis">>=
 BiocStyle::latex()
 @
 
 \bioctitle[Nethet]{Heterogeneous Clustering and Network Inference with the MixGLasso}
-\author{Iman Author\footnote{iman@author.org}}
+\author{Nicolas St\"{a}dler\footnote{n.stadler@gmail.com}, Frank Dondelinger\footnote{fdondelinger.work@gmail.com}}
 
 \begin{document}
 
@@ -16,13 +17,7 @@ BiocStyle::latex()
 
 <<echo=FALSE, include=FALSE, warning=FALSE>>=
 # Load package
-#library(nethet)
-
-library(ggplot2)
-library(xtable)
-library(devtools)
-
-load_all('../../nethet')
+library(nethet)
 
 set.seed(1)
 @
@@ -41,19 +36,19 @@ achieved via a relay of kinases and other proteins (the signalling pathway),
 which can be thought of as a network.
 
 Numerous software packages exist for reconstructing networks from observational
-data [some citations?]. However, most of these packages assume that there is a 
-single underlying network. Package \texttt{nethet} was designed with the intent
-of handling heterogeneous datasets arising from a collection of (possibly 
-related) networks. 
+data (e.g. \cite{ARACNE}, \cite{bnlearn}, \cite{RTN}, \cite{EDISON}). 
+However, most of these packages assume that there is a single underlying network. 
+Package \texttt{nethet} was designed with the intent of handling heterogeneous 
+datasets arising from a collection of (possibly related) networks. 
 
-A simple example would be protein measurements of breast cancer tumor cells. It
+Take for example protein measurements of breast cancer tumor cells. It
 is known that there exist several subtypes of breast cancer with different 
-molecular profiles. We might be interested in whether the signalling pathways
-(networks) reconstructed from two subtypes are statistically different. If 
-they are not, then we might be interested in identifying new subtypes that 
-present different molecular profiles, and reconstructing the networks for each
-identified subtype. The \texttt{nethet} package contains functionalities to tackle
-all of these tasks.
+molecular profiles \cite{tcga_brca}. We might be interested in whether 
+the signalling pathways (networks) reconstructed from two subtypes are 
+statistically different. If they are not, then we might want to identify new 
+subtypes that present different molecular profiles, and reconstruct the 
+networks for each identified subtype. The \texttt{nethet} package contains 
+functionalities to tackle all of these tasks.
 
 \section{Functionality}
 
@@ -69,8 +64,8 @@ The package consists of two main parts:
 
 The underlying statistical model for networks in this package is the 
 l1-penalised partial correlation matrix. Information about the model and theory
-behind it can be found in \cite{staedler}. This vignette will mainly deal 
-with how to use the package in practice.
+behind it can be found in \cite{staedler_mixglasso} and \cite{staedler_diffnet}. 
+This vignette will mainly deal with how to use the package in practice.
 
 In addition to the two main functionalities of the package, we include functions 
 for simulating data from a pre-defined heterogeneous network model, and for 
@@ -112,6 +107,7 @@ print(table(sim.result$comp)/n)
 
 component = as.factor(sim.result$comp)
 
+library('ggplot2')
 qplot(x=sim.result$data[,1], y=sim.result$data[,2], 
       colour=component) + 
   xlab('Dimension 1') +
@@ -155,7 +151,7 @@ gen.net <- generate.2networks(p,graph='random',n.nz=rep(p,2),
 invcov1 <- gen.net[[1]]
 invcov2 <- gen.net[[2]]
 
-plot.2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)
+plot_2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)
 @
 
 \section{Network estimation with known group labels}
@@ -227,7 +223,7 @@ different. We will use the inverse covariance matrices generated in Section
 #                               n.nz.common=ceiling(p*0.8))
 # invcov1 <- gen.net[[1]]
 # invcov2 <- gen.net[[2]]
-# plot.2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)
+# plot_2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)
 
 ## Get corresponding correlation matrices
 cor1 <- cov2cor(solve(invcov1))
@@ -235,6 +231,7 @@ cor2 <- cov2cor(solve(invcov2))
 
 ## Generate data under null-hypothesis (both datasets have the same underlying
 ## network)
+library(mvtnorm) # To generate multivariate Gaussian random samples
 x1 <- rmvnorm(n,mean = rep(0,dim(cor1)[1]), sigma = cor1)
 x2 <- rmvnorm(n,mean = rep(0,dim(cor1)[1]), sigma = cor1)
 
@@ -265,7 +262,7 @@ Next, we present the function \texttt{ggmagsa\_multisplit}, which allows for
 network-based gene set analysis.
 
 <<echo=TRUE, include=TRUE, warning=TRUE, results="asis">>=
-##genereta data
+##generate data
 #set.seed(1)
 
 ## Generate new networks
@@ -274,9 +271,10 @@ n <- 50
 hub.net <- generate.2networks(p,graph='hub',n.hub=5,n.hub.diff=2)#generate hub networks
 invcov1 <- hub.net[[1]]
 invcov2 <- hub.net[[2]]
-plot.2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)
+plot_2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)
 
 ## Generate data
+library('mvtnorm')
 x1 <- rmvnorm(n,mean = rep(0,p), sigma = cov2cor(solve(invcov1)))
 x2 <- rmvnorm(n,mean = rep(0,p), sigma = cov2cor(solve(invcov2)))
 
@@ -392,6 +390,7 @@ mixglasso.result = mixglasso(sim.result$data, n.comp=3)
 
 # Calculate adjusted rand index to judge how accurate the clustering is
 # Values > 0.7 indicate good agreement.
+library(mclust)
 adj.rand = adjustedRandIndex(mixglasso.result$comp, sim.result$comp)
 cat('Adjusted Rand Index', round(adj.rand, digits=2), '\n')
 @
@@ -415,6 +414,8 @@ sim.grouping = c('A', 'B', 'C')[sim.result$comp]
 
 cross.table = crosstab(factor(mixglasso.result$comp), factor(sim.grouping))
 
+# Generate table
+library(xtable)
 latex.table = xtable(cross.table, caption=
 										 	paste('Cross-tabulation of mixglasso clusters (rows) with',
                     'true group assignments (columns).'),
@@ -444,6 +445,7 @@ BIC.vals = c(mixglasso.result$bic, mixglasso.result.0$bic,
 lambda.labels = rep(c('Default', 'Lambda = 0', 'Lambda = Inf'), each=6)
 
 # Plot to verify that minimum BIC value corresponds with true 
+library(ggplot2)
 plotting.frame <- data.frame(BIC=BIC.vals, Num.Comps=rep(1:6, 3), Lambda=lambda.labels)
 
 p <- ggplot(plotting.frame) + 
@@ -465,11 +467,12 @@ and results that have been obtained.
 
 The output of \texttt{het\_cv\_glmnet} and \texttt{mixglasso} can be plotted either
 as in network form or as individual edges in the networks. For the network plots,
-we use the \texttt{network} package \cite{network}. This is the default plotting
-when \texttt{plot} is invoked on an object of class \texttt{nethetclustering},
-and produces one global plot showing edges that occur in any group, as well as 
-one plot for each group. For this example we will use the networks and 
-clustering obtained using \texttt{mixglasso} in the previous section.
+we use the \texttt{network} package \cite{network_package}. This is the default 
+plotting when \texttt{plot} is invoked on an object of class 
+\texttt{nethetclustering}, and produces one global plot showing edges that 
+occur in any group, as well as one plot for each group. For this example we 
+will use the networks and clustering obtained using \texttt{mixglasso} in the 
+previous section.
 
 <<echo=TRUE, include=TRUE>>=
 
@@ -485,7 +488,7 @@ Usually we are only interested in specific edges, and perhaps we wish to compare
 them among groups. Function \texttt{dot\_plot} generates a plot with edges above
 a certain threshold along the y axis, and one circle for each group showing the
 smallest mean of the two nodes that make up the edge. We use the \texttt{ggplot2}
-package to make the plots \cite{ggplot2}.
+package to make the plots \cite{ggplot2_package}.
 
 <<echo=TRUE, include=TRUE>>=
 

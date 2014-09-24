@@ -2,10 +2,6 @@
 ##This example illustrates the use of Differential Regression##
 ###############################################################
 
-library(devtools)
-load_all('nethet')
-rm(list=ls())
-
 ##set seed
 set.seed(1)
 
