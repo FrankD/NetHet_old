@@ -86,6 +86,29 @@ buildDotPlotDataFrame <- function(net.clustering, cluster.names, node.names) {
 #' @import ggplot2
 #' @return Returns a ggplot2 object. If display=TRUE, additionally displays the 
 #' plot.
+#' @examples
+#' n = 500
+#' p = 10
+#' s = 0.9
+#' n.comp = 3
+#'
+#' # Create different mean vectors
+#' Mu = matrix(0,p,n.comp)
+#'
+#' # Define non-zero means in each group (non-overlapping)
+#' nonzero.mean = split(sample(1:p),rep(1:n.comp,length=p))
+#'
+#' # Set non-zero means to fixed value
+#' for(k in 1:n.comp){
+#' 	Mu[nonzero.mean[[k]],k] = -2/sqrt(ceiling(p/n.comp))
+#' }
+#'
+#' # Generate data
+#' sim.result = sim_mix_networks(n, p, n.comp, s, Mu=Mu)
+#' mixglasso.result = mixglasso(sim.result$data, n.comp=3)
+#' mixglasso.clustering = mixglasso.result$models[[mixglasso.result$bic.opt]]
+#' 
+#' dot_plot(mixglasso.clustering, p.corrs.thresh=0.5)
 dot_plot <- function(net.clustering, p.corrs.thresh=0.25, hard.limit=50,
 										display=TRUE, node.names=rownames(net.clustering$Mu),
 										group.names=sort(unique(net.clustering$comp)),
@@ -169,7 +192,34 @@ dot_plot <- function(net.clustering, p.corrs.thresh=0.25, hard.limit=50,
 #' @import ggplot2
 #' @return Returns a ggplot2 object. If display=TRUE, additionally displays the 
 #' plot.
+#' @examples
+#' n = 500
+#' p = 10
+#' s = 0.9
+#' n.comp = 3
+#'
+#' # Create different mean vectors
+#' Mu = matrix(0,p,n.comp)
+#'
+#' # Define non-zero means in each group (non-overlapping)
+#' nonzero.mean = split(sample(1:p),rep(1:n.comp,length=p))
+#'
+#' # Set non-zero means to fixed value
+#' for(k in 1:n.comp){
+#' 	Mu[nonzero.mean[[k]],k] = -2/sqrt(ceiling(p/n.comp))
+#' }
+#'
+#' # Generate data
+#' sim.result = sim_mix_networks(n, p, n.comp, s, Mu=Mu)
+#' mixglasso.result = mixglasso(sim.result$data, n.comp=3)
+#' mixglasso.clustering = mixglasso.result$models[[mixglasso.result$bic.opt]]
 #' 
+#' # Specify edges
+#' node.pairs = rbind(c(1,3), c(6,9),c(7,8))
+#' 
+#' # Create scatter plots of specified edges
+#' scatter_plot(mixglasso.clustering, data=sim.result$data,
+#'						 node.pairs=node.pairs)
 scatter_plot <- function(net.clustering, data, node.pairs, display=TRUE, 
 												node.names=rownames(net.clustering$Mu),
 												group.names=sort(unique(net.clustering$comp))) {
@@ -379,6 +429,19 @@ plot.nethetclustering <- function(x,
 ##' @return Figure with two panels (for each network).
 ##' @author nicolas
 ##' @export
+##' @examples
+##' n <- 70
+##' p <- 30
+##' 
+##' ## Specifiy sparse inverse covariance matrices,
+##' ## with number of edges in common equal to ~ 0.8*p
+##' gen.net <- generate_2networks(p,graph='random',n.nz=rep(p,2),
+##'                               n.nz.common=ceiling(p*0.8))
+##' 
+##' invcov1 <- gen.net[[1]]
+##' invcov2 <- gen.net[[2]]
+##' 
+##' plot_2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)
 plot_2networks <- function(invcov1,invcov2,
 													 node.label=paste('X',1:nrow(invcov1),sep=''),
 													 main=c('',''),...){

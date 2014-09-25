@@ -17,7 +17,6 @@ library(ICSNP)
 library(parallel)
 library(mvtnorm)
 
-
 ######################
 ##P-value adjustment##
 ######################

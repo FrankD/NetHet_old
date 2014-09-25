@@ -7,7 +7,7 @@
 set.seed(1)
 p <- 50#network with p nodes
 n <- 50
-hub.net <- generate.2networks(p,graph='hub',n.hub=5,n.hub.diff=2)#generate hub networks
+hub.net <- generate_2networks(p,graph='hub',n.hub=5,n.hub.diff=2)#generate hub networks
 invcov1 <- hub.net[[1]]
 invcov2 <- hub.net[[2]]
 plot_2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)

@@ -21,6 +21,15 @@ library(mvtnorm)
 ##' @author n.stadler
 ##' @export
 ##' @import mvtnorm
+##' @examples
+##' n.comp = 4
+##' p = 5 # dimensionality
+##' Mu = matrix(rep(0, p), p, n.comp)
+##' Sigma = array(diag(p), c(p, p, n.comp))
+##' mix.prob = rep(0.25, n.comp)
+##' 
+##' sim_mix(100, n.comp, mix.prob, Mu, Sigma)
+
 sim_mix <- function(n,n.comp,mix.prob,Mu,Sig, dist='norm', df=2){
 	
   # Only one Mu specified
@@ -72,6 +81,8 @@ sim_mix <- function(n,n.comp,mix.prob,Mu,Sig, dist='norm', df=2){
 ##' @param sparsity Determined the proportion of non-zero off-diagonal entries.
 ##' @return A p by p positive definite inverse covariance matrix.
 ##' @export
+##' @examples
+##' generate_inv_cov(p=162)
 generate_inv_cov <- function(p=162, sparsity=0.7) {
 	num.edges = p*(p-1)/2
 	
@@ -143,6 +154,9 @@ getinvcov<- function(p,s, a.diff=5,b.diff=5,magn.diag=0,emin=0.1){
 ##' \code{data} Simulated data, a n by p matrix.
 ##' \code{S} Component assignments, a vector of length n.
 ##' @export
+##' @examples
+##' # Generate dataset with 100 samples of dimensionality 30, and 4 components
+##' test.data = sim_mix_networks(n=100, p=30, n.comp=4)
 sim_mix_networks <- function(n, p, n.comp, sparsity=0.7, 
 														 mix.prob=rep(1/n.comp, n.comp),
 														 Mu=NULL, Sig=NULL, ...) {
@@ -179,7 +193,20 @@ sim_mix_networks <- function(n, p, n.comp, sparsity=0.7,
 ##' @param verbose If verbose=FALSE then tracing output is disabled.
 ##' @export
 ##' @return Two sparse inverse covariance matrices with overlap
-generate.2networks<- function(p,graph='random',
+##' @examples
+##' n <- 70
+##' p <- 30
+##' 
+##' ## Specifiy sparse inverse covariance matrices,
+##' ## with number of edges in common equal to ~ 0.8*p
+##' gen.net <- generate_2networks(p,graph='random',n.nz=rep(p,2),
+##'                               n.nz.common=ceiling(p*0.8))
+##' 
+##' invcov1 <- gen.net[[1]]
+##' invcov2 <- gen.net[[2]]
+##' 
+##' plot_2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)
+generate_2networks<- function(p,graph='random',
 															n.nz=rep(p,2),n.nz.common=p,
 															n.hub=2,n.hub.diff=1,
 															magn.nz.diff=0.8,

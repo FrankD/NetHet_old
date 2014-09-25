@@ -39,7 +39,18 @@ library(huge)
 #' Mu and Sigma.diag contain the mean and variance of the input data,
 #' and group.names and var.names contains the names for the groups and
 #' variables in the data (if specified as colnames of the input data matrix).
-#' 
+#' @examples
+#' n = 100
+#' p = 25
+#'
+#' # Generate networks with random means and covariances. 
+#' sim.result = sim_mix_networks(n, p, n.comp=3)
+#'
+#' test.data = sim.result$data
+#' test.labels = sim.result$comp
+#'
+#' # Reconstruct networks for each component
+#' networks = het_cv_glasso(data=test.data, grouping=test.labels) 
 het_cv_glasso <- function(data, grouping=rep(1, dim(data)[1]), mc.flag=FALSE,
                           use.package='huge', normalise=FALSE, verbose=FALSE, ...) {
   

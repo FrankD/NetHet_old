@@ -7,7 +7,9 @@ library(network)
 ##' @param invcov Inverse covariance matrix
 ##' @export
 ##' @return The partial correlation matrix.
-##' 
+##' @examples
+##' inv.cov = generate_inv_cov(p=25)
+##' p.corr = invcov2parcor(inv.cov)
 invcov2parcor <- function(invcov){
 	return(-invcov*tcrossprod(sqrt(1/diag(invcov))))
 }
@@ -20,6 +22,9 @@ invcov2parcor <- function(invcov){
 ##' @export
 ##' @return Array of partial correlation matrices of dimension numNodes by 
 ##' numNodes by numComps
+##' @examples
+##' invcov.array = sapply(1:5, function(x) generate_inv_cov(p=25), simplify='array')
+##' p.corr = invcov2parcor_array(invcov.array)
 invcov2parcor_array <- function(invcov.array) {
 	return(sapply(1:dim(invcov.array)[3], 
 								function(i) invcov2parcor(invcov.array[,,i]), 
@@ -47,6 +52,33 @@ invcov2parcor_array <- function(invcov.array) {
 ##' @return NULL
 ##' @author Frank Dondelinger
 ##' @export
+##' @examples
+##' n = 500
+##' p = 10
+##' s = 0.9
+##' n.comp = 3
+##'
+##' # Create different mean vectors
+##' Mu = matrix(0,p,n.comp)
+##'
+##' # Define non-zero means in each group (non-overlapping)
+##' nonzero.mean = split(sample(1:p),rep(1:n.comp,length=p))
+##'
+##' # Set non-zero means to fixed value
+##' for(k in 1:n.comp){
+##' 	Mu[nonzero.mean[[k]],k] = -2/sqrt(ceiling(p/n.comp))
+##' }
+##'
+##' # Generate data
+##' sim.result = sim_mix_networks(n, p, n.comp, s, Mu=Mu)
+##' mixglasso.result = mixglasso(sim.result$data, n.comp=3)
+##' mixglasso.clustering = mixglasso.result$models[[mixglasso.result$bic.opt]]
+##' 
+##' \dontrun{
+##' # Save network in CSV format suitable for Cytoscape import
+##' export_network(mixglasso.clustering, file='nethet_network.csv',
+##'							 p.corrs.thresh=0.25, quote=FALSE)
+##' }
 export_network <- function(net.clustering, file='network_table.csv',
 													 node.names=rownames(net.clustering$Mu),
 													 group.names=sort(unique(net.clustering$comp)),
