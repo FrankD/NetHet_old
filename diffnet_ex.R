@@ -8,8 +8,8 @@
 set.seed(1)
 
 ##sample size and number of nodes
-n <- 70
-p <- 30
+n <- 40
+p <- 10
 
 ##specifiy sparse inverse covariance matrices
 gen.net <- generate_2networks(p,graph='random',n.nz=rep(p,2),
@@ -22,28 +22,26 @@ plot_2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)
 cor1 <- cov2cor(solve(invcov1))
 cor2 <- cov2cor(solve(invcov2))
 
-##generate data under null-hypothesis
+##generate data under null hypothesis
 library('mvtnorm')
 x1 <- rmvnorm(n,mean = rep(0,p), sigma = cor1)
 x2 <- rmvnorm(n,mean = rep(0,p), sigma = cor1)
 
-##run diffnet (under null)
-dn.null <- diffnet_multisplit(x1,x2,b.splits=10,verbose=FALSE)
+##run diffnet
+dn.null <- diffnet_multisplit(x1,x2,b.splits=1,verbose=FALSE)
+dn.null$ss.pval#single-split p-value
 
-plot(dn.null)#histogram of multi-split p-values
-dn.null$medagg.pval#pvalue aggregated using median
-dn.null$meinshagg.pval#pvalue aggregated using approach of Meinshausen et al (2009)
-
-
-##generate data under alternative
+##generate data under alternative hypothesis
 x1 <- rmvnorm(n,mean = rep(0,p), sigma = cor1)
 x2 <- rmvnorm(n,mean = rep(0,p), sigma = cor2)
 
-##run diffnet (under alternative)
-dn.altn <- diffnet_multisplit(x1,x2,b.splits=10,verbose=FALSE)
+##run diffnet
+dn.altn <- diffnet_multisplit(x1,x2,b.splits=1,verbose=FALSE)
+dn.altn$ss.pval#single-split p-value
+dn.altn$medagg.pval#median aggregated p-value
 
-plot(dn.altn)#histogram of multi-split p-values
-dn.altn$medagg.pval#pvalue aggregated using median
-dn.altn$meinshagg.pval#pvalue aggregated using approach of Meinshausen et al (2009)
-
-
+##typically we would choose a larger number of splits
+# dn.altn <- diffnet_multisplit(x1,x2,b.splits=10,verbose=FALSE)
+# dn.altn$ms.pval#multi-split p-values
+# dn.altn$medagg.pval#median aggregated p-value
+# plot(dn.altn)#histogram of single-split p-values

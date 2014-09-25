@@ -258,6 +258,11 @@ cv.glasso <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se
 ##'          Mu mean of the input data.
 ##' @author n.stadler
 ##' @export
+##' @examples
+##' n=50
+##' p=5
+##' x=matrix(rnorm(n*p),n,p)
+##' wihat=screen_cv.glasso(x,folds=2)$wi
 screen_cv.glasso <- function(x,include.mean=FALSE,
                              folds=10,length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,
                              trunc.method='linear.growth',trunc.k=5,plot.it=FALSE,se=FALSE,use.package='huge',verbose=FALSE)
@@ -466,6 +471,11 @@ aic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package
 ##'          containing the truncated and untruncated inverse covariance matrix. 
 ##' @author n.stadler
 ##' @export
+##' @examples
+##' n=50
+##' p=5
+##' x=matrix(rnorm(n*p),n,p)
+##' wihat=screen_bic.glasso(x,length.lambda=5)$wi
 screen_bic.glasso <- function(x,include.mean=TRUE,
                               length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),penalize.diagonal=FALSE,
                               plot.it=FALSE,trunc.method='linear.growth',trunc.k=5,use.package='huge',verbose=FALSE){
@@ -507,6 +517,11 @@ screen_bic.glasso <- function(x,include.mean=TRUE,
 ##'          containing the truncated and untruncated inverse covariance matrix. 
 ##' @author n.stadler
 ##' @export
+##' @examples
+##' n=50
+##' p=5
+##' x=matrix(rnorm(n*p),n,p)
+##' wihat=screen_aic.glasso(x,length.lambda=5)$wi
 screen_aic.glasso <- function(x,include.mean=TRUE,length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),
                               penalize.diagonal=FALSE,plot.it=FALSE,
                               trunc.method='linear.growth',trunc.k=5,use.package='huge',verbose=FALSE){
@@ -559,6 +574,11 @@ screen_lasso <- function(x,include.mean=NULL,
 ##'          containing the truncated and untruncated inverse covariance matrix.
 ##' @author n.stadler
 ##' @export
+##' @examples
+##' n=50
+##' p=5
+##' x=matrix(rnorm(n*p),n,p)
+##' wihat=screen_shrink(x)$wi
 screen_shrink <- function(x,include.mean=NULL,
                           trunc.method='linear.growth',trunc.k=5){
   wi <- ggm.estimate.pcor(x)
@@ -592,6 +612,11 @@ screen_shrink <- function(x,include.mean=NULL,
 ##'          Mu mean of the input data.
 ##' @author n.stadler
 ##' @export
+##' @examples
+##' n=50
+##' p=5
+##' x=matrix(rnorm(n*p),n,p)
+##' wihat=screen_mb(x)$wi
 screen_mb <- function(x,include.mean=NULL,
                       folds=10,length.lambda=20,lambdamin.ratio=ifelse(ncol(x)>nrow(x),0.01,0.001),
                       penalize.diagonal=FALSE,trunc.method='linear.growth',trunc.k=5,
@@ -771,6 +796,10 @@ mle.ggm <- function(x,wi,algorithm='glasso_rho0',rho=NULL,include.mean){
 ##'         'twiceLR' is twice the log-likelihood-ratio statistic.
 ##' @author n.stadler
 ##' @export
+##' @examples
+##' x1=matrix(rnorm(100),50,2)
+##' x2=matrix(rnorm(100),50,2)
+##' logratio(x1,x2,rbind(x1,x2),diag(1,2),diag(1,2),diag(1,2),c(0,0),c(0,0),c(0,0))$twiceLR
 logratio <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu){
   twiceLR <- 2*(sum(dmvnorm(x1,mean=mu1,sigma=sig1,log=TRUE))+sum(dmvnorm(x2,mean=mu2,sigma=sig2,log=TRUE))-sum(dmvnorm(x,mean=mu,sigma=sig,log=TRUE)))
   list(twiceLR=twiceLR,sig1=sig1,sig2=sig2,sig=sig)
@@ -1331,6 +1360,7 @@ diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.
 ##' \item{mu}{mle (mean) obtained in cleaning-step}
 ##' @author n.stadler
 ##' @export
+##' @example ../diffnet_ss_ex.R
 diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glasso',
                                compute.evals='est2.my.ev3',algorithm.mleggm='glasso_rho0',include.mean=FALSE,
                                method.compquadform='imhof',acc=1e-04,epsabs=1e-10,epsrel=1e-10,

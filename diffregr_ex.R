@@ -6,7 +6,7 @@
 set.seed(1)
 
 ##number of predictors / sample size
-p <- 200
+p <- 100
 n <- 80
 
 ##predictor matrices
@@ -21,27 +21,26 @@ beta1[act1] <- 0.5
 beta2[act2] <- 0.5
 
 ##response vectors under null-hypothesis
-y1 <- x1%*%as.matrix(beta1)+rnorm(n,sd=0.5)
-y2 <- x2%*%as.matrix(beta1)+rnorm(n,sd=0.5)
+y1 <- x1%*%as.matrix(beta1)+rnorm(n,sd=1)
+y2 <- x2%*%as.matrix(beta1)+rnorm(n,sd=1)
 
 ##Diffregr (asymptotic p-values)
-fit.null <- diffregr_multisplit(y1,y2,x1,x2,b.splits=10)
-plot(fit.null)
-summary(fit.null)
+fit.null <- diffregr_multisplit(y1,y2,x1,x2,b.splits=5)
+fit.null$ms.pval#multi-split p-values
+fit.null$medagg.pval#median aggregated p-values
 
 ##response vectors under alternative-hypothesis
-y1 <- x1%*%as.matrix(beta1)+rnorm(n,sd=0.5)
-y2 <- x2%*%as.matrix(beta2)+rnorm(n,sd=0.5)
+y1 <- x1%*%as.matrix(beta1)+rnorm(n,sd=1)
+y2 <- x2%*%as.matrix(beta2)+rnorm(n,sd=1)
 
 ##Diffregr (asymptotic p-values)
-fit.alt <- diffregr_multisplit(y1,y2,x1,x2,b.splits=10)
-plot(fit.alt)
-fit.alt$meinshagg.pval
+fit.alt <- diffregr_multisplit(y1,y2,x1,x2,b.splits=5)
+fit.alt$ms.pval
 fit.alt$medagg.pval
 
 ##Diffregr (permutation-based p-values; 100 permutations)
-fit.alt.perm <- diffregr_multisplit(y1,y2,x1,x2,b.splits=10,n.perm=100)
-plot(fit.alt.perm)
-summary(fit.alt.perm)
+fit.alt.perm <- diffregr_multisplit(y1,y2,x1,x2,b.splits=5,n.perm=100)
+fit.alt.perm$ms.pval
+fit.alt.perm$medagg.pval
 
 

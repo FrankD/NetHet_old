@@ -767,7 +767,6 @@ mixglasso <- function(x,n.comp,
 ##' \item{re.init.in}{Logical vector indicating whether re-initialization was performed or not}
 ##' \item{fit.mixgl.selcrit}{Results for model with optimal number of components. List see mixglasso_init}
 ##' @author n.stadler
-##' @export
 bwprun_mixglasso <- function(x,
                              n.comp.min=1,n.comp.max,
                              lambda=sqrt(2*nrow(x)*log(ncol(x)))/2,
@@ -945,7 +944,6 @@ loglik_mix<- function(x,mix.prob,Mu,Sig){
 ##' @param scale.parcor Should SigInv be scaled to have diagonal equal one, siginv=parcor ?
 ##' @return SigInv: list of inverse covariance matrices
 ##' @author n.stadler
-##' @export
 sparse_conc <- function(p,K,s,s.common,magn.nz=0.5,scale.parcor=TRUE){
     ##Generate K different Sparse Inverse Covariance-Matrices of dimension p:
     ##

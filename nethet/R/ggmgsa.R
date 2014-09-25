@@ -206,6 +206,19 @@ gsea.iriz.scale <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method.p.ad
 ##' \item{pval.combined}{combined p-values (minimum of pval.shift and pval.scale)}
 ##' @author n.stadler
 ##' @export
+##' @examples
+##' n <- 100
+##' p <- 20
+##' x1 <- matrix(rnorm(n*p),n,p)
+##' x2 <- matrix(rnorm(n*p),n,p)
+##' gene.names <- paste('G',1:p,sep='')
+##' gsets <- split(gene.names,rep(1:4,each=5))
+##' fit <- gsea.iriz(x1,x2,gsets,gene.names)
+##' fit$pvals.combined
+##'
+##' x2[,1:3] <- x2[,1:3]+0.5#variables 1-3 of first gene-set are upregulated
+##' fit <- gsea.iriz(x1,x2,gsets,gene.names)
+##' fit$pvals.combined
 gsea.iriz <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',alternative='two-sided'){
 
   fit.shift <- gsea.iriz.shift(x1,x2,gene.sets,gene.names,gs.names,method.p.adjust,alternative)
@@ -427,6 +440,9 @@ shapiro_screen <- function(x1,x2,sign.level=0.001){
 ##' @return Aggregated p-value.
 ##' @author n.stadler
 ##' @export
+##' @examples
+##' pval=runif(50)
+##' aggpval(pval)
 aggpval <- function(pval,gamma.min=0.05){
   
   min(1,(1-log(gamma.min))*optimize(

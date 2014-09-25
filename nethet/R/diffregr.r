@@ -30,6 +30,8 @@ library(CompQuadForm)
 ##' @return Active-set
 ##' @author n.stadler
 ##' @export
+##' @examples
+##' screen_cvmin.lasso(matrix(rnorm(5000),50,100),rnorm(50))
 screen_cvmin.lasso <- function(x,y){
   fit.cv <- cv.glmnet(x,y)
   beta <- as.numeric(coef(fit.cv,s='lambda.min')[-1])
@@ -48,6 +50,8 @@ screen_cvmin.lasso <- function(x,y){
 ##' @return Active-set
 ##' @author n.stadler
 ##' @export
+##' @examples
+##' screen_cv1se.lasso(matrix(rnorm(5000),50,100),rnorm(50))
 screen_cv1se.lasso <- function(x,y){
   fit.cv <- cv.glmnet(x,y)
   beta <- as.numeric(coef(fit.cv,s='lambda.1se')[-1])
@@ -71,6 +75,8 @@ screen_cv1se.lasso <- function(x,y){
 ##' @return Active-set.
 ##' @author n.stadler
 ##' @export
+##' @examples
+##' screen_cvtrunc.lasso(matrix(rnorm(5000),50,100),rnorm(50))
 screen_cvtrunc.lasso <- function(x,y,k.trunc=5){
   n <- nrow(x)
   fit.cv <- cv.glmnet(x,y)
@@ -93,6 +99,8 @@ screen_cvtrunc.lasso <- function(x,y,k.trunc=5){
 ##' @return Active-set.
 ##' @author n.stadler
 ##' @export
+##' @examples
+##' screen_cvsqrt.lasso(matrix(rnorm(5000),50,100),rnorm(50))
 screen_cvsqrt.lasso <- function(x,y){
   n <- nrow(x)
   fit.cv <- cv.glmnet(x,y)
@@ -116,6 +124,8 @@ screen_cvsqrt.lasso <- function(x,y){
 ##' @return Active-set.
 ##' @author n.stadler
 ##' @export
+##' @examples
+##' screen_cvfix.lasso(matrix(rnorm(5000),50,100),rnorm(50))
 screen_cvfix.lasso <- function(x,y,no.predictors=10){
   n <- nrow(x)
   fit.cv <- cv.glmnet(x,y)
@@ -976,6 +986,7 @@ perm.diffregr_pval <- function(y1,y2,x1,x2,act1,act2,act,n.perm){
 ##' \item{beta}{Regression coefficients (MLE) obtaind in cleaning-step.}
 ##' @author n.stadler
 ##' @export
+##' @example ../diffregr_ss_ex.R
 diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='screen_cvtrunc.lasso',
                                 compute.evals='est2.my.ev3.diffregr',method.compquadform='imhof',acc=1e-04,
                                 epsabs=1e-10,epsrel=1e-10,
