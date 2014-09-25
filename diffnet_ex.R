@@ -12,7 +12,7 @@ n <- 70
 p <- 30
 
 ##specifiy sparse inverse covariance matrices
-gen.net <- generate.2networks(p,graph='random',n.nz=rep(p,2),
+gen.net <- generate_2networks(p,graph='random',n.nz=rep(p,2),
                               n.nz.common=ceiling(p*0.8))
 invcov1 <- gen.net[[1]]
 invcov2 <- gen.net[[2]]

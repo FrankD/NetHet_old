@@ -135,7 +135,7 @@ When the covariance matrices for the components are not specified in advance,
 the \texttt{sim\_mix\_networks} function implicitly assumes that they are 
 generated independently of each other. In order to test the \texttt{diffnet} 
 functions, we also want to be able to generate simulated data from pairs of 
-networks that present some common edges. The \texttt{generate.2networks}
+networks that present some common edges. The \texttt{generate\_2networks}
 function is used to generate pairs of networks with an arbitrary overlap.
 
 <<echo=TRUE, include=TRUE>>=
@@ -145,7 +145,7 @@ p <- 30
 
 ## Specifiy sparse inverse covariance matrices,
 ## with number of edges in common equal to ~ 0.8*p
-gen.net <- generate.2networks(p,graph='random',n.nz=rep(p,2),
+gen.net <- generate_2networks(p,graph='random',n.nz=rep(p,2),
                               n.nz.common=ceiling(p*0.8))
 
 invcov1 <- gen.net[[1]]
@@ -219,7 +219,7 @@ different. We will use the inverse covariance matrices generated in Section
 # p <- 30
 # 
 # ##specifiy sparse inverse covariance matrices
-# gen.net <- generate.2networks(p,graph='random',n.nz=rep(p,2),
+# gen.net <- generate_2networks(p,graph='random',n.nz=rep(p,2),
 #                               n.nz.common=ceiling(p*0.8))
 # invcov1 <- gen.net[[1]]
 # invcov2 <- gen.net[[2]]
@@ -268,7 +268,7 @@ network-based gene set analysis.
 ## Generate new networks
 p <- 50#network with p nodes
 n <- 50
-hub.net <- generate.2networks(p,graph='hub',n.hub=5,n.hub.diff=2)#generate hub networks
+hub.net <- generate_2networks(p,graph='hub',n.hub=5,n.hub.diff=2)#generate hub networks
 invcov1 <- hub.net[[1]]
 invcov2 <- hub.net[[2]]
 plot_2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)
@@ -383,8 +383,6 @@ Now we will run mixglasso on this dataset to retrieve the original clustering
 and reconstruct the underlying networks.
 
 <<echo=TRUE, include=TRUE>>=
-test.data = sim.result$data
-
 # Run mixglasso
 mixglasso.result = mixglasso(sim.result$data, n.comp=3)
 
@@ -538,8 +536,8 @@ loaded into Cytoscape, provided the option \texttt{quote=FALSE} is set.
 <<echo=TRUE, include=TRUE, eval=FALSE>>=
 
 # Save network in CSV format suitable for Cytoscape import
-export_network(mixglasso.clustering, file='nethet_network.csv',
-							 p.corrs.thresh=0.25, quote=FALSE)
+#export_network(mixglasso.clustering, file='nethet_network.csv',
+#							 p.corrs.thresh=0.25, quote=FALSE)
 @
 
 \bibliography{nethet}

@@ -494,7 +494,6 @@ mixglasso_ncomp_fixed <- function(x,n.comp,
 ##' \item{pi.comps}{Component probabilities}
 ##' \item{warn}{Warnings during EM algorithm}
 ##' @author n.stadler
-##' @export
 mixglasso_init<- function(x,n.comp,lambda,
                           u.init,mix.prob.init,
                           gamma=0.5,pen='glasso.parcor',penalize.diagonal=FALSE,

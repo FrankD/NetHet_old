@@ -41,7 +41,7 @@ GSEA.Gct2Frame <- function(filename = "NULL") {
 # This software is supplied without any warranty or guaranteed support
 # whatsoever. Neither the Broad Institute nor MIT can be responsible for
 # its use, misuse, or functionality.
-   ds <- read.delim(filename, header=T, sep="\t", skip=2, row.names=1, blank.lines.skip=T, comment.char="", as.is=T)
+   ds <- read.delim(filename, header=TRUE, sep="\t", skip=2, row.names=1, blank.lines.skip=TRUE, comment.char="", as.is=TRUE)
    ds <- ds[-1]
    return(ds)
 }
@@ -120,7 +120,7 @@ GSEA.Res2Frame <- function(filename = "NULL") {
    temp <- unlist(strsplit(header.cont, "\t"))
    colst <- length(temp)
    header.labels <- temp[seq(3, colst, 2)]
-   ds <- read.delim(filename, header=F, row.names = 2, sep="\t", skip=3, blank.lines.skip=T, comment.char="", as.is=T)
+   ds <- read.delim(filename, header=FALSE, row.names = 2, sep="\t", skip=3, blank.lines.skip=TRUE, comment.char="", as.is=TRUE)
    colst <- length(ds[1,])
    cols <- (colst - 1)/2
    rows <- length(ds[,1])
