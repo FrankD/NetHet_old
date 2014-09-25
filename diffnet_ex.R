@@ -22,20 +22,21 @@ plot_2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)
 cor1 <- cov2cor(solve(invcov1))
 cor2 <- cov2cor(solve(invcov2))
 
-##generate data under null hypothesis
+##generate data under null hypothesis (both datasets have the same underlying
+## network)
 library('mvtnorm')
 x1 <- rmvnorm(n,mean = rep(0,p), sigma = cor1)
 x2 <- rmvnorm(n,mean = rep(0,p), sigma = cor1)
 
-##run diffnet
+##run diffnet (under null hypothesis)
 dn.null <- diffnet_multisplit(x1,x2,b.splits=1,verbose=FALSE)
 dn.null$ss.pval#single-split p-value
 
-##generate data under alternative hypothesis
+##generate data under alternative hypothesis (datasets have different networks)
 x1 <- rmvnorm(n,mean = rep(0,p), sigma = cor1)
 x2 <- rmvnorm(n,mean = rep(0,p), sigma = cor2)
 
-##run diffnet
+##run diffnet (under alternative hypothesis)
 dn.altn <- diffnet_multisplit(x1,x2,b.splits=1,verbose=FALSE)
 dn.altn$ss.pval#single-split p-value
 dn.altn$medagg.pval#median aggregated p-value

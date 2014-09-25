@@ -3,7 +3,7 @@
 #######################################################
 
 
-##genereta data
+## Genereta networks
 set.seed(1)
 p <- 9#network with p nodes
 n <- 40
@@ -12,20 +12,20 @@ invcov1 <- hub.net[[1]]
 invcov2 <- hub.net[[2]]
 plot_2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)
 
-##generate data
+## Generate data
 library('mvtnorm')
 x1 <- rmvnorm(n,mean = rep(0,p), sigma = cov2cor(solve(invcov1)))
 x2 <- rmvnorm(n,mean = rep(0,p), sigma = cov2cor(solve(invcov2)))
 
-##run DiffNet
+## Run DiffNet
 # fit.dn <- diffnet_multisplit(x1,x2,b.splits=2,verbose=FALSE)
 # fit.dn$medagg.pval
 
-##identify hubs with 'gene-sets'
+## Identify hubs with 'gene-sets'
 gene.names <- paste('G',1:p,sep='')
 gsets <- split(gene.names,rep(1:3,each=3))
 
-##run GGM-GSA
+## Run GGM-GSA
 fit.ggmgsa <- ggmgsa_multisplit(x1,x2,no.splits=2,gsets,gene.names,verbose=FALSE)
 summary(fit.ggmgsa)
 fit.ggmgsa$medagg.pval#median aggregated p-values
