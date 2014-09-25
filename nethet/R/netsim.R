@@ -22,11 +22,11 @@ library(mvtnorm)
 ##' @export
 ##' @import mvtnorm
 ##' @examples
-##' n.comps = 4
+##' n.comp = 4
 ##' p = 5 # dimensionality
-##' Mu = matrix(rep(0, p), p, n.comps)
-##' Sigma = array(diag(p), c(p, p, n.comps))
-##' mix.prob = rep(0.25, n.comps)
+##' Mu = matrix(rep(0, p), p, n.comp)
+##' Sigma = array(diag(p), c(p, p, n.comp))
+##' mix.prob = rep(0.25, n.comp)
 ##' 
 ##' sim_mix(100, n.comp, mix.prob, Mu, Sigma)
 
@@ -156,7 +156,7 @@ getinvcov<- function(p,s, a.diff=5,b.diff=5,magn.diag=0,emin=0.1){
 ##' @export
 ##' @examples
 ##' # Generate dataset with 100 samples of dimensionality 30, and 4 components
-##' test.data = sim_mix_networks(n=100, p=30, n.comps=4)
+##' test.data = sim_mix_networks(n=100, p=30, n.comp=4)
 sim_mix_networks <- function(n, p, n.comp, sparsity=0.7, 
 														 mix.prob=rep(1/n.comp, n.comp),
 														 Mu=NULL, Sig=NULL, ...) {

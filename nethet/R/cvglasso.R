@@ -44,7 +44,7 @@ library(huge)
 #' p = 25
 #'
 #' # Generate networks with random means and covariances. 
-#' sim.result = sim_mix_networks(n, p, n.comps=3)
+#' sim.result = sim_mix_networks(n, p, n.comp=3)
 #'
 #' test.data = sim.result$data
 #' test.labels = sim.result$comp
