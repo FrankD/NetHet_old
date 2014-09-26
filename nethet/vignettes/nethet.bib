@@ -1,3 +1,38 @@
+@article{ggmgsa2014,
+  author = 	 {St\"adler, Nicolas and Mukherjee, Sach},
+  title = 	 {Multivariate gene-set testing based on graphical models},
+  journal   = {Biostatistics, doi: 10.1093/biostatistics/kxu027},
+  year = 	 {2014}
+ }
+
+@Book{rue2005,
+  author = 	 {Rue, H. and Held, L.},
+  title = 	 {Gaussian Markov random fields: theory and applications},
+  publisher = 	 {CRC Press},
+  year = 	 {2005}
+}
+
+@Article{friedman2007sic,
+  title={Sparse inverse covariance estimation with the graphical {L}asso},
+  author={Friedman, J. and Hastie, T. and Tibshirani, R.},
+  journal={Biostatistics},
+  year={2008},
+  volume={9},
+  number={3},
+ pages={432-441}
+}
+
+@Article{huge2012,
+  author = 	 {Tuo Zhao and Han Liu and Kathryn Roeder and John Lafferty and Larry Wasserman},
+  title = 	 {The huge Package for High-dimensional Undirected Graph Estimation in {R}},
+  journal = 	 {Journal of Machine Learning Research},
+  year = 	 {2012},
+  OPTkey = 	 {},
+  volume = 	 {13},
+  OPTnumber = 	 {4},
+  pages = 	 {1059--1062}
+}
+
 @article{ARACNE,
 	title = {{ARACNE}: An Algorithm for the Reconstruction of Gene Regulatory Networks in a Mammalian Cellular Context},
 	volume = {7},
@@ -24,7 +59,7 @@
 
 
 @article{EDISON,
-	title = {Non-homogeneous dynamic Bayesian networks with Bayesian regularization for inferring gene regulatory networks with gradually time-varying structure},
+	title = {Non-homogeneous dynamic {B}ayesian networks with {B}ayesian regularization for inferring gene regulatory networks with gradually time-varying structure},
 	volume = {90},
 	issn = {0885-6125, 1573-0565},
 	url = {http://link.springer.com/article/10.1007/s10994-012-5311-x},
@@ -34,7 +69,7 @@
 	number = {2},
 	urldate = {2014-09-23},
 	journal = {Machine Learning},
-	author = {Dondelinger, Frank and Lèbre, Sophie and Husmeier, Dirk},
+	author = {Dondelinger, Frank and L\`{e}bre, Sophie and Husmeier, Dirk},
 	month = feb,
 	year = {2013},
 	keywords = {Artificial Intelligence (incl. Robotics), Computing Methodologies, Control, Robotics, Mechatronics, Dynamic Bayesian networks, Gene expression time series, Hierarchical Bayesian models, Language Translation and Linguistics, Multiple changepoint processes, Reversible jump Markov chain Monte Carlo, Simulation and Modeling, Systems and synthetic biology},
@@ -113,33 +148,22 @@
 }
 
 @article{staedler_mixglasso,
-	title = {Penalized estimation in high-dimensional hidden Markov models with state-specific graphical models},
-	url = {http://arxiv.org/abs/1208.4989},
-	abstract = {We consider penalized estimation in hidden Markov models ({HMMs}) with multivariate Normal observations. In the moderate-to-large dimensional setting, estimation for {HMMs} remains challenging in practice, due to several concerns arising from the hidden nature of the states. We address these concerns by l1-penalization of state-specific inverse covariance matrices. Penalized estimation leads to sparse inverse covariance matrices which can be interpreted as state-specific conditional independence graphs. Penalization is non-trivial in this latent variable setting; we propose a penalty that automatically adapts to number of states K and state-specific sample size and can cope with scaling issues arising from the unknown states. The methodology is adaptive and very general, applying in particular to both low- and high-dimensional settings without requiring hand tuning. Furthermore, our approach facilitates exploration of the number of states K by coupling estimation for successive candidate values K. Empirical results on simulated examples demonstrate the effectiveness of the proposed approach. In a challenging real data example from genome biology, we demonstrate the ability of our approach to yields gains in predictive power and deliver richer estimates than existing methods.},
-	urldate = {2013-11-27},
-	journal = {{arXiv}:1208.4989 [stat]},
-	author = {Städler, Nicolas and Mukherjee, Sach},
-	month = aug,
-	year = {2012},
-	keywords = {pancan {II}, Statistics - Methodology},
-	file = {1208.4989 PDF:/local/tmp/Zotero/storage/ZSK8QNCP/Städler and Mukherjee - 2012 - Penalized estimation in high-dimensional hidden Ma.pdf:application/pdf;arXiv.org Snapshot:/local/tmp/Zotero/storage/M5UKIBGJ/1208.html:text/html}
-}
-
+  author = 	 {St\"adler, Nicolas and Mukherjee, Sach},
+  title = 	 {Penalized estimation in high-dimensional hidden {M}arkov models with state-specific graphical models},
+journal = 	 {Annals of Applied Statistics},
+  year = 	 {2013},
+  OPTkey = 	 {},
+  volume = 	 {7},
+  OPTnumber = 	 {},
+  pages = 	 {2157--2179}
+ }
 
 @article{staedler_diffnet,
-	title = {Two-Sample Testing in High-Dimensional Models},
-	url = {http://arxiv.org/abs/1210.4584},
-	abstract = {We propose novel methodology for testing equality of model parameters between two high-dimensional populations. The technique is very general and applicable to a wide range of models. The method is based on sample splitting: the data is split into two parts; on the first part we reduce the dimensionality of the model to a manageable size; on the second part we perform significance testing (p-value calculation) based on a restricted likelihood ratio statistic. Assuming that both populations arise from the same distribution, we show that the restricted likelihood ratio statistic is asymptotically distributed as a weighted sum of chi-squares with weights which can be efficiently estimated from the data. In high-dimensional problems, a single data split can result in a "p-value lottery". To ameliorate this effect, we iterate the splitting process and aggregate the resulting p-values. This multi-split approach provides improved p-values. We illustrate the use of our general approach in two-sample comparisons of high-dimensional regression models ("differential regression") and graphical models ("differential network"). In both cases we show results on simulated data as well as real data from recent, high-throughput cancer studies.},
-	urldate = {2014-09-23},
-	journal = {{arXiv}:1210.4584 [stat]},
-	author = {Städler, Nicolas and Mukherjee, Sach},
-	month = oct,
-	year = {2012},
-	note = {{arXiv}: 1210.4584},
-	keywords = {Statistics - Methodology},
-	annote = {Comment: 28 pages, 12 figures},
-	file = {arXiv\:1210.4584 PDF:/local/tmp/Zotero/storage/U4ZRC96G/Städler and Mukherjee - 2012 - Two-Sample Testing in High-Dimensional Models.pdf:application/pdf;arXiv.org Snapshot:/local/tmp/Zotero/storage/PPTAJB6M/1210.html:text/html}
-}
+  author = 	 {St\"adler, Nicolas and Mukherjee, Sach},
+  title = 	 {Two-Sample Testing in High-Dimensional Models},
+  journal   = {arXiv.org:1210.4584},
+  year = 	 {2013}
+ }
 
 @article{BIC,
   title={Estimating the dimension of a model},
