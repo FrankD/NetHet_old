@@ -18,6 +18,7 @@ cor1 <- cov2cor(solve(invcov1))
 cor2 <- cov2cor(solve(invcov2))
 
 ##generate data under alternative hypothesis
+library('mvtnorm')
 x1 <- rmvnorm(n,mean = rep(0,p), sigma = cor1)
 x2 <- rmvnorm(n,mean = rep(0,p), sigma = cor2)
 
