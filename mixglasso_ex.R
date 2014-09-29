@@ -32,7 +32,8 @@ fit3 <-  mixglasso(sim$data,n.comp=1:6,lambda=0)
 set.seed(1)
 fit4 <-  mixglasso(sim$data,n.comp=1:6,lambda=Inf)
 #set.seed(1)
-#fit5 <-  bwprun_mixglasso(dat$X,n.comp=1,n.comp.max=6,selection.crit='bic')
+#fit5 <-  bwprun_mixglasso(sim$data,n.comp=1,n.comp.max=5,selection.crit='bic')
+#plot(fit5$selcrit,ylab='bic',xlab='Num.Comps',type='b')
 
 ##compare bic
 library('ggplot2')

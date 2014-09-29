@@ -778,6 +778,28 @@ mixglasso <- function(x,n.comp,
 ##' \item{re.init.in}{Logical vector indicating whether re-initialization was performed or not}
 ##' \item{fit.mixgl.selcrit}{Results for model with optimal number of components. List see mixglasso_init}
 ##' @author n.stadler
+##' @export
+##' @example
+##' ##generate data
+##' set.seed(1)
+##' n <- 1000
+##' n.comp <- 3
+##' p <- 10
+##'
+##' # Create different mean vectors
+##' Mu <- matrix(0,p,n.comp)
+##'
+##' nonzero.mean <- split(sample(1:p),rep(1:n.comp,length=p))
+##' for(k in 1:n.comp){
+##'   Mu[nonzero.mean[[k]],k] <- -2/sqrt(ceiling(p/n.comp))
+##' }
+##'
+##' sim <- sim_mix_networks(n, p, n.comp, Mu=Mu)
+##'
+##' ##run mixglasso
+##'
+##' fit <-  bwprun_mixglasso(sim$data,n.comp=1,n.comp.max=5,selection.crit='bic')
+##' plot(fit$selcrit,ylab='bic',xlab='Num.Comps',type='b')
 bwprun_mixglasso <- function(x,
                              n.comp.min=1,n.comp.max,
                              lambda=sqrt(2*nrow(x)*log(ncol(x)))/2,

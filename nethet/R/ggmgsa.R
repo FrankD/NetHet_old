@@ -346,18 +346,6 @@ test.t2 <- function(x1,x2){
   list(pval=fit.t2$p.value)
 }
 
-##' Trace of a matrix
-##'
-##' 
-##' @title Trace of a matrix
-##' @param m no descr
-##' @return no descr
-##' @author n.stadler
-##' @keywords internal
-trace.mat <- function(m){
-  sum(diag(m))
-}
-
 ##' High-Dim Two-Sample Test (Srivastava, 2006)
 ##'
 ##' 
@@ -377,9 +365,9 @@ test.sd <- function(x1,x2){
   pooled.cov <-(var(x1)*(N1-1)+var(x2)*(N2-1))/n
   d.pooled.cov <- diag(pooled.cov)
   cormat <- diag(1/sqrt(d.pooled.cov))%*%pooled.cov%*%diag(1/sqrt(d.pooled.cov))
-  c.const <- 1+trace.mat(cormat%*%cormat)/(k^{3/2})
+  c.const <- 1+tr(cormat%*%cormat)/(k^{3/2})
   teststat <- ((N1*N2)/(N1+N2))*crossprod(mu1-mu2,diag(1/d.pooled.cov))%*%(mu1-mu2)-(n*k/(n-2))
-  teststat <- teststat/sqrt(2*(trace.mat(cormat%*%cormat)-(k^2)/n)*c.const)
+  teststat <- teststat/sqrt(2*(tr(cormat%*%cormat)-(k^2)/n)*c.const)
   
   list(teststat=teststat,pval=1-pnorm(teststat))
 }
