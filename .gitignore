@@ -8,3 +8,5 @@
 nethet/man/
 *.tex
 *.out
+*.synctex.gz
+nethet.Rcheck

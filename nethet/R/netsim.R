@@ -101,6 +101,7 @@ generate_inv_cov <- function(p=162, sparsity=0.7) {
 ##' @param magn.diag Magnitude
 ##' @param emin e min
 ##' Internal function
+##' @keywords internal
 getinvcov<- function(p,s, a.diff=5,b.diff=5,magn.diag=0,emin=0.1){
 	#####8!!! act1 are the indices of the upper-diagonal non-zero entries of a pxp matrix 
 	

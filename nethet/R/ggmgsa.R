@@ -29,6 +29,7 @@ library(mvtnorm)
 ##' @param method Method for p-value adjustment (default='fdr').
 ##' @return Vector of adjusted p-values.
 ##' @author n.stadler
+##' @keywords internal
 my.p.adjust <- function(p,method='fdr'){
   if(method=='fdr'){
     return(p.adjust(p,method='fdr'))
@@ -56,6 +57,7 @@ my.p.adjust <- function(p,method='fdr'){
 ##' @param x2 no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 my.ttest <- function(x1,x2){
   ##equal variances
   s <- sqrt((var(x1)*(length(x1)-1)+var(x2)*(length(x2)-1))/(length(x1)+length(x2)-2))
@@ -71,6 +73,7 @@ my.ttest <- function(x1,x2){
 ##' @param x2 no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 my.ttest2 <- function(x1,x2){
   ##unequal variances
   s <- sqrt((var(x1)/length(x1))+(var(x2)/length(x2)))
@@ -87,6 +90,7 @@ my.ttest2 <- function(x1,x2){
 ##' @param gene.name no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 agg.score.iriz.shift <- function(ttstat,geneset,gene.name){
   genes.gs <- which(gene.name%in%geneset)
   ttstat <- ttstat[genes.gs]
@@ -103,6 +107,7 @@ agg.score.iriz.shift <- function(ttstat,geneset,gene.name){
 ##' @param gene.name no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 agg.score.iriz.scale <- function(ttstat,geneset,gene.name){
   genes.gs <- which(gene.name%in%geneset)
   ttstat <- ttstat[genes.gs]
@@ -123,6 +128,7 @@ agg.score.iriz.scale <- function(ttstat,geneset,gene.name){
 ##' @param alternative no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 gsea.iriz.shift <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',alternative='two-sided'){
   
   no.genes <- ncol(x1)
@@ -161,6 +167,7 @@ gsea.iriz.shift <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method.p.ad
 ##' @param alternative no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 gsea.iriz.scale <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method.p.adjust='fdr',alternative='two-sided'){
   
   no.genes <- ncol(x1)
@@ -247,6 +254,7 @@ gsea.iriz <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method.p.adjust='
 ##' @param include.mean no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 t2cov.lr <- function(x1,x2,include.mean=FALSE){
   k <- ncol(x1)
   if(include.mean){
@@ -270,6 +278,7 @@ t2cov.lr <- function(x1,x2,include.mean=FALSE){
 ##' @param include.mean no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 t2diagcov.lr <- function(x1,x2,include.mean=FALSE){
   k <- ncol(x1)
   if(include.mean){
@@ -299,6 +308,7 @@ t2diagcov.lr <- function(x1,x2,include.mean=FALSE){
 ##' @param method.p.adjust method for p-value adjustment (default: 'fdr')
 ##' @return list of results
 ##' @author n.stadler
+##' @keywords internal
 gsea.t2cov <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method='t2cov.lr',method.p.adjust='fdr'){
   
   
@@ -330,6 +340,7 @@ gsea.t2cov <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method='t2cov.lr
 ##' @param x2 no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 test.t2 <- function(x1,x2){
   fit.t2 <- HotellingsT2(x1,x2, mu = NULL, test = "f")
   list(pval=fit.t2$p.value)
@@ -342,6 +353,7 @@ test.t2 <- function(x1,x2){
 ##' @param m no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 trace.mat <- function(m){
   sum(diag(m))
 }
@@ -354,6 +366,7 @@ trace.mat <- function(m){
 ##' @param x2 no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 test.sd <- function(x1,x2){
   k <- ncol(x1)
   N1 <- nrow(x1)
@@ -384,6 +397,7 @@ test.sd <- function(x1,x2){
 ##' @param method.p.adjust no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 gsea.highdimT2 <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method='test.sd',method.p.adjust='fdr'){
   
   

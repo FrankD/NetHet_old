@@ -170,6 +170,7 @@ summary.nethetclustering <- function(x) {
 ##' @param x object of class 'nethetsummary'
 ##' @return NULL
 ##' @author frankd
+##' @keywords internal
 ##' 
 print.nethetsummary <- function(x) {
 	

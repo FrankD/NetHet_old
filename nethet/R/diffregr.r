@@ -155,6 +155,7 @@ screen_cvfix.lasso <- function(x,y,no.predictors=10){
 ##' @param beta Pooled regression coefficients.
 ##' @return 2 times log-likelihood ratio statistics.
 ##' @author n.stadler
+##' @keywords internal
 logratio.diffregr <- function(y1,y2,y,xx1,xx2,xx,beta1,beta2,beta){
   ##Compute 2*log-likelihood ratio
   ##Input:
@@ -193,6 +194,7 @@ logratio.diffregr <- function(y1,y2,y,xx1,xx2,xx,beta1,beta2,beta){
 ##' @param act2 no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 ww.mat.diffregr <- function(Sig,act,act1,act2){
   ##Compute W and Eval(W) (without simplification of W)
   ##
@@ -221,6 +223,7 @@ ww.mat.diffregr <- function(Sig,act,act1,act2){
 ##' @param act2 no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 ww.mat2.diffregr <- function(Sig,act,act1,act2){
   ##Compute W and Eval(W) ('1st order' simplification of W)
   ##
@@ -261,6 +264,7 @@ ww.mat2.diffregr <- function(Sig,act,act1,act2){
 ##' @param s no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 q.matrix.diffregr <- function(Sig,a,b,s){
   ##Compute Q: based on true information matrix (Sig)
   if(length(s)==0){
@@ -280,6 +284,7 @@ q.matrix.diffregr <- function(Sig,a,b,s){
 ##' @param act2 no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 my.ev2.diffregr <- function(Sig,act,act1,act2){
   ##Compute Eval (with 2nd order simplification of W)
   ##
@@ -369,6 +374,7 @@ my.ev2.diffregr <- function(Sig,act,act1,act2){
 ##' @param Sig no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 beta.mat.diffregr<-function(ind1,ind2,beta1,beta2,beta,sig1,sig2,sig,Sig){
   ##compute Beta-Matrix
   ##Input:
@@ -398,6 +404,7 @@ beta.mat.diffregr<-function(ind1,ind2,beta1,beta2,beta,sig1,sig2,sig,Sig){
 ##' @param ss no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 q.matrix.diffregr3 <- function(beta.a,beta.b,beta,sig.a,sig.b,sig,Sig,act.a,act.b,ss){
 
  ##Estimate Q
@@ -424,6 +431,7 @@ q.matrix.diffregr3 <- function(beta.a,beta.b,beta,sig.a,sig.b,sig,Sig,act.a,act.
 ##' @param ss no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 q.matrix.diffregr4 <- function(b.mat,act.a,act.b,ss){
 
  ##Estimate Q
@@ -456,6 +464,7 @@ q.matrix.diffregr4 <- function(b.mat,act.a,act.b,ss){
 ##' @param act no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 est2.ww.mat.diffregr <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
 
   n1 <- length(y1)
@@ -524,6 +533,7 @@ est2.ww.mat.diffregr <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
 ##' @param act no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 est2.ww.mat2.diffregr <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
   ##Estimate W and Eval(W) ('1st order' simplification of W)
   ##
@@ -617,6 +627,7 @@ est2.ww.mat2.diffregr <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
 ##' @param act no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 est2.my.ev2.diffregr <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
 
   ##Estimate Evals ('2nd order' simplification of W)
@@ -745,6 +756,7 @@ est2.my.ev2.diffregr <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
 ##' @param act Pooled active-set
 ##' @return Eigenvalues of M, respectively the weights.
 ##' @author n.stadler
+##' @keywords internal
 est2.my.ev3.diffregr <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act){
 
   show.warn <- FALSE
@@ -891,6 +903,7 @@ diffregr_pval <- function(y1,y2,x1,x2,beta1,beta2,beta,act1,act2,act,compute.eva
 ##' @param x12 Pooled predictor matrix
 ##' @return Test statistic (log-likelihood-ratio statistic).
 ##' @author n.stadler
+##' @keywords internal
 perm.diffregr_teststat <- function(y1,y2,y12,x1,x2,x12){
   p1 <- ncol(x1)
   p2 <- ncol(x2)
@@ -928,6 +941,7 @@ perm.diffregr_teststat <- function(y1,y2,y12,x1,x2,x12){
 ##' @param n.perm Number of permutations.
 ##' @return Permutation based p-value.
 ##' @author n.stadler
+##' @keywords internal
 perm.diffregr_pval <- function(y1,y2,x1,x2,act1,act2,act,n.perm){
   n1 <- nrow(x1);n2 <- nrow(x2)
   x12 <- rbind(x1,x2)
@@ -1158,6 +1172,7 @@ diffregr_multisplit<- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,screen.met
 ##' @param compute.evals no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 twosample_single_regr <- function(y1,y2,x1,x2,n.screen.pop1=100,n.screen.pop2=100,screen.meth='screen_cvmin.lasso',compute.evals='est2.my.ev3.diffregr'){
 
   ##Single-Split Pvalues

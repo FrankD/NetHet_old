@@ -10,7 +10,7 @@
 #'   *Gene-set analysis based on graphical models (GGMGSA)
 #'   *Plotting functions for exploring network heterogeneity
 #'
-#' @references St\"adler, N. and Mukherjee, S. (2013). Two-Sample Testing in High-Dimensional Models.
+#' @references St{\"a}dler, N. and Mukherjee, S. (2013). Two-Sample Testing in High-Dimensional Models.
 #' Preprint \url{http://arxiv.org/abs/1210.4584}.
 #' @import glasso mvtnorm parcor GeneNet huge CompQuadForm ggm mclust parallel GSA limma multtest ICSNP glmnet 
 #' @docType package

@@ -55,6 +55,7 @@ library(parallel)
 ##' @param m no descr
 ##' @return Sum of non-diag elements
 ##' @author n.stadler
+##' @keywords internal
 sumoffdiag <- function(m){
   sum(m)-sum(diag(m))
 }
@@ -75,6 +76,7 @@ sumoffdiag <- function(m){
 ##' @return  a list consisting of
 ##' \item{u}{responsibilities}
 ##' @author n.stadler
+##' @keywords internal
 func.uinit <- function(x,n.comp,init='kmeans',my.cl=NULL,nstart.kmeans=1,iter.max.kmeans=10,modelname.hc="EII"){
   ##Initializing EM (provides uinit)
   ##
@@ -155,6 +157,7 @@ func.uinit <- function(x,n.comp,init='kmeans',my.cl=NULL,nstart.kmeans=1,iter.ma
 ##' @param m no descr
 ##' @return trace of matrix
 ##' @author n.stadler
+##' @keywords internal
 tr <- function(m){sum(diag(m))}
 
 ##' Compute symmetric kull-back leibler distance
@@ -167,6 +170,7 @@ tr <- function(m){sum(diag(m))}
 ##' @param sig2 no descr
 ##' @return symmetric kull-back leibler distance
 ##' @author n.stadler
+##' @keywords internal
 symmkldist <- function(mu1,mu2,sig1,sig2){
     symmkl <- 0.5*tr((sig1-sig2)%*%(solve(sig2)-solve(sig1)))+0.5*t(mu1-mu2)%*%(solve(sig1)+solve(sig2))%*%(mu1-mu2)
     return(symmkl)
@@ -182,6 +186,7 @@ symmkldist <- function(mu1,mu2,sig1,sig2){
 ##' \item{comp.kldist}{}
 ##' \item{min.comp.kldist}{}
 ##' @author n.stadler
+##' @keywords internal
 w.kldist <- function(Mu,Sig){
     n.comp <- ncol(Mu)
     res<- matrix(NA,n.comp,n.comp)
@@ -203,6 +208,7 @@ w.kldist <- function(Mu,Sig){
 ##' \item{u}{responsibilities}
 ##' \item{LL}{loglikelihood}
 ##' @author n.stadler
+##' @keywords internal
 EXPStep.mix <- function(logphi,mix.prob){
     u <- logphi+matrix(log(mix.prob),nrow(logphi),ncol(logphi),byrow=TRUE)
     max.u <- apply(u,1,max)
@@ -223,6 +229,7 @@ EXPStep.mix <- function(logphi,mix.prob){
 ##' @param term no descr
 ##' @return w; wi; iter
 ##' @author n.stadler
+##' @keywords internal
 glasso.parcor <- function(s,rho,penalize.diagonal,maxiter=1000,term=10^{-3}){
     ww <- diag(s)
     iter <- 0
@@ -250,6 +257,7 @@ glasso.parcor <- function(s,rho,penalize.diagonal,maxiter=1000,term=10^{-3}){
 ##' @param term no descr
 ##' @return w; wi; iter
 ##' @author n.stadler
+##' @keywords internal
 glasso.invcor <- function(s,rho,penalize.diagonal,term=10^{-3}){
   if(penalize.diagonal==FALSE){
     ww <- diag(s)
@@ -273,6 +281,7 @@ glasso.invcor <- function(s,rho,penalize.diagonal,term=10^{-3}){
 ##' @param term no descr
 ##' @return w; wi; iter
 ##' @author n.stadler
+##' @keywords internal
 glasso.invcov <- function(s,rho,penalize.diagonal,term=10^{-3}){
   gl <- glasso(s,rho=rho,penalize.diagonal=penalize.diagonal)
   list(w=gl$w,wi=gl$wi)
@@ -296,6 +305,7 @@ glasso.invcov <- function(s,rho,penalize.diagonal,term=10^{-3}){
 ##' @param model no descr
 ##' @return list consisting of mix.prob, Mu, Sig, SigInv
 ##' @author n.stadler
+##' @keywords internal
 MStepGlasso <- function(x,chromosome=NULL,u,v=NULL,lambda,gamma,pen,penalize.diagonal,equal.prob.trans=NULL,term,model='hmm'){
     ##Mstep for HMMGLasso/MixGLasso (optimizes -completeloglik+lambda*pen)
     ##different chromosomes
@@ -426,6 +436,7 @@ MStepGlasso <- function(x,chromosome=NULL,u,v=NULL,lambda,gamma,pen,penalize.dia
 ##' \item{pi.comps}{}
 ##' \item{warn}{warnings during optimization}
 ##' @author n.stadler
+##' @keywords internal
 mixglasso_ncomp_fixed <- function(x,n.comp,
                       lambda=sqrt(2*nrow(x)*log(ncol(x)))/2,
                       pen='glasso.parcor',init='kmeans.hc',my.cl=NULL,modelname.hc="VVV",nstart.kmeans=1,iter.max.kmeans=10,
@@ -915,6 +926,7 @@ bwprun_mixglasso <- function(x,
 ##' @param Sig no descr
 ##' @return log-likelihood
 ##' @author n.stadler
+##' @keywords internal
 loglik_mix<- function(x,mix.prob,Mu,Sig){
   ##computes loglikelihood of model
   n.comp <- ncol(Mu)

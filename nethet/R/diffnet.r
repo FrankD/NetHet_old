@@ -28,6 +28,7 @@ library(ggm)
 ##' @param x no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 lambda.max <- function(x){
   n <- nrow(x)
   s.var <- var(x)
@@ -44,6 +45,7 @@ lambda.max <- function(x){
 ##' @param nr.gridpoints no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 lambdagrid_mult <- function(lambda.min,lambda.max,nr.gridpoints){
     mult.const <- (lambda.max/lambda.min)^(1/(nr.gridpoints-1))
     return(lambda.min*mult.const^((nr.gridpoints-1):0))
@@ -58,6 +60,7 @@ lambdagrid_mult <- function(lambda.min,lambda.max,nr.gridpoints){
 ##' @param nr.gridpoints no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 lambdagrid_lin <- function(lambda.min,lambda.max,nr.gridpoints){
     return(seq(lambda.max,lambda.min,length=nr.gridpoints))
 }
@@ -72,6 +75,7 @@ lambdagrid_lin <- function(lambda.min,lambda.max,nr.gridpoints){
 ##' @param method no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 make_grid <- function(lambda.min,lambda.max,nr.gridpoints,method='lambdagrid_mult'){
   eval(as.name(method))(lambda.min,lambda.max,nr.gridpoints)
 }
@@ -87,6 +91,7 @@ make_grid <- function(lambda.min,lambda.max,nr.gridpoints,method='lambdagrid_mul
 ##' @param ... no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 error.bars <- function (x, upper, lower, width = 0.02, ...)
 {
     xlim <- range(x)
@@ -109,6 +114,7 @@ error.bars <- function (x, upper, lower, width = 0.02, ...)
 ##' @param ... no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 plotCV <- function(lambda,cv,cv.error,se=TRUE,type='b',...){
   if (se==TRUE){ylim <- range(cv,cv+cv.error,cv-cv.error)}
   else {ylim <- range(cv)}
@@ -126,6 +132,7 @@ plotCV <- function(lambda,cv,cv.error,se=TRUE,type='b',...){
 ##' @param folds no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 cv.fold <- function(n,folds=10){
   split(sample(1:n),rep(1:folds,length=n))
 }
@@ -140,6 +147,7 @@ cv.fold <- function(n,folds=10){
 ##' @param trace no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 hugepath <- function(s,rholist,penalize.diagonal=NULL,trace=NULL){
   #fit.huge <- huge(s,method = "glasso",cov.output =TRUE,verbose = FALSE)
   fit.huge <- huge(s,lambda=sort(rholist,decreasing=TRUE),method = "glasso",cov.output =TRUE,verbose = FALSE)
@@ -159,6 +167,7 @@ hugepath <- function(s,rholist,penalize.diagonal=NULL,trace=NULL){
 ##' @param trunc.k no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 mytrunc.method <- function(n,wi,method='linear.growth',trunc.k=5){
   p <- ncol(wi)
   if (method=='none'){
@@ -195,6 +204,7 @@ mytrunc.method <- function(n,wi,method='linear.growth',trunc.k=5){
 ##' @param include.mean no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 cv.glasso <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se=TRUE,include.mean=FALSE)
 {
   colnames(x)<-paste('x',1:ncol(x),sep='')  
@@ -322,6 +332,7 @@ screen_cv.glasso <- function(x,include.mean=FALSE,
 ##' @param include.mean no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 bic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package='huge',include.mean=FALSE)
 {
   ##glasso; lambda.opt with bic
@@ -392,6 +403,7 @@ bic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package
 ##' @param include.mean no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 aic.glasso <- function(x,lambda,penalize.diagonal=FALSE,plot.it=TRUE,use.package='huge',include.mean=FALSE)
 {
   ##glasso; lambda.opt with aicc
@@ -552,6 +564,7 @@ screen_aic.glasso <- function(x,include.mean=TRUE,length.lambda=20,lambdamin.rat
 ##' @param trunc.k no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 screen_lasso <- function(x,include.mean=NULL,
                          trunc.method='linear.growth',trunc.k=5){
   
@@ -672,6 +685,7 @@ screen_mb <- function(x,include.mean=NULL,
 ##' @param verbose no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 screen_mb2 <- function(x,include.mean=NULL,length.lambda=20,
                        trunc.method='linear.growth',trunc.k=5,plot.it=FALSE,verbose=FALSE)
 {
@@ -711,6 +725,7 @@ screen_mb2 <- function(x,include.mean=NULL,length.lambda=20,
 ##' @param trunc.k no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 screen_full <- function(x,include.mean=NULL,length.lambda=NULL,trunc.method=NULL,trunc.k=NULL){
  wi <- diag(1,ncol(x))
  list(rho.opt=NULL,wi=wi)
@@ -730,6 +745,7 @@ screen_full <- function(x,include.mean=NULL,length.lambda=NULL,trunc.method=NULL
 ##' @param covMethod no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 mcov <- function(x,include.mean,covMethod='ML'){
   if(covMethod=='ML'){
     return(cov.wt(x,method='ML',center=include.mean)$cov)
@@ -754,6 +770,7 @@ mcov <- function(x,include.mean,covMethod='ML'){
 ##' @param include.mean no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 mle.ggm <- function(x,wi,algorithm='glasso_rho0',rho=NULL,include.mean){
   if(is.null(rho)){
     algorithm <- 'glasso_rho0'
@@ -813,6 +830,7 @@ logratio <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu){
 ##' @param include.mean no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 inf.mat<-function(Sig,include.mean=FALSE){
   k <- ncol(Sig)
   uptri.rownr <- row(Sig)[upper.tri(Sig,diag=TRUE)]
@@ -857,6 +875,7 @@ inf.mat<-function(Sig,include.mean=FALSE){
 ##' @param act2 I_v
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 ww.mat <- function(imat,act,act1,act2){
  
   bfg <- rbind(imat[act1,act,drop=FALSE],imat[act2,act,drop=FALSE])
@@ -881,6 +900,7 @@ ww.mat <- function(imat,act,act1,act2){
 ##' @param act2 I_v
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 ww.mat2 <- function(imat,act,act1,act2){
 
   dimf <- length(act1)+length(act2)
@@ -919,6 +939,7 @@ ww.mat2 <- function(imat,act,act1,act2){
 ##' @param sig no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 beta.mat<-function(ind1,ind2,sig1,sig2,sig){
   uptri.rownr <- row(sig)[upper.tri(sig,diag=TRUE)]
   uptri.colnr <- col(sig)[upper.tri(sig,diag=TRUE)]
@@ -962,6 +983,7 @@ beta.mat<-function(ind1,ind2,sig1,sig2,sig){
 ##' @param ss no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 q.matrix3 <- function(sig,sig.a,sig.b,act.a,act.b,ss){
   b.ab<-beta.mat(act.a,act.b,sig.a,sig.b,sig)
   aa<-seq(1,length(act.a))[!(act.a%in%ss)]
@@ -986,6 +1008,7 @@ q.matrix3 <- function(sig,sig.a,sig.b,act.a,act.b,ss){
 ##' @param ss no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 q.matrix4 <- function(b.mat,act.a,act.b,ss){
  ##Estimate Q
     aa<-seq(1,length(act.a))[!(act.a%in%ss)]
@@ -1013,6 +1036,7 @@ q.matrix4 <- function(b.mat,act.a,act.b,ss){
 ##' @param include.mean no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 est2.ww.mat2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
 
   k <- nrow(sig1)
@@ -1081,6 +1105,7 @@ est2.ww.mat2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
 ##' @param include.mean no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 est2.my.ev2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
 
   k <- nrow(sig1)
@@ -1183,6 +1208,7 @@ est2.my.ev2 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
 ##' @param include.mean Should the mean be in cluded in the likelihood?
 ##' @return Eigenvalues of M, respectively the weights.
 ##' @author n.stadler
+##' @keywords internal
 est2.my.ev3 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
 
   show.warn <- FALSE
@@ -1254,6 +1280,7 @@ est2.my.ev3 <- function(sig1,sig2,sig,act1,act2,act,include.mean=FALSE){
 ##' @param pval vector of p-values
 ##' @return inf-quantile aggregated p-value
 ##' @author n.stadler
+##' @keywords internal
 agg.pval <- function(gamma,pval){
     min(quantile(pval/gamma,probs=gamma),1)
 }
@@ -1283,6 +1310,7 @@ agg.pval <- function(gamma,pval){
 ##' @param show.warn no descr
 ##' @return no descr
 ##' @author n.stadler
+##' @keywords internal
 diffnet_pval <- function(x1,x2,x,sig1,sig2,sig,mu1,mu2,mu,act1,act2,act,compute.evals,include.mean,method.compquadform,acc,epsabs,epsrel,show.warn){
   ##########################
   ##compute test-statistic##
