@@ -1077,6 +1077,12 @@ diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='screen_cv
 ##' @param show.warn Show warnings (default=FALSE)?
 ##' @param n.perm Number of permutation for "split-perm" p-value. Default=NULL, which means
 ##'               that the asymptotic approximation is used.
+##' @param mc.flag If \code{TRUE} use parallel execution for each b.splits via function 
+##'                \code{mclapply} of package \code{parallel}.
+##' @param mc.set.seed See mclapply. Default=TRUE
+##' @param mc.preschedule See mclapply. Default=TRUE
+##' @param mc.cores Number of cores to use in parallel execution. Defaults to
+##'                 mc.cores option if set, or 2 otherwise.
 ##' @param ... Other arguments specific to screen.meth.
 ##' @return List consisting of
 ##' \item{ms.pval}{p-values for all b.splits}
@@ -1093,19 +1099,32 @@ diffregr_singlesplit<- function(y1,y2,x1,x2,split1,split2,screen.meth='screen_cv
 diffregr_multisplit<- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,screen.meth='screen_cvtrunc.lasso',
                                gamma.min=0.05,compute.evals='est2.my.ev3.diffregr',
                                method.compquadform='imhof',acc=1e-04,epsabs=1e-10,epsrel=1e-10,
-                               show.warn=FALSE,n.perm=NULL,...){
+                               show.warn=FALSE,n.perm=NULL,
+                               mc.flag=FALSE,mc.set.seed=TRUE, mc.preschedule = TRUE,mc.cores=getOption("mc.cores", 2L),...){
 
   n1 <- nrow(x1)
   n2 <- nrow(x2)
+
+  if(mc.flag){
+      res.multisplit <- mclapply(seq(b.splits),
+                                 FUN=function(i){
+                                     split1 <- sample(1:n1,floor((n1-1)*frac.split),replace=FALSE)
+                                     split2 <- sample(1:n2,floor((n2-1)*frac.split),replace=FALSE)
+                                     res.singlesplit <- diffregr_singlesplit(y1,y2,x1,x2,split1,split2,screen.meth,
+                                                                             compute.evals,method.compquadform,
+                                                                             acc,epsabs,epsrel,show.warn,n.perm,...)
+                                 },mc.set.seed=mc.set.seed, mc.preschedule = mc.preschedule, mc.cores=mc.cores)                                 
+  }else{
+      res.multisplit <- lapply(seq(b.splits),
+                               function(i){
+                                   split1 <- sample(1:n1,floor((n1-1)*frac.split),replace=FALSE)
+                                   split2 <- sample(1:n2,floor((n2-1)*frac.split),replace=FALSE)
+                                   res.singlesplit <- diffregr_singlesplit(y1,y2,x1,x2,split1,split2,screen.meth,
+                                                                           compute.evals,method.compquadform,
+                                                                           acc,epsabs,epsrel,show.warn,n.perm,...)                      
+                               })
+  }
   
-  res.multisplit <- lapply(seq(b.splits),
-                          function(i){
-                            split1 <- sample(1:n1,floor((n1-1)*frac.split),replace=FALSE)
-                            split2 <- sample(1:n2,floor((n2-1)*frac.split),replace=FALSE)
-                            res.singlesplit <- diffregr_singlesplit(y1,y2,x1,x2,split1,split2,screen.meth,
-                                                                    compute.evals,method.compquadform,
-                                                                    acc,epsabs,epsrel,show.warn,n.perm,...)                      
-                          })
   pval.onesided <- sapply(res.multisplit,function(x){x[['pval.onesided']]},simplify='array')
   pval.twosided <- sapply(res.multisplit,function(x){x[['pval.twosided']]},simplify='array')
   teststat <- sapply(res.multisplit,function(x){x[['teststat']]},simplify='array')

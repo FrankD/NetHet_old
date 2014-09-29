@@ -509,6 +509,8 @@ ggmgsa_singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust='fdr',
 ##'                \code{mclapply} of package \code{parallel}.
 ##' @param mc.set.seed See mclapply. Default=TRUE
 ##' @param mc.preschedule See mclapply. Default=TRUE
+##' @param mc.cores Number of cores to use in parallel execution. Defaults to
+##'                 mc.cores option if set, or 2 otherwise.
 ##' @param verbose If TRUE, show output progess.
 ##' @param ... Other arguments (see diffnet_singlesplit).
 ##' @return List consisting of
@@ -528,7 +530,7 @@ ggmgsa_singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust='fdr',
 ##' @example ../ggmgsa_ex.R
 ggmgsa_multisplit<- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,
                                  method.p.adjust='fdr',order.adj.agg='agg-adj',
-                                 mc.flag=FALSE,mc.set.seed=TRUE,mc.preschedule=TRUE,verbose=TRUE,...){
+                                 mc.flag=FALSE,mc.set.seed=TRUE,mc.preschedule=TRUE,mc.cores=getOption("mc.cores", 2L),verbose=TRUE,...){
 
     if(is.null(gs.names)){
         gs.names <- paste('gs',1:length(gene.sets),sep='')
@@ -545,7 +547,7 @@ ggmgsa_multisplit<- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NU
                             mat <- cbind(res$pvals,res$teststat,res$teststat.bic,res$teststat.aic,res$rel.edgeinter,res$dfu,res$dfv,res$dfuv)
                             colnames(mat) <- c('pvals','teststat','teststat.bic','teststat.aic','rel.edgeinter','dfu','dfv','dfuv')
                             return(mat)
-                        }, mc.set.seed=mc.set.seed, mc.preschedule = mc.preschedule)
+                        }, mc.set.seed=mc.set.seed, mc.preschedule = mc.preschedule,mc.cores=mc.cores)
     }else{
 
         res <- lapply(seq(no.splits),

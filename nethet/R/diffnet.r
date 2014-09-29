@@ -1494,6 +1494,12 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
 ##'                 are saved for all b.splits. The median aggregated inverse covariance matrix
 ##'                 is provided in the output as 'medwi'. The default is save.mle=FALSE.
 ##' @param verbose If TRUE, show output progress.
+##' @param mc.flag If \code{TRUE} use parallel execution for each b.splits via function 
+##'                \code{mclapply} of package \code{parallel}.
+##' @param mc.set.seed See mclapply. Default=TRUE
+##' @param mc.preschedule See mclapply. Default=TRUE
+##' @param mc.cores Number of cores to use in parallel execution. Defaults to
+##'                 mc.cores option if set, or 2 otherwise.
 ##' @param ... Additional arguments for screen.meth.
 ##' @return list consisting of
 ##' \item{ms.pval}{p-values for all b.splits}
@@ -1512,7 +1518,8 @@ diffnet_singlesplit<- function(x1,x2,split1,split2,screen.meth='screen_bic.glass
 diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='screen_bic.glasso',include.mean=FALSE,
                               gamma.min=0.05,compute.evals='est2.my.ev3',algorithm.mleggm='glasso_rho0',
                               method.compquadform='imhof',acc=1e-04,epsabs=1e-10,epsrel=1e-10,
-                              show.warn=FALSE,save.mle=FALSE,verbose=TRUE,...){
+                              show.warn=FALSE,save.mle=FALSE,verbose=TRUE,
+                              mc.flag=FALSE,mc.set.seed=TRUE, mc.preschedule = TRUE,mc.cores=getOption("mc.cores", 2L),...){
 
   ##????Important Notes: Pval can be NA, because...
   ##????
@@ -1520,17 +1527,31 @@ diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='scre
   ##????                 2) W cannot be estimated (|active-set| > n, problems matrix inversion) 
   n1 <- nrow(x1)
   n2 <- nrow(x2)
-  
-  res.multisplit <- lapply(seq(b.splits),
-                           function(i){
-                               if(verbose){cat(' split: ',i,'\n\n')}
-                               split1 <- sample(1:n1,round(n1*frac.split),replace=FALSE)
-                               split2 <- sample(1:n2,round(n2*frac.split),replace=FALSE)
-                               res.singlesplit <- diffnet_singlesplit(x1,x2,split1,split2,screen.meth,
-                                                                      compute.evals,algorithm.mleggm,include.mean,
-                                                                      method.compquadform,acc,epsabs,epsrel,show.warn,save.mle,...)
-                               
-                           })
+
+  if(mc.flag){
+      res.multisplit <- mclapply(seq(b.splits),
+                                 FUN=function(i){
+                                     if(verbose){cat(' split: ',i,'\n\n')}
+                                     split1 <- sample(1:n1,round(n1*frac.split),replace=FALSE)
+                                     split2 <- sample(1:n2,round(n2*frac.split),replace=FALSE)
+                                     res.singlesplit <- diffnet_singlesplit(x1,x2,split1,split2,screen.meth,
+                                                                            compute.evals,algorithm.mleggm,include.mean,
+                                                                            method.compquadform,acc,epsabs,epsrel,show.warn,save.mle,...)
+                                 },mc.set.seed=mc.set.seed, mc.preschedule = mc.preschedule, mc.cores=mc.cores)
+                                 
+  }else{
+      res.multisplit <- lapply(seq(b.splits),
+                               function(i){
+                                   if(verbose){cat(' split: ',i,'\n\n')}
+                                   split1 <- sample(1:n1,round(n1*frac.split),replace=FALSE)
+                                   split2 <- sample(1:n2,round(n2*frac.split),replace=FALSE)
+                                   res.singlesplit <- diffnet_singlesplit(x1,x2,split1,split2,screen.meth,
+                                                                          compute.evals,algorithm.mleggm,include.mean,
+                                                                          method.compquadform,acc,epsabs,epsrel,show.warn,save.mle,...)
+                                   
+                               })
+  }
+
   pval.onesided <- sapply(res.multisplit,function(x){x[['pval.onesided']]},simplify='array')
   pval.twosided <- sapply(res.multisplit,function(x){x[['pval.twosided']]},simplify='array')
   teststat <- sapply(res.multisplit,function(x){x[['teststat']]},simplify='array')
