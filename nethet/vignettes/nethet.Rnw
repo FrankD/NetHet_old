@@ -11,7 +11,7 @@
 \usepackage{amsmath}
 \usepackage{amsfonts}
 
-<<style-knitr, eval=TRUE, echo=FALSE, results="asis">>=
+<<style-knitr, eval=TRUE, echo=FALSE, results="asis" >>=
 BiocStyle::latex()
 @
 
@@ -275,21 +275,32 @@ qplot(x=c(networks$Sig), y=c(sim.result$Sig),
 @
 
 \section{High-dimensional hypothesis testing}
+We have demonstrated how to use our package to estimate networks from
+heterogeneous data consisting of different groups (or components). Often,
+we would like to perform a statistical comparison between estimated
+networks. In this section we will introduce functions which allow
+formal hypothesis testing regarding network differences.
 
-We have demonstrated how to use our package to reconstruct networks
-from data with the graphical lasso. Next, we will show how to use the
-functions that allow for high-dimensional hypothesis testing; in other
-words, how to compare reconstructed networks (and regression models)
-and test whether the networks that arise from a given dataset are
-significantly different.
+%% show how to use the functions that allow
+%% for high-dimensional hypothesis testing; in other words, how to
+%% compare reconstructed networks (and regression models) and test
+%% whether the networks that arise from a given dataset are significantly
+%% different.
 
-\subsection{Differential Network}
+\subsection{Differential network}
 \label{sec:diffnet}
+Consider two datasets $\mathbf{X}_1$ and $\mathbf{X}_2$ collected
+under different conditions. We would like to know whether networks
+estimated from these two datasets differ in a statistical significant
+manner. The function \texttt{diffnet\_multisplit} uses repeated sample
+splitting to address this task: the data is randomly split into two
+halves, networks are inferred on one half and significance testing
+(p-value calculation) is performed on the other half. In order to
+prevent a p-value lottery this process is repeated many times and the
+resulting p-values are aggregated to obtain a final p-value.
 
-The function \texttt{diffnet\_multisplit} uses repeated pooling and splitting of 
-two datasets to evaluate whether the reconstructed networks are significantly 
-different. We will use the inverse covariance matrices generated in Section
-\ref{sec:simulation} in this example.
+We will use the inverse covariance matrices generated in Section
+\ref{sec:simulation}in this example.
 
 <<echo=TRUE, include=TRUE, warning=TRUE, results="asis">>=
 ##set seed
@@ -310,8 +321,8 @@ different. We will use the inverse covariance matrices generated in Section
 cor1 <- cov2cor(solve(invcov1))
 cor2 <- cov2cor(solve(invcov2))
 
-## Generate data under null-hypothesis (both datasets have the same underlying
-## network)
+## Generate data under null-hypothesis 
+## (both datasets have the same underlying network)
 library(mvtnorm) # To generate multivariate Gaussian random samples
 x1 <- rmvnorm(n,mean = rep(0,dim(cor1)[1]), sigma = cor1)
 x2 <- rmvnorm(n,mean = rep(0,dim(cor1)[1]), sigma = cor1)
@@ -376,7 +387,7 @@ summary(fit.ggmgsa)
 fit.ggmgsa$medagg.pval#median aggregated p-values
 p.adjust(apply(fit.ggmgsa$pval,1,median),method='fdr')#or: first median aggregation,
                                                       #second fdr-correction
-
+plot(fit.ggmgsa)
 @
 
 \subsection{Differential Regression}

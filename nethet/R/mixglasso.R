@@ -779,7 +779,7 @@ mixglasso <- function(x,n.comp,
 ##' \item{fit.mixgl.selcrit}{Results for model with optimal number of components. List see mixglasso_init}
 ##' @author n.stadler
 ##' @export
-##' @example
+##' @examples
 ##' ##generate data
 ##' set.seed(1)
 ##' n <- 1000
@@ -978,6 +978,7 @@ loglik_mix<- function(x,mix.prob,Mu,Sig){
 ##' @param scale.parcor Should SigInv be scaled to have diagonal equal one, siginv=parcor ?
 ##' @return SigInv: list of inverse covariance matrices
 ##' @author n.stadler
+##' @keywords internal
 sparse_conc <- function(p,K,s,s.common,magn.nz=0.5,scale.parcor=TRUE){
     ##Generate K different Sparse Inverse Covariance-Matrices of dimension p:
     ##

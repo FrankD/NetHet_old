@@ -423,6 +423,7 @@ gsea.highdimT2 <- function(x1,x2,gene.sets,gene.names,gs.names=NULL,method='test
 ##' \item{x1.filt}{expression matrix (condition 1) after filtering}
 ##' \item{x2.filt}{expression matrix (condition 2) after filtering}
 ##' @author n.stadler
+##' @keywords internal
 shapiro_screen <- function(x1,x2,sign.level=0.001){
   p <- ncol(x1)
   pval1 <- sapply(1:p,function(j){shapiro.test(x1[,j])$p.value})
