@@ -18,6 +18,7 @@ if(getRversion() >= '2.15.1')
 #' @param net.clustering Clustering
 #' @param cluster.names Cluster names
 #' @param node.names Node names
+#' @keywords internal
 #' 
 buildDotPlotDataFrame <- function(net.clustering, cluster.names, node.names) {
 	results.frame = data.frame()
@@ -188,6 +189,7 @@ dot_plot <- function(net.clustering, p.corrs.thresh=0.25, hard.limit=50,
 #' net.clustering will be used.
 #' @param group.names Names for the clusters or groups. If NULL, names from 
 #' net.clustering will be used (by default these are integets 1:numClusters).
+#' @param cex Scale factor for text and symbols in plot.
 #' @export
 #' @import ggplot2
 #' @return Returns a ggplot2 object. If display=TRUE, additionally displays the 
@@ -222,7 +224,8 @@ dot_plot <- function(net.clustering, p.corrs.thresh=0.25, hard.limit=50,
 #'						 node.pairs=node.pairs)
 scatter_plot <- function(net.clustering, data, node.pairs, display=TRUE, 
 												node.names=rownames(net.clustering$Mu),
-												group.names=sort(unique(net.clustering$comp))) {
+												group.names=sort(unique(net.clustering$comp)),
+												cex=1) {
 	
 	if(class(net.clustering) != 'nethetclustering') 
 		 stop('net.clustering needs to be an object of class nethetclustering')
@@ -270,12 +273,12 @@ scatter_plot <- function(net.clustering, data, node.pairs, display=TRUE,
 	}
 	
 	p <- ggplot(plotting.frame, aes(Node.1, Node.2)) +
-		geom_point(aes(colour=Group)) +		
+		geom_point(aes(colour=Group), size=2*cex) +		
 		geom_abline(linetype=3) + 
 		facet_grid(Edge.Name ~ Group) +
-		geom_text(data=corr.frame, aes(x=Inf, y=Inf, label=paste('PCorr: ', P.Corr, '\n', 'Corr: ', Corr, sep='')), size=6, family='Times', hjust=1, vjust=1) +
-		theme(strip.text.y = element_text(size=15), strip.text.x = element_text(size=20),
-					axis.text=element_text(size=18), axis.title=element_text(size=24,face="bold"))
+		geom_text(data=corr.frame, aes(x=Inf, y=Inf, label=paste('PCorr: ', P.Corr, '\n', 'Corr: ', Corr, sep='')), size=6*cex, family='Times', hjust=1, vjust=1) +
+		theme(strip.text.y = element_text(size=cex*15), strip.text.x = element_text(size=cex*20),
+					axis.text=element_text(size=cex*18), axis.title=element_text(size=cex*24,face="bold"))
 	
 	if(display) print(p)
 	

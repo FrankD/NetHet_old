@@ -595,7 +595,7 @@ node.pairs = rbind(c(9,10), c(2,5),c(6,7))
 
 # Create scatter plots of specified edges
 g = scatter_plot(mixglasso.clustering, data=sim.result$data,
-						node.pairs=node.pairs)
+						node.pairs=node.pairs, cex=0.5)
 @
 
 \subsection{Exporting Results}
