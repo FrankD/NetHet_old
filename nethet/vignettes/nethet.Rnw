@@ -1,3 +1,9 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%Comments:
+% * set opts_chunk$set(eval=FALSE) for 'knitting' 
+%   without running R code
+%
+
 \documentclass{article}
 
 %\VignetteEngine{knitr::knitr}
@@ -18,7 +24,7 @@ BiocStyle::latex()
 \bioctitle[nethet]{{\color{red}A Bioconductor package for investigation of network network heterogeneity from high-dimensional data}
   % Heterogeneous Clustering and Network Inference with the MixGLasso
 }
-\author{Nicolas St\"{a}dler\footnote{n.stadler@gmail.com}, Frank Dondelinger\footnote{fdondelinger.work@gmail.com}}
+\author{Nicolas St\"{a}dler\footnote{staedler.n@gmail.com}, Frank Dondelinger\footnote{fdondelinger.work@gmail.com}}
 
 \begin{document}
 
@@ -274,63 +280,85 @@ qplot(x=c(networks$Sig), y=c(sim.result$Sig),
   
 @
 
-\section{High-dimensional hypothesis testing}
-We have demonstrated how to use our package to estimate networks from
-heterogeneous data consisting of different groups (or components). Often,
-we would like to perform a statistical comparison between estimated
-networks. In this section we will introduce functions which allow
-formal hypothesis testing regarding network differences.
+\section{High-dimensional two-sample testing}\label{sec:diffnet}
 
-%% show how to use the functions that allow
-%% for high-dimensional hypothesis testing; in other words, how to
-%% compare reconstructed networks (and regression models) and test
-%% whether the networks that arise from a given dataset are significantly
-%% different.
+We have demonstrated how to use our package to estimate networks from
+heterogeneous data. Often, we would like to perform a statistical
+comparison between networks. \emph{Differential network} allows formal
+hypothesis testing regarding network differences. It is based on a
+novel and very general methodology for high-dimensioal two-sample
+testing. Other useful tools based on this technology are
+\emph{GGM-GSA} (``multivariate gene-set testing based on GGMs'') and
+\emph{differential regression} which allows formal two-sample testing
+in the high-dimensional regression model.
 
 \subsection{Differential network}
-\label{sec:diffnet}
-Consider two datasets $\mathbf{X}_1$ and $\mathbf{X}_2$ collected
-under different conditions. We would like to know whether networks
-estimated from these two datasets differ in a statistical significant
-manner. The function \texttt{diffnet\_multisplit} uses repeated sample
-splitting to address this task: the data is randomly split into two
-halves, networks are inferred on one half and significance testing
-(p-value calculation) is performed on the other half. In order to
-prevent a p-value lottery this process is repeated many times and the
-resulting p-values are aggregated to obtain a final p-value.
+Let us consider datasets generated from GGMs $G_1$ and $G_2$
+respectively. We would like to know whether networks inferred form
+these datasets differ in a statistical significant manner, that is we
+would like to test the hypothesis
+\begin{eqnarray*}
+  \mathbf{H}_0:\quad G_1=G_2.
+\end{eqnarray*}
+The function \texttt{diffnet\_multisplit} uses repeated sample
+splitting to address this task. The main steps are:
+\begin{enumerate}
+\item Both datasets are randomly split into two halves: the ``\emph{in}-'' and ``\emph{out}-sample''.
+\item Networks are inferred using only the \emph{in}-sample (``screening step'').
+\item Based on the \emph{out}-sample, a p-value is computed which
+  compares the neworks obtained in step 2 (``cleaning step'').
+\item Steps 1-3 are repeated many times (e.g. 50 times); the resulting
+  p-values are aggregated and the final aggregated p-value is reported.
+\end{enumerate}
 
-We will use the inverse covariance matrices generated in Section
-\ref{sec:simulation}in this example.
+We now illustrate the use of \texttt{diffnet\_multisplit} with an
+example. We consider GGMs (i.e. inverse covariance matrices)
+previsously generated in Section \ref{sec:simulation}.
 
-<<echo=TRUE, include=TRUE, warning=TRUE, results="asis">>=
-##set seed
-#set.seed(1)
-
-##sample size and number of nodes
-# n <- 70
-# p <- 30
-# 
-# ##specify sparse inverse covariance matrices
-# gen.net <- generate_2networks(p,graph='random',n.nz=rep(p,2),
-#                               n.nz.common=ceiling(p*0.8))
-# invcov1 <- gen.net[[1]]
-# invcov2 <- gen.net[[2]]
-# plot_2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)
+<<eval=FALSE, echo=TRUE, include=TRUE, warning=TRUE, results="asis">>=
+## Set seed
+set.seed(1)
+ 
+## Sample size and number of nodes
+p <- 30
+ 
+## Specify sparse inverse covariance matrices
+gen.net <- generate_2networks(p,graph='random',n.nz=rep(p,2),                               
+                             n.nz.common=ceiling(p*0.8))
+invcov1 <- gen.net[[1]]
+invcov2 <- gen.net[[2]] 
 
 ## Get corresponding correlation matrices
 cor1 <- cov2cor(solve(invcov1))
 cor2 <- cov2cor(solve(invcov2))
+@ 
 
-## Generate data under null-hypothesis 
-## (both datasets have the same underlying network)
+We start with generating data under the ``null-scenario'' where both datasets have
+the same underlying network.
+
+<<echo=TRUE, include=TRUE, warning=TRUE, results="asis">>=
+## Generate data under null hypothesis
 library(mvtnorm) # To generate multivariate Gaussian random samples
+
+## Sample size
+n <- 70
+
 x1 <- rmvnorm(n,mean = rep(0,dim(cor1)[1]), sigma = cor1)
 x2 <- rmvnorm(n,mean = rep(0,dim(cor1)[1]), sigma = cor1)
+@ 
 
+Then, we run a differential network analysis and obtain the p-value \Sexpr{dn.null$ms.pval}.
+<<echo=TRUE, include=TRUE, warning=TRUE, results="asis">>=
 ## Run diffnet (under null hypothesis)
 dn.null <- diffnet_multisplit(x1,x2,b.splits=1,verbose=FALSE)
- 
-dn.null$ss.pval#single-split p-value
+cat('p-value:',dn.null$ms.pval,'\n') # resulting p-values are in output ms.pval  
+@ 
+
+The same analysis can be performed for data generated under the
+alternative hypothesis. The resulting p-value is
+\Sexpr{dn.altn$ms.pval} which indicates a highly significant network
+difference.
+<<echo=TRUE, include=TRUE, warning=TRUE, results="asis">>=
 
 ## Generate data under alternative hypothesis (datasets have different networks)
 x1 <- rmvnorm(n,mean = rep(0,dim(cor1)[1]), sigma = cor1)
@@ -339,26 +367,35 @@ x2 <- rmvnorm(n,mean = rep(0,dim(cor1)[2]), sigma = cor2)
 ## Run diffnet (under alternative)
 dn.altn <- diffnet_multisplit(x1,x2,b.splits=1,verbose=FALSE)
 
-dn.altn$ss.pval#single-split p-value
+dn.altn$ms.pval
+@ 
 
-##typically we would choose a larger number of splits
-# dn.altn <- diffnet_multisplit(x1,x2,b.splits=10,verbose=FALSE)
-# dn.altn$ms.pval#multi-split p-values
-# dn.altn$medagg.pval#median aggregated p-value
-# plot(dn.altn)#histogram of single-split p-values
-
+The variable \texttt{b.splits} specifies the number of data splits
+used in the differential network procedure. The p-values in the
+previous examples were obtained using only a single data split
+(\texttt{b.splits=1}). P-values heavily depend on the random split of
+the data. This amounts to a "p-value lottery". To get stable and
+reproducible results we therefore would typically choose a larger
+number for the variable \texttt{b.split} and report the aggregated
+p-value.
+<<eval=FALSE, echo=TRUE, include=TRUE, warning=TRUE, results="asis">>=
+## Typically we would choose a larger number of splits
+dn.altn <- diffnet_multisplit(x1,x2,b.splits=50,verbose=FALSE,mc.flag=TRUE)
+dn.altn$ms.pval # p-values for all b.split data splits
+plot(dn.altn) # histogram over 50 p-values
+cat('p-value:',dn.altn$medagg.pval,'\n') # median aggregated p-value
 @
 
 
 \subsection{Multivariate gene-set testing based on GGMs}
+In the case where molecular variables can be grouped into various sets
+of biologically related features (e.g. gene-sets or pathways),
+\texttt{ggmagsa\_multisplit} can be used to perform differential
+network analyses iteratively for all gene-sets. This allows to
+identify gene-sets which show a significant network difference. For
+illustration we consider data generated from the following networks.
 
-Next, we present the function \texttt{ggmagsa\_multisplit}, which allows for 
-network-based gene set analysis.
-
-<<echo=TRUE, include=TRUE, warning=TRUE, results="asis", fig.width=7, fig.height=3, fig.align='center'>>=
-##generate data
-#set.seed(1)
-
+<<echo=TRUE, include=TRUE, warning=TRUE, results="asis", fig.width=5, fig.height=2.5, fig.align='center'>>=
 ## Generate new networks
 set.seed(1)
 p <- 9#network with p nodes
@@ -366,41 +403,48 @@ n <- 40
 hub.net <- generate_2networks(p,graph='hub',n.hub=3,n.hub.diff=1)#generate hub networks
 invcov1 <- hub.net[[1]]
 invcov2 <- hub.net[[2]]
-plot_2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)
+plot_2networks(invcov1,invcov2,label.pos=0,label.cex=0.7,
+               main=c('network 1', 'network 2'),cex.main=0.7)
 
 ## Generate data
 library('mvtnorm')
 x1 <- rmvnorm(n,mean = rep(0,p), sigma = cov2cor(solve(invcov1)))
 x2 <- rmvnorm(n,mean = rep(0,p), sigma = cov2cor(solve(invcov2)))
+@ 
 
-## Run DiffNet
-# fit.dn <- diffnet_multisplit(x1,x2,b.splits=2,verbose=FALSE)
-# fit.dn$medagg.pval
+%## Run DiffNet
+%# fit.dn <- diffnet_multisplit(x1,x2,b.splits=2,verbose=FALSE)
+%# fit.dn$medagg.pval
 
-## Identify hubs with 'gene-sets'
+The nodes can be grouped into three gene-sets where only the first has
+a different underlying network.
+<<eval=FALSE, echo=TRUE, include=TRUE, warning=TRUE, results="asis">>=
+## Identify groups with 'gene-sets'
 gene.names <- paste('G',1:p,sep='')
 gsets <- split(gene.names,rep(1:3,each=3))
+@ 
 
+We run GGM-GSA with a single data split (\texttt{b.splits=1}) and note
+that only the p-value for the first gene-set has small magnitude. Again, we
+would typically use a larger number of data splits in order to obtain
+stable p-values.
+<<eval=TRUE, echo=TRUE, include=TRUE, warning=TRUE, results="asis">>=
 ## Run GGM-GSA
-fit.ggmgsa <- ggmgsa_multisplit(x1,x2,no.splits=2,gsets,gene.names,verbose=FALSE)
-summary(fit.ggmgsa)
-fit.ggmgsa$medagg.pval#median aggregated p-values
-p.adjust(apply(fit.ggmgsa$pval,1,median),method='fdr')#or: first median aggregation,
-                                                      #second fdr-correction
-plot(fit.ggmgsa)
+fit.ggmgsa <- ggmgsa_multisplit(x1,x2,b.splits=1,gsets,gene.names,verbose=FALSE)
+print(xtable(summary(fit.ggmgsa),digits=6))
 @
 
-\subsection{Differential Regression}
+\subsection{Differential regression}
 
-In addition to network analysis, we have also included the related function
-\texttt{diffregr\_multisplit}, which allows for hypothesis testing of regression
-models. This is an extension of the function described in Section 
-\ref{sec:diffnet}, and works in a similar way.
+In addition to differential network, this \textbf{R}-package also
+provides and implementation of differential regression. In particular,
+the function \texttt{diffregr\_multisplit} allows formal two-sample
+testing in the high-dimensional regression model. It is also based on
+sample splitting and is very similar to the previously introduced
+\texttt{diffnet\_multisplit}.
 
+Consider the following sparse regression models.
 <<echo=TRUE, include=TRUE, warning=TRUE, results="asis">>=
-##set seed
-#set.seed(1)
-
 ## Number of predictors and sample size
 p <- 100
 n <- 80
@@ -415,30 +459,39 @@ act2 <- c(act1[1:3],sample(setdiff(1:p,act1),2))
 beta1 <- beta2 <- rep(0,p)
 beta1[act1] <- 0.5
 beta2[act2] <- 0.5
+@ 
 
+We generate data under the null-hypothesis and run differential regression. The histogram shows the distribution of the p-values obtained form ten data splits.
+<<echo=TRUE, include=TRUE, warning=TRUE, results="asis", fig.align='center', fig.width=3.5,fig.height=3.5>>=
 ## Response vectors under null-hypothesis
 y1 <- x1%*%as.matrix(beta1)+rnorm(n,sd=1)
 y2 <- x2%*%as.matrix(beta1)+rnorm(n,sd=1)
 
-## Diffregr (asymptotic p-values)
-fit.null <- diffregr_multisplit(y1,y2,x1,x2,b.splits=5)
-fit.null$ms.pval#multi-split p-values
-fit.null$medagg.pval#median aggregated p-values
+## Differential regression; b.splits=10
+fit.null <- diffregr_multisplit(y1,y2,x1,x2,b.splits=10)
+par(cex=0.7)
+plot(fit.null,cex=0.5) # histogram of p-values from b.split data splits
+cat('p-value: ',fit.null$medagg.pval,'\n') # median aggregated p-value
+@ 
 
+The following example illustrates differential regression in scenario with different regression models. 
+<<echo=TRUE, include=TRUE, warning=TRUE, results="asis",fig.align='center',fig.width=3.5,fig.height=3.5>>=
 ## Response vectors under alternative-hypothesis
 y1 <- x1%*%as.matrix(beta1)+rnorm(n,sd=1)
 y2 <- x2%*%as.matrix(beta2)+rnorm(n,sd=1)
 
-## Diffregr (asymptotic p-values)
-fit.alt <- diffregr_multisplit(y1,y2,x1,x2,b.splits=5)
-fit.alt$ms.pval
-fit.alt$medagg.pval
+## Differential regression (asymptotic p-values)
+fit.alt <- diffregr_multisplit(y1,y2,x1,x2,b.splits=10)
+par(cex=0.7)
+plot(fit.alt)
+cat('p-value: ',fit.alt$medagg.pval,'\n')
+@ 
 
-## Diffregr (permutation-based p-values; 100 permutations)
+For differential regression we have the option to compute p-values based on permutations.
+<<echo=TRUE, include=TRUE, warning=TRUE, results="asis",fig.align='center',fig.width=3.5,fig.height=3.5>>=
+## Differential regression (permutation-based p-values; 100 permutations)
 fit.alt.perm <- diffregr_multisplit(y1,y2,x1,x2,b.splits=5,n.perm=100)
-fit.alt.perm$ms.pval
-fit.alt.perm$medagg.pval
-
+cat('p-value: ',fit.alt.perm$medagg.pval,'\n')
 @
 
 \section{{\color{red} Model-based clustering based on networks}
