@@ -500,7 +500,7 @@ ggmgsa_singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust='fdr',
 ##' @title Multi-split GGMGSA (parallelized computation)
 ##' @param x1 Expression matrix for condition 1 (mean zero is required).
 ##' @param x2 Expression matrix for condition 2 (mean zero is required).
-##' @param no.splits Number of random data splits (default=50).
+##' @param b.splits Number of random data splits (default=50).
 ##' @param gene.sets List of gene-sets.
 ##' @param gene.names Gene names. Each column in x1 (and x2) corresponds
 ##'                   to a gene. 
@@ -508,7 +508,7 @@ ggmgsa_singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust='fdr',
 ##' @param method.p.adjust Method for p-value adjustment (default='fdr').
 ##' @param order.adj.agg Order of aggregation and adjustment of p-values.
 ##'                      Options: 'agg-adj' (default), 'adj-agg'.
-##' @param mc.flag If \code{TRUE} use parallel execution for each no.splits via function 
+##' @param mc.flag If \code{TRUE} use parallel execution for each b.splits via function 
 ##'                \code{mclapply} of package \code{parallel}.
 ##' @param mc.set.seed See mclapply. Default=TRUE
 ##' @param mc.preschedule See mclapply. Default=TRUE
@@ -531,7 +531,7 @@ ggmgsa_singlesplit <- function(x1,x2,gene.sets,gene.names,method.p.adjust='fdr',
 ##' @author n.stadler
 ##' @export
 ##' @example ../ggmgsa_ex.R
-ggmgsa_multisplit<- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NULL,
+ggmgsa_multisplit<- function(x1,x2,b.splits=50,gene.sets,gene.names,gs.names=NULL,
                                  method.p.adjust='fdr',order.adj.agg='agg-adj',
                                  mc.flag=FALSE,mc.set.seed=TRUE,mc.preschedule=TRUE,mc.cores=getOption("mc.cores", 2L),verbose=TRUE,...){
 
@@ -540,7 +540,7 @@ ggmgsa_multisplit<- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NU
     }
 
     if(mc.flag==TRUE){
-        res <- mclapply(seq(no.splits),
+        res <- mclapply(seq(b.splits),
                         function(i){
                             if(verbose){cat('\n split: ',i,'\n\n')}
                             res <- ggmgsa_singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
@@ -553,7 +553,7 @@ ggmgsa_multisplit<- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NU
                         }, mc.set.seed=mc.set.seed, mc.preschedule = mc.preschedule,mc.cores=mc.cores)
     }else{
 
-        res <- lapply(seq(no.splits),
+        res <- lapply(seq(b.splits),
                       function(i){
                           if(verbose){cat('\n split: ',i,'\n\n')}
                           res <- ggmgsa_singlesplit(x1,x2,gene.sets=gene.sets,gene.names=gene.names,
@@ -566,14 +566,14 @@ ggmgsa_multisplit<- function(x1,x2,no.splits=50,gene.sets,gene.names,gs.names=NU
                       )
     }
     
-    res.pval <- sapply(seq(no.splits),function(i){res[[i]][,'pvals']})
-    res.teststat <- sapply(seq(no.splits),function(i){res[[i]][,'teststat']})
-    res.teststat.bic <- sapply(seq(no.splits),function(i){res[[i]][,'teststat.bic']})
-    res.teststat.aic <- sapply(seq(no.splits),function(i){res[[i]][,'teststat.aic']})
-    res.rel.edgeinter <- sapply(seq(no.splits),function(i){res[[i]][,'rel.edgeinter']})
-    res.dfu <- sapply(seq(no.splits),function(i){res[[i]][,'dfu']})
-    res.dfv <- sapply(seq(no.splits),function(i){res[[i]][,'dfv']})
-    res.dfuv <- sapply(seq(no.splits),function(i){res[[i]][,'dfuv']})
+    res.pval <- sapply(seq(b.splits),function(i){res[[i]][,'pvals']})
+    res.teststat <- sapply(seq(b.splits),function(i){res[[i]][,'teststat']})
+    res.teststat.bic <- sapply(seq(b.splits),function(i){res[[i]][,'teststat.bic']})
+    res.teststat.aic <- sapply(seq(b.splits),function(i){res[[i]][,'teststat.aic']})
+    res.rel.edgeinter <- sapply(seq(b.splits),function(i){res[[i]][,'rel.edgeinter']})
+    res.dfu <- sapply(seq(b.splits),function(i){res[[i]][,'dfu']})
+    res.dfv <- sapply(seq(b.splits),function(i){res[[i]][,'dfv']})
+    res.dfuv <- sapply(seq(b.splits),function(i){res[[i]][,'dfuv']})
 
     if(order.adj.agg=='agg-adj'){
         pvalagg <- my.p.adjust(apply(res.pval,1,aggpval),method=method.p.adjust)
