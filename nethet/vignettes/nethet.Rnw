@@ -66,7 +66,7 @@ subtypes that present different molecular profiles, and reconstruct the
 networks for each identified subtype. The \texttt{nethet} package contains 
 functionalities to tackle all of these tasks.
 
-\section{Statistical Setup}
+\section{Statistical setup}
 
 We consider independent samples $X_i\in \mathbb{R}^p$
 ($i=1,\ldots,n$), measuring $p$ molecular variables. We assume that
@@ -103,7 +103,7 @@ thereby control over-fitting. In particular, we use the popular
 the group assignments $S_i$, as well as the number of groups
 $K$, are unknown at the outset and have to be inferred simultaneously
 with the group-specific mean vectors and networks. The method
-\emph{mixglasso}, implemented in this package, is novel tool for
+\emph{mixglasso}, implemented in this package, is a novel tool for
 high-dimensional, network-based clustering. It is based on a finite 
 mixture of GGMs and employs an adaptive and automatic penalization scheme 
 \cite{staedler_mixglasso}.
@@ -123,7 +123,7 @@ We build upon a recent approach called \emph{differential network}
 \cite{staedler_diffnet,ggmgsa2014} which allows formal two-sample
 testing in high-dimensional GGMs.
 
-\section{Package Functionalities}
+\section{Package functionalities}
 
 The package consists of the following main parts: 
 
@@ -165,7 +165,7 @@ p = 25
 # Specify number of components of the mixture model and mixture probabilities
 n.comp = 4
 
-mix.prob = c(0.2, 0.3, 0.3, 0.2)
+mix.prob = c(0.1, 0.4, 0.3, 0.2)
 
 # Specify sparsity in [0,1], indicating fraction of off-diagonal zero entries.
 s = 0.9
@@ -286,7 +286,7 @@ We have demonstrated how to use our package to estimate networks from
 heterogeneous data. Often, we would like to perform a statistical
 comparison between networks. \emph{Differential network} allows formal
 hypothesis testing regarding network differences. It is based on a
-novel and very general methodology for high-dimensioal two-sample
+novel and very general methodology for high-dimensional two-sample
 testing. Other useful tools based on this technology are
 \emph{GGM-GSA} (``multivariate gene-set testing based on GGMs'') and
 \emph{differential regression} which allows formal two-sample testing
@@ -294,7 +294,7 @@ in the high-dimensional regression model.
 
 \subsection{Differential network}
 Let us consider datasets generated from GGMs $G_1$ and $G_2$
-respectively. We would like to know whether networks inferred form
+respectively. We would like to know whether networks inferred from
 these datasets differ in a statistical significant manner, that is we
 would like to test the hypothesis
 \begin{eqnarray*}
@@ -306,16 +306,16 @@ splitting to address this task. The main steps are:
 \item Both datasets are randomly split into two halves: the ``\emph{in}-'' and ``\emph{out}-sample''.
 \item Networks are inferred using only the \emph{in}-sample (``screening step'').
 \item Based on the \emph{out}-sample, a p-value is computed which
-  compares the neworks obtained in step 2 (``cleaning step'').
+  compares the networks obtained in step 2 (``cleaning step'').
 \item Steps 1-3 are repeated many times (e.g. 50 times); the resulting
   p-values are aggregated and the final aggregated p-value is reported.
 \end{enumerate}
 
 We now illustrate the use of \texttt{diffnet\_multisplit} with an
 example. We consider GGMs (i.e. inverse covariance matrices)
-previsously generated in Section \ref{sec:simulation}.
+previously generated in Section \ref{sec:simulation}.
 
-<<eval=FALSE, echo=TRUE, include=TRUE, warning=TRUE, results="asis">>=
+<<eval=TRUE, echo=TRUE, include=TRUE, warning=TRUE, results="asis">>=
 ## Set seed
 set.seed(1)
  
@@ -347,17 +347,17 @@ x1 <- rmvnorm(n,mean = rep(0,dim(cor1)[1]), sigma = cor1)
 x2 <- rmvnorm(n,mean = rep(0,dim(cor1)[1]), sigma = cor1)
 @ 
 
-Then, we run a differential network analysis and obtain the p-value \Sexpr{dn.null$ms.pval}.
+Then, we run a differential network analysis:
 <<echo=TRUE, include=TRUE, warning=TRUE, results="asis">>=
 ## Run diffnet (under null hypothesis)
 dn.null <- diffnet_multisplit(x1,x2,b.splits=1,verbose=FALSE)
-cat('p-value:',dn.null$ms.pval,'\n') # resulting p-values are in output ms.pval  
 @ 
 
+We obtain the p-value \Sexpr{dn.null$ms.pval}, which is stored in 
+\texttt{dn.null\$ms.pval}.
+
 The same analysis can be performed for data generated under the
-alternative hypothesis. The resulting p-value is
-\Sexpr{dn.altn$ms.pval} which indicates a highly significant network
-difference.
+alternative hypothesis. 
 <<echo=TRUE, include=TRUE, warning=TRUE, results="asis">>=
 
 ## Generate data under alternative hypothesis (datasets have different networks)
@@ -366,9 +366,10 @@ x2 <- rmvnorm(n,mean = rep(0,dim(cor1)[2]), sigma = cor2)
 
 ## Run diffnet (under alternative)
 dn.altn <- diffnet_multisplit(x1,x2,b.splits=1,verbose=FALSE)
-
-dn.altn$ms.pval
 @ 
+
+The resulting p-value is \Sexpr{dn.altn$ms.pval} which indicates a highly 
+significant network difference.
 
 The variable \texttt{b.splits} specifies the number of data splits
 used in the differential network procedure. The p-values in the
@@ -378,11 +379,11 @@ the data. This amounts to a "p-value lottery". To get stable and
 reproducible results we therefore would typically choose a larger
 number for the variable \texttt{b.split} and report the aggregated
 p-value.
-<<eval=FALSE, echo=TRUE, include=TRUE, warning=TRUE, results="asis">>=
+<<eval=TRUE, echo=TRUE, include=TRUE, warning=TRUE, fig.width=3.5, fig.height=3.5, fig.align='center'>>=
 ## Typically we would choose a larger number of splits
 dn.altn <- diffnet_multisplit(x1,x2,b.splits=50,verbose=FALSE,mc.flag=TRUE)
-dn.altn$ms.pval # p-values for all b.split data splits
-plot(dn.altn) # histogram over 50 p-values
+par(cex=0.7)
+plot(dn.altn, cex=0.5) # histogram over 50 p-values
 cat('p-value:',dn.altn$medagg.pval,'\n') # median aggregated p-value
 @
 
@@ -391,14 +392,14 @@ cat('p-value:',dn.altn$medagg.pval,'\n') # median aggregated p-value
 In the case where molecular variables can be grouped into various sets
 of biologically related features (e.g. gene-sets or pathways),
 \texttt{ggmagsa\_multisplit} can be used to perform differential
-network analyses iteratively for all gene-sets. This allows to
+network analyses iteratively for all gene-sets. This allows us to
 identify gene-sets which show a significant network difference. For
 illustration we consider data generated from the following networks.
 
 <<echo=TRUE, include=TRUE, warning=TRUE, results="asis", fig.width=5, fig.height=2.5, fig.align='center'>>=
 ## Generate new networks
 set.seed(1)
-p <- 9#network with p nodes
+p <- 9 # network with p nodes
 n <- 40
 hub.net <- generate_2networks(p,graph='hub',n.hub=3,n.hub.diff=1)#generate hub networks
 invcov1 <- hub.net[[1]]
@@ -418,7 +419,7 @@ x2 <- rmvnorm(n,mean = rep(0,p), sigma = cov2cor(solve(invcov2)))
 
 The nodes can be grouped into three gene-sets where only the first has
 a different underlying network.
-<<eval=FALSE, echo=TRUE, include=TRUE, warning=TRUE, results="asis">>=
+<<eval=TRUE, echo=TRUE, include=TRUE, warning=TRUE, results="asis">>=
 ## Identify groups with 'gene-sets'
 gene.names <- paste('G',1:p,sep='')
 gsets <- split(gene.names,rep(1:3,each=3))
@@ -431,13 +432,15 @@ stable p-values.
 <<eval=TRUE, echo=TRUE, include=TRUE, warning=TRUE, results="asis">>=
 ## Run GGM-GSA
 fit.ggmgsa <- ggmgsa_multisplit(x1,x2,b.splits=1,gsets,gene.names,verbose=FALSE)
+
+library(xtable)
 print(xtable(summary(fit.ggmgsa),digits=6))
 @
 
 \subsection{Differential regression}
 
 In addition to differential network, this \textbf{R}-package also
-provides and implementation of differential regression. In particular,
+provides an implementation of differential regression. In particular,
 the function \texttt{diffregr\_multisplit} allows formal two-sample
 testing in the high-dimensional regression model. It is also based on
 sample splitting and is very similar to the previously introduced
@@ -494,9 +497,9 @@ fit.alt.perm <- diffregr_multisplit(y1,y2,x1,x2,b.splits=5,n.perm=100)
 cat('p-value: ',fit.alt.perm$medagg.pval,'\n')
 @
 
-\section{{\color{red} Model-based clustering based on networks}
-  % Network reconstruction with unknown components using \texttt{mixglasso}
-}
+\section{Network estimation and model-based clustering with unknown group labels}
+% Network reconstruction with unknown components using \texttt{mixglasso}
+
 
 Often we do not know a priori which component each sample belongs to. For example 
 in the case of samples corresponding to protein measurements in breast cancer 
@@ -540,7 +543,7 @@ mixglasso.result = mixglasso(sim.result$data, n.comp=3)
 
 # Calculate adjusted rand index to judge how accurate the clustering is
 # Values > 0.7 indicate good agreement.
-library(mclust)
+library(mclust, quietly=TRUE)
 adj.rand = adjustedRandIndex(mixglasso.result$comp, sim.result$comp)
 cat('Adjusted Rand Index', round(adj.rand, digits=2), '\n')
 @
@@ -608,15 +611,15 @@ print(p)
 Note that in this simplified example, $\lambda=0$ performs well because the 
 true inverse covariance matrices are not particularly sparse and $n >> p$.
 
-\section{Plotting and Exporting Results}
+\section{Plotting and exporting results}
 
 Our package includes several functions for plotting and exporting the networks
 and results that have been obtained. 
 
-\subsection{Plotting Results}
+\subsection{Plotting results}
 
 The output of \texttt{het\_cv\_glmnet} and \texttt{mixglasso} can be plotted either
-as in network form or as individual edges in the networks. For the network plots,
+in network form or as individual edges in the networks. For the network plots,
 we use the \texttt{network} package \cite{network_package}. This is the default 
 plotting when \texttt{plot} is invoked on an object of class 
 \texttt{nethetclustering}, and produces one global plot showing edges that 
@@ -631,13 +634,13 @@ mixglasso.clustering = mixglasso.result$models[[mixglasso.result$bic.opt]]
 
 # Plot networks, omitting edges with absolute partial correlation < 0.5 in 
 # every group.
-# Not displayed as plots are too big
+# NOTE: Not displayed.
 # plot(mixglasso.clustering, p.corrs.thresh=0.5)
 @
 
 Usually we are only interested in specific edges, and perhaps we wish to compare
 them among groups. Function \texttt{dot\_plot} generates a plot with edges above
-a certain threshold along the y axis, and one circle for each group showing the
+a certain threshold along the y-axis, and one circle for each group showing the
 smallest mean of the two nodes that make up the edge. We use the \texttt{ggplot2}
 package to make the plots \cite{ggplot2_package}.
 
@@ -655,7 +658,7 @@ a specified list of edges.
 <<echo=TRUE, include=TRUE, fig.width=7, fig.height=7, fig.align='center'>>=
 
 # Specify edges
-node.pairs = rbind(c(9,10), c(2,5),c(6,7))
+node.pairs = rbind(c(9,10), c(2,5),c(4,9))
 
 # Create scatter plots of specified edges
 g = scatter_plot(mixglasso.clustering, data=sim.result$data,

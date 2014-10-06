@@ -3,7 +3,7 @@
 #######################################################
 
 
-## Genereta networks
+## Generate networks
 set.seed(1)
 p <- 9#network with p nodes
 n <- 40
@@ -26,7 +26,7 @@ gene.names <- paste('G',1:p,sep='')
 gsets <- split(gene.names,rep(1:3,each=3))
 
 ## Run GGM-GSA
-fit.ggmgsa <- ggmgsa_multisplit(x1,x2,no.splits=2,gsets,gene.names,verbose=FALSE)
+fit.ggmgsa <- ggmgsa_multisplit(x1,x2,b.splits=2,gsets,gene.names,verbose=FALSE)
 summary(fit.ggmgsa)
 fit.ggmgsa$medagg.pval#median aggregated p-values
 p.adjust(apply(fit.ggmgsa$pval,1,median),method='fdr')#or: first median aggregation,

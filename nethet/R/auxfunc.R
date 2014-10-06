@@ -121,6 +121,7 @@ export_network <- function(net.clustering, file='network_table.csv',
 ##' @param x object of class 'diffnet'
 ##' @return aggregated p-values
 ##' @author nicolas
+##' @export
 summary.diffnet <- function(x){
 	out <- data.frame(medagg.pval=x$medagg.pval,meinshagg.pval=x$meinshagg.pval)
 	rownames(out) <- 'aggregated p-values'
@@ -134,12 +135,21 @@ summary.diffnet <- function(x){
 ##' @param x object of class 'diffregr'
 ##' @return aggregated p-values
 ##' @author nicolas
+##' @export
 summary.diffregr <- function(x){
 	out <- data.frame(medagg.pval=x$medagg.pval,meinshagg.pval=x$meinshagg.pval)
 	rownames(out) <- 'aggregated p-values'
 	return(out)
 }
 
+##' Summary function for object of class 'ggmgsa'
+##'
+##' 
+##' @title Summary function for object of class 'ggmgsa'
+##' @param x object of class 'ggmgsa'
+##' @return aggregated p-values
+##' @author nicolas
+##' @export
 summary.ggmgsa <- function(x){
 	out <- data.frame(medagg.pval=x$medagg.pval,meinshagg.pval=x$meinshagg.pval)
 	rownames(out) <- x$gs.names
@@ -153,7 +163,7 @@ summary.ggmgsa <- function(x){
 ##' @param x object of class 'nethetclustering'
 ##' @return Network statistics (a 'nethetsummary' object)
 ##' @author frankd
-##' 
+##' @export
 summary.nethetclustering <- function(x) {
 	
 	out = list(mix.prob=x$mix.prob, p=dim(x$Mu)[1], n.comp=dim(x$Mu)[2],
@@ -170,7 +180,7 @@ summary.nethetclustering <- function(x) {
 ##' @param x object of class 'nethetsummary'
 ##' @return NULL
 ##' @author frankd
-##' @keywords internal
+##' @export
 ##' 
 print.nethetsummary <- function(x) {
 	
