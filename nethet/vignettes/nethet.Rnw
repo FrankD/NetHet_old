@@ -21,7 +21,7 @@
 BiocStyle::latex()
 @
 
-\bioctitle[nethet]{{\color{red}A Bioconductor package for investigation of network network heterogeneity from high-dimensional data}
+\bioctitle[nethet]{A Bioconductor package for investigation of network heterogeneity from high-dimensional data
   % Heterogeneous Clustering and Network Inference with the MixGLasso
 }
 \author{Nicolas St\"{a}dler\footnote{staedler.n@gmail.com}, Frank Dondelinger\footnote{fdondelinger.work@gmail.com}}
@@ -77,12 +77,12 @@ $n_k\times p$ data matrix consisting of all samples belonging to group
 $k$.
 
 To describe networks we use Gaussian graphical models (\emph{GGMs},
-\cite{rue2005}). These models use an undirected graph or network to
+\cite{rue2005}). These models use an undirected graph (or network) to
 describe probabilistic relationships between variables.  For each
 group $k$, we assume that $\X_k$ is sampled from a multivariate
 Gaussian distribution with (unknown) mean $\mu_k$ and (unknown) $p
 \times p$ concentration matrix $\Omega_k=\Sigma_k^{-1}$. The matrix
-$\Omega_k$ defines the group-specific network $G_k$ via
+$\Omega_k$ defines the group-specific graph $G_k$ via
 \begin{eqnarray*}
 &(j,j') \in
 E(G_k) \Leftrightarrow \Omega_{k;jj'}\neq 0,\\
@@ -99,7 +99,7 @@ where $E(G)$ denotes the edge set of graph $G$.
 %group level. 
 We employ regularization to learn sparse, parsimonious networks and
 thereby control over-fitting. In particular, we use the popular
-\emph{graphical lasso} \cite{friedman2007sic,huge2012}. Frequently 
+\emph{graphical Lasso} \cite{friedman2007sic,huge2012}. Frequently 
 the group assignments $S_i$, as well as the number of groups
 $K$, are unknown at the outset and have to be inferred simultaneously
 with the group-specific mean vectors and networks. The method
@@ -132,16 +132,17 @@ The package consists of the following main parts:
        Gaussian mixture (network) model.
  \item Network inference using the \texttt{het\_cv\_glasso} function for 
        reconstructing heterogeneous networks from data with the graphical 
-       lasso \cite{glasso} when the group structure is known.
- \item High-dimensional hypothesis testing capabilities, including the 
-       \texttt{diffnet} functions implementing a statistical test for whether
-       the networks underlying a pair of dataset are different, the 
-       \texttt{ggmgsa} functions allowing for differential gene set testing and
-       the \texttt{diffregr} functions testing whether two regression models are 
-       statistically different.
+       Lasso \cite{glasso} when the group structure is known.
+     \item High-dimensional hypothesis testing capabilities, including
+       the \texttt{diffnet} functions implementing a statistical test
+       for whether the networks underlying a pair of dataset are
+       different, the \texttt{ggmgsa} functions allowing for
+       differential gene set testing and the \texttt{diffregr}
+       functions testing whether two high-dimensional regression
+       models are statistically different \cite{staedler_diffnet,ggmgsa2014}.
  \item The \texttt{mixglasso} functions implementing a 
        network-based clustering and reconstruction algorithm also based on the 
-       graphical lasso, for unknown group structure.
+       graphical Lasso, for unknown group structure \cite{staedler_mixglasso}.
  \item Plotting and export functions for displaying and saving the results of
        the analysis in a sensible way.
 \end{itemize}
@@ -241,9 +242,9 @@ plot_2networks(invcov1,invcov2,label.pos=0,label.cex=0.7)
 
 If it is known a priori to which component each sample belongs, then
 the problem of reconstructing the network reduces to a simple
-application of the graphical lasso to each component. For convenience,
+application of the graphical Lasso to each component. For convenience,
 we have included a wrapper function \texttt{het\_cv\_glasso} in
-\texttt{nethet} that applies the graphical lasso \cite{glasso} to each 
+\texttt{nethet} that applies the graphical Lasso \cite{glasso} to each 
 component in a heterogeneous dataset with specified component labels. The 
 penalisation hyperparameter is tuned individually for each component using
 cross-validation.
@@ -290,7 +291,8 @@ novel and very general methodology for high-dimensional two-sample
 testing. Other useful tools based on this technology are
 \emph{GGM-GSA} (``multivariate gene-set testing based on GGMs'') and
 \emph{differential regression} which allows formal two-sample testing
-in the high-dimensional regression model.
+in the high-dimensional regression model. For details on this
+methodology we refer the reader to \cite{staedler_diffnet,ggmgsa2014}.
 
 \subsection{Differential network}
 Let us consider datasets generated from GGMs $G_1$ and $G_2$
@@ -391,7 +393,7 @@ cat('p-value:',dn.altn$medagg.pval,'\n') # median aggregated p-value
 \subsection{Multivariate gene-set testing based on GGMs}
 In the case where molecular variables can be grouped into various sets
 of biologically related features (e.g. gene-sets or pathways),
-\texttt{ggmagsa\_multisplit} can be used to perform differential
+\texttt{ggmgsa\_multisplit} can be used to perform differential
 network analyses iteratively for all gene-sets. This allows us to
 identify gene-sets which show a significant network difference. For
 illustration we consider data generated from the following networks.
@@ -460,8 +462,8 @@ x2 <- matrix(rnorm(n*p),n,p)
 act1 <- sample(1:p,5)
 act2 <- c(act1[1:3],sample(setdiff(1:p,act1),2))
 beta1 <- beta2 <- rep(0,p)
-beta1[act1] <- 0.5
-beta2[act2] <- 0.5
+beta1[act1] <- 0.7
+beta2[act2] <- 0.7
 @ 
 
 We generate data under the null-hypothesis and run differential regression. The histogram shows the distribution of the p-values obtained form ten data splits.
@@ -490,12 +492,16 @@ plot(fit.alt)
 cat('p-value: ',fit.alt$medagg.pval,'\n')
 @ 
 
-For differential regression we have the option to compute p-values based on permutations.
+For differential regression we have the option to compute
+permutation-based p-values by choosing a number of permutations
+\texttt{n.perm}.
 <<echo=TRUE, include=TRUE, warning=TRUE, results="asis",fig.align='center',fig.width=3.5,fig.height=3.5>>=
 ## Differential regression (permutation-based p-values; 100 permutations)
 fit.alt.perm <- diffregr_multisplit(y1,y2,x1,x2,b.splits=5,n.perm=100)
-cat('p-value: ',fit.alt.perm$medagg.pval,'\n')
-@
+@ 
+The default option (\texttt{n.perm=NULL}) uses
+an asymptotic approximation to calculate p-values.
+
 
 \section{Network estimation and model-based clustering with unknown group labels}
 % Network reconstruction with unknown components using \texttt{mixglasso}
@@ -505,7 +511,7 @@ Often we do not know a priori which component each sample belongs to. For exampl
 in the case of samples corresponding to protein measurements in breast cancer 
 patients, the particular subtype of breast cancer that a patient suffers from
 may be unknown. In these cases, our package allows for network-based clustering
-of the samples using the mixture graphical lasso (mixglasso), which jointly 
+of the samples using the mixture graphical Lasso (mixglasso), which jointly 
 clusters the samples and reconstructs the networks for each group or cluster.
 
 To demonstrate the \texttt{mixglasso} function, let us first generate some data 
@@ -608,8 +614,14 @@ p <- ggplot(plotting.frame) +
 print(p)
 @
 
-Note that in this simplified example, $\lambda=0$ performs well because the 
-true inverse covariance matrices are not particularly sparse and $n >> p$.
+We note that mixglasso involves a penalization parameter $\lambda$
+which trades off goodness-of-fit and model complexity. We recommend to
+use the default which employs an adaptive and automatic penalization
+scheme \cite{staedler_mixglasso}. Note that in this simplified
+example, $\lambda=0$ (no penalization) performs well because %the true
+%inverse covariance matrices are not particularly sparse and 
+$n >> p$. $\lambda=\infty$ constrains inverse covariance matrices to
+be diagonal, hence the inferior performance.
 
 \section{Plotting and exporting results}
 
