@@ -118,12 +118,14 @@ export_network <- function(net.clustering, file='network_table.csv',
 ##'
 ##' 
 ##' @title Summary function for object of class 'diffnet'
-##' @param x object of class 'diffnet'
+##' @param object object of class 'diffnet'
+##' @param ... Other arguments.
 ##' @return aggregated p-values
 ##' @author nicolas
 ##' @export
-summary.diffnet <- function(x){
-	out <- data.frame(medagg.pval=x$medagg.pval,meinshagg.pval=x$meinshagg.pval)
+##' @method summary diffnet
+summary.diffnet <- function(object, ...){
+	out <- data.frame(medagg.pval=object$medagg.pval,meinshagg.pval=object$meinshagg.pval)
 	rownames(out) <- 'aggregated p-values'
 	return(out)
 }
@@ -132,12 +134,14 @@ summary.diffnet <- function(x){
 ##'
 ##' 
 ##' @title Summary function for object of class 'diffregr'
-##' @param x object of class 'diffregr'
+##' @param object object of class 'diffregr
+##' @param ... Other arguments
 ##' @return aggregated p-values
 ##' @author nicolas
 ##' @export
-summary.diffregr <- function(x){
-	out <- data.frame(medagg.pval=x$medagg.pval,meinshagg.pval=x$meinshagg.pval)
+##' @method summary diffregr
+summary.diffregr <- function(object, ...){
+	out <- data.frame(medagg.pval=object$medagg.pval,meinshagg.pval=object$meinshagg.pval)
 	rownames(out) <- 'aggregated p-values'
 	return(out)
 }
@@ -146,13 +150,15 @@ summary.diffregr <- function(x){
 ##'
 ##' 
 ##' @title Summary function for object of class 'ggmgsa'
-##' @param x object of class 'ggmgsa'
+##' @param object object of class 'ggmgsa'
+##' @param ... Other arguments
 ##' @return aggregated p-values
 ##' @author nicolas
 ##' @export
-summary.ggmgsa <- function(x){
-	out <- data.frame(medagg.pval=x$medagg.pval,meinshagg.pval=x$meinshagg.pval)
-	rownames(out) <- x$gs.names
+##' @method summary ggmgsa
+summary.ggmgsa <- function(object, ...){
+	out <- data.frame(medagg.pval=object$medagg.pval,meinshagg.pval=object$meinshagg.pval)
+	rownames(out) <- object$gs.names
 	return(out)
 }
 
@@ -160,14 +166,16 @@ summary.ggmgsa <- function(x){
 ##'
 ##' 
 ##' @title Summary function for object of class 'nethetclustering'
-##' @param x object of class 'nethetclustering'
+##' @param object object of class 'nethetclustering'
+##' @param ... Other arguments
 ##' @return Network statistics (a 'nethetsummary' object)
 ##' @author frankd
 ##' @export
-summary.nethetclustering <- function(x) {
+##' @method summary nethetclustering
+summary.nethetclustering <- function(object, ...) {
 	
-	out = list(mix.prob=x$mix.prob, p=dim(x$Mu)[1], n.comp=dim(x$Mu)[2],
-			 loglik=x$loglik, bic=x$bic, mmdl=x$mmdl, compsize=x$compsize)
+	out = list(mix.prob=object$mix.prob, p=dim(object$Mu)[1], n.comp=dim(object$Mu)[2],
+			 loglik=object$loglik, bic=object$bic, mmdl=object$mmdl, compsize=object$compsize)
 	
 	class(out) = 'nethetsummary'
 	return(out)
@@ -178,11 +186,13 @@ summary.nethetclustering <- function(x) {
 ##' 
 ##' @title Print function for object of class 'nethetsummmary'
 ##' @param x object of class 'nethetsummary'
+##' @param ... Other arguments
 ##' @return NULL
 ##' @author frankd
 ##' @export
+##' @method print nethetsummary
 ##' 
-print.nethetsummary <- function(x) {
+print.nethetsummary <- function(x, ...) {
 	
 	cat('Heterogeneous network mixture\n',
 			'Number of nodes:', x$p, '\n',
