@@ -66,6 +66,17 @@ subtypes that present different molecular profiles, and reconstruct the
 networks for each identified subtype. The \texttt{nethet} package contains 
 functionalities to tackle all of these tasks.
 
+To the best of our knowledge, \texttt{nethet} is currently the only 
+implementation of statistical solid methodology enabling the analysis of 
+network heterogeneity from high-dimensional data. Package \texttt{nethet} 
+combines several implementations of recent statistical innovations useful for 
+estimation and comparison of networks in a heterogeneous, high-dimensional 
+setting. In particular, we provide code for formal two-sample testing in 
+Gaussian graphical models (differential network and GGM-GSA; 
+\cite{staedler_diffnet}, \cite{ggmgsa2014}) and make a novel network-based 
+clustering algorithm available (mixed graphical lasso, 
+\cite{staedler_mixglasso}).
+
 \section{Statistical setup}
 
 We consider independent samples $X_i\in \mathbb{R}^p$
