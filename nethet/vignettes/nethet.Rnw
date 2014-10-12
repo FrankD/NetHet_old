@@ -383,7 +383,13 @@ number for the variable \texttt{b.split} and report the aggregated
 p-value.
 <<eval=TRUE, echo=TRUE, include=TRUE, warning=TRUE, fig.width=3.5, fig.height=3.5, fig.align='center'>>=
 ## Typically we would choose a larger number of splits
-dn.altn <- diffnet_multisplit(x1,x2,b.splits=50,verbose=FALSE,mc.flag=TRUE)
+# Use parallel library (only available under Unix) for computational efficiency
+if(.Platform$OS.type == "unix") {
+	dn.altn <- diffnet_multisplit(x1,x2,b.splits=50,verbose=FALSE,mc.flag=TRUE)
+} else {
+  dn.altn <- diffnet_multisplit(x1,x2,b.splits=25,verbose=FALSE,mc.flag=FALSE)
+}
+
 par(cex=0.7)
 plot(dn.altn, cex=0.5) # histogram over 50 p-values
 cat('p-value:',dn.altn$medagg.pval,'\n') # median aggregated p-value

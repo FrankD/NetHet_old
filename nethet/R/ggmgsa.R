@@ -539,7 +539,7 @@ ggmgsa_multisplit<- function(x1,x2,b.splits=50,gene.sets,gene.names,gs.names=NUL
         gs.names <- paste('gs',1:length(gene.sets),sep='')
     }
 
-    if(mc.flag==TRUE){
+    if(mc.flag && .Platform$OS.type == "unix"){
         res <- mclapply(seq(b.splits),
                         function(i){
                             if(verbose){cat('\n split: ',i,'\n\n')}
@@ -552,7 +552,7 @@ ggmgsa_multisplit<- function(x1,x2,b.splits=50,gene.sets,gene.names,gs.names=NUL
                             return(mat)
                         }, mc.set.seed=mc.set.seed, mc.preschedule = mc.preschedule,mc.cores=mc.cores)
     }else{
-
+    	  if(mc.flag) warning('Windows does not support parallelisation via mclapply, using sequential lapply instead.')
         res <- lapply(seq(b.splits),
                       function(i){
                           if(verbose){cat('\n split: ',i,'\n\n')}

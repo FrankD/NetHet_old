@@ -716,7 +716,7 @@ mixglasso <- function(x,n.comp,
                           mc.set.seed=FALSE, mc.preschedule = FALSE, 
 											    mc.cores=getOption("mc.cores", 2L), ...){
                   
-	if(mc.flag) {
+	if(mc.flag && .Platform$OS.type == "unix") {
     res <- mclapply(1:length(n.comp),
                   FUN=function(k){
                     fit.mixgl <-mixglasso_ncomp_fixed(x,n.comp[k],lambda=lambda,pen=pen,
@@ -726,6 +726,7 @@ mixglasso <- function(x,n.comp,
                     return(fit.mixgl)},
                   mc.set.seed=mc.set.seed, mc.preschedule = mc.preschedule, mc.cores=mc.cores)
 	} else {
+		if(mc.flag) warning('Windows does not support parallelisation via mclapply, using sequential lapply instead.')
 		res <- lapply(1:length(n.comp),
 										FUN=function(k){
 											fit.mixgl <-mixglasso_ncomp_fixed(x,n.comp[k],lambda=lambda,pen=pen,

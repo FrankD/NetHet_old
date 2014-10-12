@@ -81,10 +81,11 @@ het_cv_glasso <- function(data, grouping=rep(1, dim(data)[1]), mc.flag=FALSE,
   }
   
   # Run glasso on each group
-  if(mc.flag) {
+  if(mc.flag && .Platform$OS.type == "unix") {
     results = mclapply(data.list, screen_cv.glasso, use.package=use.package, 
                        verbose=verbose, include.mean=TRUE, trunc.method='none', ...)
   } else {
+  	if(mc.flag) warning('Windows does not support parallelisation via mclapply, using sequential lapply instead.')
     results = lapply(data.list, screen_cv.glasso, use.package=use.package, 
                      verbose=verbose, include.mean=TRUE, trunc.method='none', ...)
   }

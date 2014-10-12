@@ -1556,7 +1556,7 @@ diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='scre
   n1 <- nrow(x1)
   n2 <- nrow(x2)
 
-  if(mc.flag){
+  if(mc.flag && .Platform$OS.type == "unix"){
       res.multisplit <- mclapply(seq(b.splits),
                                  FUN=function(i){
                                      if(verbose){cat(' split: ',i,'\n\n')}
@@ -1568,6 +1568,7 @@ diffnet_multisplit<- function(x1,x2,b.splits=50,frac.split=1/2,screen.meth='scre
                                  },mc.set.seed=mc.set.seed, mc.preschedule = mc.preschedule, mc.cores=mc.cores)
                                  
   }else{
+  	  if(mc.flag) warning('Windows does not support parallelisation via mclapply, using sequential lapply instead.')
       res.multisplit <- lapply(seq(b.splits),
                                function(i){
                                    if(verbose){cat(' split: ',i,'\n\n')}

@@ -1119,7 +1119,7 @@ diffregr_multisplit<- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,screen.met
   n1 <- nrow(x1)
   n2 <- nrow(x2)
 
-  if(mc.flag){
+  if(mc.flag && .Platform$OS.type == "unix"){
       res.multisplit <- mclapply(seq(b.splits),
                                  FUN=function(i){
                                      split1 <- sample(1:n1,floor((n1-1)*frac.split),replace=FALSE)
@@ -1129,6 +1129,7 @@ diffregr_multisplit<- function(y1,y2,x1,x2,b.splits=50,frac.split=1/2,screen.met
                                                                              acc,epsabs,epsrel,show.warn,n.perm,...)
                                  },mc.set.seed=mc.set.seed, mc.preschedule = mc.preschedule, mc.cores=mc.cores)                                 
   }else{
+  	  if(mc.flag) warning('Windows does not support parallelisation via mclapply, using sequential lapply instead.')
       res.multisplit <- lapply(seq(b.splits),
                                function(i){
                                    split1 <- sample(1:n1,floor((n1-1)*frac.split),replace=FALSE)
