@@ -1,6 +1,7 @@
 #include <R.h>
 #include <math.h>
-
+#include <Rinternals.h>
+#include <R_ext/Rdynload.h>
 
 void betamat_diffnet(double *betamat, int *ind1, int *ind2, int *uptrirownr, int *uptricolnr, int *lind1, int *lind2, double *sig1, double *sig2, double *sig, int *k){
 
@@ -16,4 +17,15 @@ void betamat_diffnet(double *betamat, int *ind1, int *ind2, int *uptrirownr, int
    
     }
   }
+}
+
+R_CMethodDef cMethods[] = {
+   {"betamat_diffnet", (DL_FUNC) &betamat_diffnet, 11, {REALSXP, INTSXP, INTSXP, 
+                                  INTSXP, INTSXP, INTSXP, INTSXP,
+                                  REALSXP, REALSXP, REALSXP, INTSXP}},
+   {NULL, NULL, 0}
+};
+
+void R_init_betamat_diffnet(DllInfo *info) {
+	R_registerRoutines(info, cMethods, NULL, NULL, NULL);
 }

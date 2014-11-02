@@ -725,5 +725,9 @@ loaded into Cytoscape, provided the option \texttt{quote=FALSE} is set.
 #							 p.corrs.thresh=0.25, quote=FALSE)
 @
 
+<<echo=TRUE, include=TRUE, eval=TRUE>>=
+sessionInfo()
+@
+
 \bibliography{nethet}
 \end{document}

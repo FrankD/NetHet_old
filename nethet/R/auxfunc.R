@@ -49,7 +49,7 @@ invcov2parcor_array <- function(invcov.array) {
 ##' Using a negative value will export all possible edges (including those 
 ##' with zero partial correlation).
 ##' @param ... Further parameters passed to \link{write.csv}.
-##' @return NULL
+##' @return Function does not return anything.
 ##' @author Frank Dondelinger
 ##' @export
 ##' @examples
@@ -187,7 +187,7 @@ summary.nethetclustering <- function(object, ...) {
 ##' @title Print function for object of class 'nethetsummmary'
 ##' @param x object of class 'nethetsummary'
 ##' @param ... Other arguments
-##' @return NULL
+##' @return Function does not return anything.
 ##' @author frankd
 ##' @export
 ##' @method print nethetsummary

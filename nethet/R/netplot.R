@@ -18,6 +18,13 @@ if(getRversion() >= '2.15.1')
 #' @param net.clustering Clustering
 #' @param cluster.names Cluster names
 #' @param node.names Node names
+#' @return A data frame for plotting the dotPlot with ggplot2 is returned. 
+#' Column P.Corr contains the partial correlations of each edge as a numeric, 
+#' column Mean contains the minimum mean expression of the two proteins
+#' (e.g. if the edge is e(p1, p2), then the column contains min(mean(p1), 
+#' mean(p2))), column Edge contains the name of the edge as a character
+#' string of the form "p1-p2" and column Type contains the cluster name of the 
+#' cluster that the edge belongs to as a character string.
 #' @keywords internal
 #' 
 buildDotPlotDataFrame <- function(net.clustering, cluster.names, node.names) {

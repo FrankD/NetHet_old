@@ -4,7 +4,8 @@
 #####################
 library(mvtnorm)
 
-##' Simulate from mixture model with multi-variate Gaussian or t-distributed components.
+##' Simulate from mixture model with multi-variate Gaussian or t-distributed 
+##' components.
 ##'
 ##' 
 ##' @title Simulate from mixture model.
@@ -14,7 +15,8 @@ library(mvtnorm)
 ##' @param Mu matrix of component-specific mean vectors 
 ##' @param Sig array of component-specific covariance matrices
 ##' @param dist 'norm' for Gaussian components, 't' for t-distributed components
-##' @param df degrees of freedom of the t-distribution (not used for Gaussian distribution), default=2
+##' @param df degrees of freedom of the t-distribution (not used for Gaussian 
+##' distribution), default=2
 ##' @return  a list consisting of:
 ##' \item{S}{component assignments}
 ##' \item{X}{observed data matrix}
@@ -61,8 +63,10 @@ sim_mix <- function(n,n.comp,mix.prob,Mu,Sig, dist='norm', df=2){
 	
   # Generate from each component
   for (k in 1:K){    
-		x[s==k,] <-  if(dist == 'norm') rmvnorm(sum(s==k),mean=Mu[,k],sigma=Sig[,,k])
-                 else if(dist == 't') rmvt(sum(s==k),delta=Mu[,k],sigma=Sig[,,k], df=df, type='shifted')
+		x[s==k,] <-  if(dist == 'norm') rmvnorm(sum(s==k),mean=Mu[,k],
+																						sigma=Sig[,,k])
+                 else if(dist == 't') rmvt(sum(s==k),delta=Mu[,k],
+                 													sigma=Sig[,,k], df=df, type='shifted')
                  else stop(paste('Invalid dist argument:', dist))
 	}
 	
@@ -70,9 +74,11 @@ sim_mix <- function(n,n.comp,mix.prob,Mu,Sig, dist='norm', df=2){
 }
 
 
-##' Generate an inverse covariance matrix with a given sparsity and dimensionality
+##' Generate an inverse covariance matrix with a given sparsity and 
+##' dimensionality
 ##'
-##' This function generates an inverse covariance matrix, with at most (1-sparsity)*p(p-1)
+##' This function generates an inverse covariance matrix, with at most 
+##' (1-sparsity)*p(p-1)
 ##' non-zero off-diagonal entries, where the non-zero entries are sampled from a 
 ##' beta distribution.
 ##' 
@@ -92,7 +98,8 @@ generate_inv_cov <- function(p=162, sparsity=0.7) {
 	return(getinvcov(p, s=s))
 }
 
-##' Generate an inverse covariance matrix with a given sparsity and dimensionality
+##' Generate an inverse covariance matrix with a given sparsity and 
+##' dimensionality
 ##'
 ##' @param p Dimensionality
 ##' @param s Sparsity
@@ -100,10 +107,12 @@ generate_inv_cov <- function(p=162, sparsity=0.7) {
 ##' @param b.diff binomial parameter
 ##' @param magn.diag Magnitude
 ##' @param emin e min
+##' @return Inverse covariance matrix
 ##' Internal function
 ##' @keywords internal
 getinvcov<- function(p,s, a.diff=5,b.diff=5,magn.diag=0,emin=0.1){
-	#####8!!! act1 are the indices of the upper-diagonal non-zero entries of a pxp matrix 
+	#####8!!! act1 are the indices of the upper-diagonal non-zero entries of a 
+	#####pxp matrix 
 	
 	ind.upper.tri <- which(upper.tri(matrix(NA,p,p)))
 	act1 <- sample(ind.upper.tri,size=s,replace=FALSE)
@@ -143,10 +152,12 @@ getinvcov<- function(p,s, a.diff=5,b.diff=5,magn.diag=0,emin=0.1){
 ##' @param p Dimensionality of the data.
 ##' @param n.comp Number of components of the mixture model.
 ##' @param sparsity Determines the proportion of non-zero off-diagonal entries.
-##' @param mix.prob Mixture probabilities for the components; defaults to uniform distribution.
+##' @param mix.prob Mixture probabilities for the components; defaults to 
+##' uniform distribution.
 ##' @param Mu Means for the mixture components, a p by n.comp matrix. If NULL, 
 ##' sampled from a standard Gaussian.
-##' @param Sig Covariances for the mixture components, a p by p by n.comp array. If NULL,
+##' @param Sig Covariances for the mixture components, a p by p by n.comp 
+##' array. If NULL,
 ##' generated using \code{\link{generate_inv_cov}}.
 ##' @param ... Further arguments passed to \code{\link{sim_mix}}.
 ##' @return A list with components:
@@ -186,7 +197,8 @@ sim_mix_networks <- function(n, p, n.comp, sparsity=0.7,
 ##' @param n.hub number of hubs (only for graph='hub')
 ##' @param n.hub.diff number of different hubs
 ##' @param n.nz number of edges per graph (only for graph='random')
-##' @param n.nz.common number of edges incommon between graphs (only for graph='random')
+##' @param n.nz.common number of edges incommon between graphs (only for 
+##' graph='random')
 ##' @param magn.nz.diff default=0.9
 ##' @param magn.nz.common default=0.9
 ##' @param magn.diag default=0
@@ -238,7 +250,8 @@ generate_2networks<- function(p,graph='random',
 	
 	if(graph=='hub'){
 		
-		if(n.hub<n.hub.diff){stop("n.hub less than n.hub.diff: choose smaller n.hub.diff")}
+		if(n.hub<n.hub.diff){
+			stop("n.hub less than n.hub.diff: choose smaller n.hub.diff")}
 		
 		##generate hub network (see library(huge); huge.generator)
 		theta.hub <- matrix(0,p,p)
@@ -285,7 +298,8 @@ generate_2networks<- function(p,graph='random',
 		SigInv[[k]] <- siginv
 		if(verbose){
 			cat('ev.min: ',min(eigen(siginv)$values),'\n')
-			cat('condnum: ',max(abs(eigen(siginv)$values))/min(abs(eigen(siginv)$values)),'\n')
+			cat('condnum: ',
+					max(abs(eigen(siginv)$values))/min(abs(eigen(siginv)$values)),'\n')
 		}
 	}
 	return(list(invcov1=SigInv[[1]],invcov2=SigInv[[2]]))
