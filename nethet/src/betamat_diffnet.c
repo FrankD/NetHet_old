@@ -3,7 +3,9 @@
 #include <Rinternals.h>
 #include <R_ext/Rdynload.h>
 
-void betamat_diffnet(double *betamat, int *ind1, int *ind2, int *uptrirownr, int *uptricolnr, int *lind1, int *lind2, double *sig1, double *sig2, double *sig, int *k){
+void betamat_diffnet(double *betamat, int *ind1, int *ind2, int *uptrirownr,
+                     int *uptricolnr, int *lind1, int *lind2, double *sig1,
+                     double *sig2, double *sig, int *k) {
 
   int i,j,colnri,rownri,colnrj,rownrj; int l1=*lind1; int l2=*lind2; int kk=*k;
 
@@ -19,13 +21,15 @@ void betamat_diffnet(double *betamat, int *ind1, int *ind2, int *uptrirownr, int
   }
 }
 
+R_NativePrimitiveArgType betamat_diffnet_t[] =
+    {REALSXP, INTSXP, INTSXP, INTSXP, INTSXP, INTSXP, INTSXP, REALSXP, REALSXP,
+     REALSXP, INTSXP};
+
 R_CMethodDef cMethods[] = {
-   {"betamat_diffnet", (DL_FUNC) &betamat_diffnet, 11, {REALSXP, INTSXP, INTSXP, 
-                                  INTSXP, INTSXP, INTSXP, INTSXP,
-                                  REALSXP, REALSXP, REALSXP, INTSXP}},
-   {NULL, NULL, 0}
+    {"betamat_diffnet", (DL_FUNC) &betamat_diffnet, 11, betamat_diffnet_t},
+    {NULL, NULL, 0}
 };
 
-void R_init_betamat_diffnet(DllInfo *info) {
+void R_init_nethet(DllInfo *info) {
 	R_registerRoutines(info, cMethods, NULL, NULL, NULL);
 }
