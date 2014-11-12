@@ -1,9 +1,9 @@
 Package: nethet
 Type: Package
 Title: A bioconductor package for high-dimensional exploration of
-        biological network heterogeneity
-Version: 0.99.3
-Date: 2014-11-2
+    biological network heterogeneity
+Version: 0.99.4
+Date: 2014-11-12
 Author: Nicolas Staedler, Frank Dondelinger
 Maintainer: Nicolas Staedler <staedler.n@gmail.com>
 Description: Package nethet is an implementation of statistical solid
@@ -15,11 +15,28 @@ Description: Package nethet is an implementation of statistical solid
     network and GGM-GSA; Stadler and Mukherjee, 2013, 2014) and make a novel
     network-based clustering algorithm available (mixed graphical lasso,
     Stadler and Mukherjee, 2013).
-Imports: glasso, mvtnorm, parcor, GeneNet, huge, CompQuadForm, ggm,
-        mclust, parallel, GSA, limma, multtest, ICSNP, glmnet, network,
-        ggplot2
-Suggests: knitr, xtable, BiocStyle
+Imports:
+    glasso,
+    mvtnorm,
+    parcor,
+    GeneNet,
+    huge,
+    CompQuadForm,
+    ggm,
+    mclust,
+    parallel,
+    GSA,
+    limma,
+    multtest,
+    ICSNP,
+    glmnet,
+    network,
+    ggplot2
+Suggests:
+    knitr,
+    xtable,
+    BiocStyle
 biocViews: Clustering, GraphAndNetwork
 VignetteBuilder: knitr
 License: GPL-2
-Packaged: 2014-11-06 23:04:06 UTC; nhayden
+Packaged: 2014-11-12 12:04:06 UTC; FrankD

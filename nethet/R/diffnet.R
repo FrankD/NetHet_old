@@ -943,13 +943,20 @@ ww.mat2 <- function(imat,act,act1,act2){
 beta.mat<-function(ind1,ind2,sig1,sig2,sig){
   uptri.rownr <- row(sig)[upper.tri(sig,diag=TRUE)]
   uptri.colnr <- col(sig)[upper.tri(sig,diag=TRUE)]
-  betamat <- .C('betamat_diffnet',betamat=matrix(0,length(ind1),length(ind2)),
+  betamat <- .C('betamat_diffnet',
+  							betamat=as.numeric(matrix(0,length(ind1),length(ind2))),
                 ind1=as.integer(ind1-1),ind2=as.integer(ind2-1),##8!indexing
                 uptrirownr=uptri.rownr,uptricolnr=uptri.colnr,
                 lind1=length(ind1),lind2=length(ind2),
                 sig1=sig1,sig2=sig2,sig=sig,k=ncol(sig))$betamat
-  
-  return(betamat)
+   
+#   betamat.old <- .C('betamat_diffnet',betamat=matrix(0,length(ind1),length(ind2)),
+#    							ind1=as.integer(ind1-1),ind2=as.integer(ind2-1),##8!indexing
+#    							uptrirownr=uptri.rownr,uptricolnr=uptri.colnr,
+#    							lind1=length(ind1),lind2=length(ind2),
+#    							sig1=sig1,sig2=sig2,sig=sig,k=ncol(sig))$betamat
+#   
+  return(matrix(betamat, length(ind1), length(ind2)))
 }
 
 ## beta.mat<-function(ind1,ind2,sig1,sig2,sig){
