@@ -1,1 +1,3 @@
 Version 0.99.0: First release.
+Version 0.99.5: Minor bug fixes and Bioconductor compliance issues resolved.
+                First Bioconductor-devel release.
