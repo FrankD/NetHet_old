@@ -261,11 +261,13 @@ cv.glasso <- function(x,folds=10,lambda,penalize.diagonal=FALSE,plot.it=FALSE,se
 ##' @param se default=FALSE.
 ##' @param use.package 'glasso' or 'huge' (default).
 ##' @param verbose If TRUE, output la.min, la.max and la.opt (default=FALSE).
-##' @return  Returns a list with named elements 'rho.opt', 'wi', 'wi.orig', 'mu', 
-##'          Variable rho.opt is the optimal (scaled) penalization parameter (rho.opt=2*la.opt/n). 
-##'          The variables wi and wi.orig are matrices of size dim.samples by dim.samples 
-##'          containing the truncated and untruncated inverse covariance matrix. Variable 
-##'          Mu mean of the input data.
+##' @return  Returns a list with named elements 'rho.opt', 'w', 'wi', 'wi.orig', 
+##'          'mu'. Variable rho.opt is the optimal (scaled) penalization 
+##'          parameter (rho.opt=2*la.opt/n). Variable w is the estimated 
+##'          covariance matrix. The variables wi and wi.orig are 
+##'          matrices of size dim.samples by dim.samples containing the 
+##'          truncated and untruncated inverse covariance matrix. Variable 
+##'          mu is the mean of the input data.
 ##' @author n.stadler
 ##' @export
 ##' @examples
@@ -317,7 +319,8 @@ screen_cv.glasso <- function(x,include.mean=FALSE,
   if (plot.it){
     plotCV(lambda,cv,cv.error,se=se)
   }
-  list(rho.opt=2*lambda[which.min(cv)]/nrow(x),wi=wi.trunc,wi.orig=wi,mu=colMeans(x))
+  list(rho.opt=2*lambda[which.min(cv)]/nrow(x),w=w,wi=wi.trunc,wi.orig=wi,
+  		 mu=colMeans(x))
 }
 
 ##' BIC.glasso
