@@ -589,8 +589,11 @@ screen_lasso <- function(x,include.mean=NULL,
 ##'          The variables wi and wi.orig are matrices of size dim.samples by dim.samples 
 ##'          containing the truncated and untruncated inverse covariance matrix.
 ##' @author n.stadler
-##' @export
-##' @examples
+##' @keywords internal
+##' 
+##' Removed until parcor package is fixed.
+##' export
+##' examples
 ##' n=50
 ##' p=5
 ##' x=matrix(rnorm(n*p),n,p)
