@@ -1,6 +1,7 @@
-Version 1.0.1: Temporarily removed screen_shrink function due to bug in parcor
-               package. Added covariance matrix as output of screen_cvglasso.
-Version 0.99.5: Minor bug fixes and Bioconductor compliance issues resolved.
+Version 1.1.1:  Temporarily removed screen_shrink function due to bug in parcor
+                package. Added covariance matrix as output of screen_cvglasso.
+Version 0.99.5-
+        1.0.0:  Minor bug fixes and Bioconductor compliance issues resolved.
                 First Bioconductor-devel release.
 Version 0.99.0: First release.
 
